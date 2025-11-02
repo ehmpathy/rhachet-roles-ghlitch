@@ -1,0 +1,30 @@
+{
+  "extends": "@tsconfig/node-lts-strictest/tsconfig.json",
+  "compilerOptions": {
+    "importsNotUsedAsValues": "remove",
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitOverride": false,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "exactOptionalPropertyTypes": false,
+    "types": [
+      "vitest/globals"
+    ],
+    "moduleResolution": "node",
+    "module": "esnext",
+    "target": "es2020",
+    "esModuleInterop": true
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "coverage",
+    "node_modules"
+  ]
+}

@@ -1,0 +1,13 @@
+*.log
+*.tsbuildinfo
+.artifact
+.env
+.rhachet
+.serverless
+.terraform
+.terraform.lock
+.yalc
+coverage
+dist
+node_modules
+.cache

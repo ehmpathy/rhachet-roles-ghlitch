@@ -1,0 +1,13 @@
+npx rhachet -s claude.code \
+--references "src/skills/diagnose/queryApis/detectLambdaCrontasks.[criteria].md"
+--output "@translate(references.0).ext(sh).as(skill)"
+--ask "
+fulfill the acceptance criteria in src/skills/diagnose/queryApis/detectLambdaCrontasks.[criteria].md
+
+via bash commands which leverage the aws cli
+
+in src/skills/diagnose/queryApis/detectLambdaCrontasks.ts
+"
+
+
+# then, tune with mechanics briefs
