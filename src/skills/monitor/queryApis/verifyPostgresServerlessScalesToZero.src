@@ -1,0 +1,27 @@
+
+```
+bootup your context via `npx rhachet briefs boot --role mechanic`
+
+summarize what you learned
+```
+
+
+```
+fulfill the acceptance criteria in src/skills/monitor/queryApis/verifyPostgresServerlessScalesToZero.[criteria].md
+
+via commands which leverage the aws cli
+
+into src/skills/monitor/queryApis/verifyPostgresServerlessScalesToZero.ts
+```
+
+```
+review src/skills/monitor/queryApis/verifyPostgresServerlessScalesToZero.ts
+
+detect violations of rules or patterns
+
+emit to src/skills/monitor/queryApis/verifyPostgresServerlessScalesToZero.[review].i1.md
+```
+
+```
+apply feedback from src/skills/monitor/queryApis/verifyPostgresServerlessScalesToZero.[review].i1.md
+```
