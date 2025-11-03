@@ -1,0 +1,5 @@
+propose a .sh command under src/skills/observe/setPostgressClusterAsObservable.sh
+
+which does both of these operations
+
+given an input of a db-clister-identifier

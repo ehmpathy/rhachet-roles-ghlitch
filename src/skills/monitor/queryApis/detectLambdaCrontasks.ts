@@ -22,6 +22,7 @@ interface LambdaWithCrontask {
   crontasks: Crontask[];
 }
 
+// npx tsx src/skills/diagnose/queryApis/detectLambdaCrontasks.ts
 export const command = asCommand(
   {
     name: basename(__filename, '.ts'),
