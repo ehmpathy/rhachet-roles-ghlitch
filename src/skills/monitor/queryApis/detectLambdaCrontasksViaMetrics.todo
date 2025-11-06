@@ -1,0 +1,12 @@
+its not detecting cron invocations well
+
+instead of using stats between average calls
+
+it should find whether there was _atleast_ a regular cadence anywhere
+
+i.e., ignore the sporadic calls
+detect regular calls underneath
+
+=>
+
+assumption is that some endpionts are called both by cron triggers and user triggers

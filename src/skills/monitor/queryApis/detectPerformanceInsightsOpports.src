@@ -1,0 +1,25 @@
+
+```
+bootup your context via `npx rhachet briefs boot --role mechanic`
+```
+
+
+```
+fulfill the acceptance criteria in src/skills/monitor/queryApis/detectPerformanceInsightsOpports.[criteria].md
+
+via commands which leverage the aws cli
+
+into src/skills/monitor/queryApis/detectPerformanceInsightsOpports.ts
+```
+
+```
+review src/skills/monitor/queryApis/detectPerformanceInsightsOpports.ts
+
+detect violations of rules or patterns
+
+emit to src/skills/monitor/queryApis/detectPerformanceInsightsOpports.[review].i1.md
+```
+
+```
+apply feedback from src/skills/monitor/queryApis/detectPerformanceInsightsOpports.[review].i1.md
+```

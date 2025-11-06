@@ -48,6 +48,7 @@
     "type-fns": "1.17.0",
     "unpdf": "1.3.2",
     "with-simple-caching": "0.14.4",
+    "wrapper-fns": "1.1.0",
     "zod": "3.25.76"
   },
   "devDependencies": {

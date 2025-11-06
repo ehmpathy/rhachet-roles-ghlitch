@@ -1,0 +1,5 @@
+given('db credentials and a query to tune performance of')
+  when('asked to gather performance context')
+    then('it should gather the observed duration via execute the query 5 times')
+    then('it should gather the explain analyze the query')
+    then('it should gather the create ddl for the dependent schemas')
