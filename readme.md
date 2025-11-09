@@ -1,6 +1,6 @@
-# rhachet-skills-ghlitch
+# rhachet-roles-ghlitch
 
-rhachet skills and briefs to observe, monitor, alarm, and diagnose systems
+rhachet roles, skills, and briefs to observe, monitor, alarm, and diagnose systems
 
 ## Skills
 
