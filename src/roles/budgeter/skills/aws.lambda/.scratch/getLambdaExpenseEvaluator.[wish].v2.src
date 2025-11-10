@@ -1,0 +1,36 @@
+remember: never delete wish files. ever.
+
+---
+
+wish =
+
+1. lookup all of the lambdas worth evaluating via cloudwatch metrics
+  - compute avg possible cost = 1048gb * duration * gb-hr cost
+  - for each lambda that has a predicted cost > $1/mo, evaluate its actual cost
+
+
+better yet, is there a way to enumerate the memory size + instance type of all lambdas in the account at one time?
+- if so, then we can just use that list to compute the absolute price right away
+
+
+2. evaluate the absolute cost of each lambda
+
+
+3. for the lambdas that had an absolute cost > $1
+evaluate savings opportunitites
+
+- memory rightsize
+- instance change
+- duration decrease
+
+---
+
+4. output a summary of
+- lambdas by cost
+- top opportunities
+
+
+----
+
+
+output a plan into src/roles/budgeter/skills/getLambdaExpenseEvaluator.[wish].v2.[plan].md

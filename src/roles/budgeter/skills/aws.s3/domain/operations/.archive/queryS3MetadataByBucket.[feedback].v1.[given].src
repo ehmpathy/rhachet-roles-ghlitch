@@ -1,0 +1,7 @@
+review src/roles/budgeter/skills/aws.s3/domain/operations/queryS3MetadataByBucket.ts
+
+against src/roles/budgeter/skills/aws.s3/.behavior/3.[blueprint].observability.provisions.v1.i1.md
+
+---
+
+enumerate BLOCKERs and NITPICKs into src/roles/budgeter/skills/aws.s3/domain/operations/queryS3MetadataByBucket.[feedback].v1.[given].md

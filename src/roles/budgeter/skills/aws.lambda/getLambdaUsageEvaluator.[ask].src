@@ -1,0 +1,8 @@
+create a src/roles/budgeter/skills/ge
+  tLambdaUsageEvaluator.sh which, for
+  the lambdas identified as having more
+  than $1/mo of cost in
+  src/roles/budgeter/skills/getLambdaEx
+  penseEvaluator.sh json, shows a daily
+  or hourly summary of their
+  invocations

@@ -1,0 +1,15 @@
+explain to me what metadata we can add to export from s3 buckets
+
+explain how long it will take for it to be available
+
+explain how we can apply it assess what storage tier cost saving opportunities we can gain
+
+---
+
+explain how we can update existing buckets to add that
+
+---
+
+write these lessons into
+
+src/roles/budgeter/skills/setS3BucketUsageObservability.[lesson].md

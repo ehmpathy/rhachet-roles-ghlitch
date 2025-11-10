@@ -1,0 +1,12 @@
+propose a plan for how to deliver on the criteria listed here
+
+src/roles/budgeter/skills/getS3BucketExpenseOptimizer.1.[criteria].md
+
+
+---
+
+ensure that we use intelligent cloudwatch metrics or aws metadata to bucket the number of files in the bucket that fit each class
+
+---
+
+write your plan into src/roles/budgeter/skills/getS3BucketExpenseOptimizer.3.[deliver].v1.[plan].v1.i1.md

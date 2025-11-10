@@ -1,0 +1,14 @@
+declare a [lesson] on the observability configurations that we can add to an s3 bucket
+
+our goal =
+- easily see a treestruct of what's stored within an s3 bucket (incl files and size of each dir)
+- easily detect access patterns (e.g., last-used = 180days+, 90days+, 30days+, 3days+, 1days+, 0days)
+- easily declare opportunities to improve storage tier of contents
+  - which globs should we move to intelligent?
+  - which globs should we move to glacier?
+
+---
+
+what would enable us to do so at minimum cost?
+
+answer at src/roles/budgeter/skills/aws.s3/.behavior/3.[lesson].observability.provisions.[seed].v1.i1.md

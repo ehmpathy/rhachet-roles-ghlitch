@@ -1,0 +1,5 @@
+implement src/roles/budgeter/skills/aws.s3/setS3BucketUsageObservability.sh
+
+by enabling s3 metadata
+
+per src/roles/budgeter/skills/aws.s3/setS3BucketUsageObservability.[lesson].md

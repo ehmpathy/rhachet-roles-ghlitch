@@ -1,1 +1,0 @@
-../../node_modules/rhachet-roles-ehmpathy/dist/logic/roles/mechanic/.briefs/style.compressed.prompt.md

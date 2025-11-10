@@ -373,6 +373,7 @@ echo "$COST_DATA" | jq -r '.ResultsByTime[0].Groups[] | select(.Metrics.Unblende
 echo ""
 
 echo "✨ Done!"
+
 echo ""
 echo "🌿 JSON files:"
 echo "   - summary: $SUMMARY_JSON_FILE"
@@ -383,3 +384,4 @@ echo "🌿 Markdown files:"
 echo "   - summary: $SUMMARY_MD_FILE"
 echo "   - detailed: $DETAILED_MD_FILE"
 echo "   - trends: $TRENDS_MD_FILE"
+echo ""

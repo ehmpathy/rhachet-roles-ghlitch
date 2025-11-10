@@ -1,0 +1,6 @@
+bootup
+- `npx rhachet roles boot --repo ehmpathy --role architect`
+- `npx rhachet roles boot --repo ehmpathy --role mechanic`
+
+create a blueprint for how to fulfill this wish src/roles/budgeter/skills/aws.lambda/.behavior/setLambdaObservability/0.[wish].md
+

@@ -1,0 +1,1 @@
+../../../../node_modules/rhachet-roles-ehmpathy/dist/logic/roles/architect/.briefs/criteria.given_when_then.[seed].md

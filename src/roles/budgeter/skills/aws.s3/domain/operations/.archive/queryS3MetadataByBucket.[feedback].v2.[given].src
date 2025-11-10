@@ -1,0 +1,7 @@
+boot `npx rhachet roles boot --repo ehmpathy --role mechanic`
+
+apply those briefs to review the code within src/roles/budgeter/skills/aws.s3/domain/operations/queryS3MetadataByBucket.ts
+
+---
+
+enumerate BLOCKERs and NITPICKs into src/roles/budgeter/skills/aws.s3/domain/operations/queryS3MetadataByBucket.[feedback].v2.[given].md

@@ -1,0 +1,1 @@
+../../../../.yalc/rhachet-roles-ehmpathy/dist/logic/roles/mechanic/.briefs/style.compressed.md

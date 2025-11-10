@@ -1,0 +1,9 @@
+look at src/roles/budgeter/skills/getS3BucketExpenseOptimizer.0.[wish].md
+
+evaluate the feasability and timecost for how to fulfill that wish via various aws sdk queries
+
+prioritize reducing the number of distinct api calls, to maximize speed (e.g., prefer to pull data in batch)
+
+---
+
+write your plan for fulfillment in src/roles/budgeter/skills/getS3BucketExpenseOptimizer.0.[wish].md.[plan].v1.i1.md

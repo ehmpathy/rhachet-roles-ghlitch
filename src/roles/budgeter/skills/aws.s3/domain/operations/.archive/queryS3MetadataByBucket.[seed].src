@@ -1,0 +1,44 @@
+boot `npx rhachet roles --repo ehmpathy --skill mechanic`
+
+then, implement queryS3MetadataByBucket
+
+websearch to learn how to do so
+
+
+output to src/roles/budgeter/skills/aws.s3/domain/operations/queryS3MetadataByBucket.ts
+
+---
+
+
+ref
+```
+# S3 Bucket Usage Observability - Metadata Export and Cost Optimization
+
+## What Metadata Can We Add/Export from S3 Buckets?
+
+AWS provides three main approaches for gaining visibility into S3 bucket object metadata and access patterns:
+
+### 1. S3 Metadata (New 2025 Feature - RECOMMENDED)
+
+The newest and most powerful option, announced at re:Invent 2024 and significantly updated in July 2025.
+
+**What it provides:**
+- Fully managed Apache Iceberg tables with complete object metadata
+- Two table types:
+  - **Journal Table**: Near real-time view of object-level changes (uploads, deletions, metadata updates)
+  - **Live Inventory Table**: Complete snapshot of all objects and their metadata in the bucket
+
+**Available metadata includes:**
+- Object key, size, last modified timestamp
+- Storage class
+- ETag, version ID
+- Encryption status
+- Object tags
+- Access tier (for Intelligent-Tiering objects)
+- All metadata for existing objects (via backfill support)
+
+**Configuration options:**
+- Server-side encryption settings
+- Journal record expiration period
+- Automatic hourly refresh for live inventory
+```

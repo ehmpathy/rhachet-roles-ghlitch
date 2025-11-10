@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "rhachet-roles-ehmpathy": {
+      "signature": "c8449786bb8b8d5e9b470eefddb8691a",
+      "file": true,
+      "replaced": "1.7.0"
+    }
+  }
+}

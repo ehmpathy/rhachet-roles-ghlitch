@@ -1,0 +1,11 @@
+given(an s3 bucket)
+  when([t0] no changes are made)
+    then(no bucket inventory or config tools are setup)
+
+  when([t1] asked to getS3BucketUsageEvaluation)
+    then(it uses list-objects to pull down metadata about all objects currently in the bucket)
+    then(it uses a read-through cache to fetch from disk instead of api, if request cached)
+      sothat(we can resume from failures if needed)
+    then(it creates a treestruct of all common paths that have more than 1gb in files && lists the size && file count of each)
+    then(it creates a table of how many gigs and how many files are in each bucket of access [3days, 30days, 90days, 180days])
+    then(it lists per access level how many objects are more or less than 125kb in size)

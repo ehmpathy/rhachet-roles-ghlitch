@@ -1,0 +1,32 @@
+run `npx rhachet roles boot --repo ehmpathy --role mechanic` to bootup your context
+
+now, rewrite src/roles/budgeter/skills/aws.lambda/getLambdaExpenseEvaluator.sh in typescript, to execute via `npx tsx`
+
+---
+
+declare DomainLiterals and DomainEntities that we care about
+
+decompose into distinct reusable operations under
+
+both under
+
+domain/operations/*.ts
+
+and
+
+domain/objects/*.ts
+
+---
+
+then compose them into the `getLambdaExpenseEvaluator` command;
+
+
+---
+
+be sure to use the npm `@ehmpathy/as-command` package to write the command
+
+see src/roles/doctor/skills/monitor/queryApis/detectLambdaCrontasksViaMetrics.ts for an example
+
+
+
+
