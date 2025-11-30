@@ -3,13 +3,17 @@
  * .why = identifies which AWS account is being analyzed
  */
 import { ContextLogTrail } from 'as-procedure';
+import { join } from 'path';
+import { withSimpleCachingOnDisk } from 'with-simple-caching';
+import { withRetry } from 'wrapper-fns';
+
 import { AwsAccount } from '../objects/AwsAccount';
 import { execAws } from './execAws';
 
-export const getAwsAccountInfo = (
-  _: Record<string, never>,
+const getAwsAccountInfoLogic = async (
+  input: { asOfDate: string },
   context: ContextLogTrail,
-): AwsAccount => {
+): Promise<AwsAccount> => {
   context.log.info('getting AWS account info...', {});
 
   const accountId = execAws(
@@ -42,3 +46,22 @@ export const getAwsAccountInfo = (
     display,
   });
 };
+
+/**
+ * .what = cached version of getAwsAccountInfo
+ * .why = account info is static and doesn't change
+ */
+export const getAwsAccountInfo = withRetry(
+  withSimpleCachingOnDisk(getAwsAccountInfoLogic, {
+    directory: {
+      mounted: {
+        path: join(
+          __dirname,
+          '.cache',
+          new Date().toISOString().split('T')[0]!, // reuse per day
+        ),
+      },
+    },
+    procedure: { name: 'getAwsAccountInfo', version: 'v2025_11_10' },
+  }),
+);

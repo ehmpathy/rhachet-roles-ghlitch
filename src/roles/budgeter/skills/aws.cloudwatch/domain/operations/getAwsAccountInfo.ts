@@ -12,6 +12,7 @@ export const getAwsAccountInfo = (
 ): AwsAccount => {
   context.log.info('getting AWS account info...', {});
 
+  context.log.info('AWS API: sts get-caller-identity', {});
   const accountId = execAws(
     'aws sts get-caller-identity --query Account --output text',
     context,
@@ -19,6 +20,7 @@ export const getAwsAccountInfo = (
 
   let accountAlias: string | undefined;
   try {
+    context.log.info('AWS API: iam list-account-aliases', {});
     const aliasOutput = execAws(
       "aws iam list-account-aliases --query 'AccountAliases[0]' --output text",
       context,

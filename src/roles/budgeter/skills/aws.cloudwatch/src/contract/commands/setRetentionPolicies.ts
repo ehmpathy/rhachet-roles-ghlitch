@@ -62,6 +62,10 @@ export const command = asCommand(
     );
 
     const changesNeeded = changes.filter((c) => c.requiresChange);
+    context.log.info(
+      `retention changes calculated: ${changesNeeded.length} log groups need updates`,
+      {},
+    );
 
     // step 3.5: calculate storage costs
     context.log.info('step 3.5: calculating storage costs...', {});
@@ -92,6 +96,7 @@ export const command = asCommand(
       `total storage: ${totalStoredGb.toFixed(2)} GB, cost: $${totalMonthlyCost.toFixed(2)}/month`,
       {},
     );
+    context.log.info('storage costs calculated', {});
 
     // step 4: display current state and planned changes
     context.log.info('', {});
@@ -109,14 +114,19 @@ export const command = asCommand(
       context.log.info('Retention Policy Report:', {});
       context.log.info('', {});
 
-      // log each change with its status
-      changes.forEach((change) => {
+      // log only changes needed (not all log groups)
+      context.log.info(
+        `showing ${changesNeeded.length} log groups that require changes (full report in markdown)`,
+        {},
+      );
+      context.log.info('', {});
+
+      changesNeeded.forEach((change) => {
         const retentionRealizedDisplay = change.retentionRealized
           ? `${change.retentionRealized} days`
           : 'null';
-        const status = change.requiresChange ? '[CHANGE]' : '[OK]';
 
-        context.log.info(`${status} ${change.logGroupName}`, {});
+        context.log.info(`[CHANGE] ${change.logGroupName}`, {});
         context.log.info(
           `       retentionRealized: ${retentionRealizedDisplay}`,
           {},

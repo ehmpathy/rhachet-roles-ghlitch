@@ -1,0 +1,9 @@
+start from scratch; we want to add
+  s3metadata to an existing bucket;
+  what do we need to do to provision
+  the bucket with s3 metadata that we
+  can query from aws athena? webseacrch
+  only; do not look at any files in
+  this repo
+
+  write output to src/roles/budgeter/skills/aws.s3/.behavior/setS3BucketUsageObservability/3.[blueprint].observability.provisions.v2.i1.md

@@ -3,6 +3,10 @@
  * .why = provides the actual service-level cost for comparison
  */
 import { ContextLogTrail } from 'as-procedure';
+import { join } from 'path';
+import { withSimpleCachingOnDisk } from 'with-simple-caching';
+import { withRetry } from 'wrapper-fns';
+
 import { execAws } from './execAws';
 
 export interface CostExplorerData {
@@ -10,14 +14,15 @@ export interface CostExplorerData {
   currency: string;
 }
 
-export const getCostExplorerData = (
+const getCostExplorerDataLogic = async (
   input: {
     accountId: string;
     periodSince: string;
     periodUptil: string;
+    asOfDate: string;
   },
   context: ContextLogTrail,
-): CostExplorerData => {
+): Promise<CostExplorerData> => {
   context.log.info('querying AWS Cost Explorer...', {});
 
   const costDataRaw = execAws(
@@ -59,7 +64,29 @@ export const getCostExplorerData = (
       'USD';
   }
 
-  context.log.info(`total Lambda cost: $${totalCost.toFixed(2)} ${currency}`, {});
+  context.log.info(
+    `total Lambda cost: $${totalCost.toFixed(2)} ${currency}`,
+    {},
+  );
 
   return { totalCost, currency };
 };
+
+/**
+ * .what = cached version of getCostExplorerData
+ * .why = cost data for a given time period never changes once the period is complete
+ */
+export const getCostExplorerData = withRetry(
+  withSimpleCachingOnDisk(getCostExplorerDataLogic, {
+    directory: {
+      mounted: {
+        path: join(
+          __dirname,
+          '.cache',
+          new Date().toISOString().split('T')[0]!, // reuse per day
+        ),
+      },
+    },
+    procedure: { name: 'getCostExplorerData', version: 'v2025_11_10' },
+  }),
+);

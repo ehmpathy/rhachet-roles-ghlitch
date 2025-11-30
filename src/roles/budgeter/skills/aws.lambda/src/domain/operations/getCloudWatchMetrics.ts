@@ -3,6 +3,9 @@
  * .why = efficiently retrieves invocation, duration, and error metrics
  */
 import { ContextLogTrail } from 'as-procedure';
+import { join } from 'path';
+import { withSimpleCachingOnDisk } from 'with-simple-caching';
+import { withRetry } from 'wrapper-fns';
 import { execAws } from './execAws';
 
 export interface CloudWatchMetricData {
@@ -59,18 +62,20 @@ const queryCloudWatchWithPagination = (
   return allResults;
 };
 
-export const getCloudWatchMetrics = (
+const getCloudWatchMetricsLogic = async (
   input: {
     daysLookback: number;
+    asOfDate: string;
   },
   context: ContextLogTrail,
-): CloudWatchMetricData => {
+): Promise<CloudWatchMetricData> => {
   context.log.info('querying CloudWatch metrics in bulk...', {});
 
+  const asOfTime = new Date(input.asOfDate).getTime();
   const metricsStart = new Date(
-    Date.now() - input.daysLookback * 24 * 60 * 60 * 1000,
+    asOfTime - input.daysLookback * 24 * 60 * 60 * 1000,
   ).toISOString();
-  const metricsEnd = new Date().toISOString();
+  const metricsEnd = new Date(asOfTime).toISOString();
   const period = 60 * 60 * 24 * input.daysLookback;
 
   // query invocations with pagination
@@ -162,3 +167,24 @@ export const getCloudWatchMetrics = (
 
   return { invocations, durations, errors };
 };
+
+/**
+ * .what = cached version of getCloudWatchMetrics with retry on cache corruption
+ * .why = speeds up subsequent runs by caching CloudWatch query results
+ * .note = cache includes asOfDate in key to ensure correct time-based caching
+ * .note = withRetry handles corrupted cache files by retrying without cache
+ */
+export const getCloudWatchMetrics = withRetry(
+  withSimpleCachingOnDisk(getCloudWatchMetricsLogic, {
+    directory: {
+      mounted: {
+        path: join(
+          __dirname,
+          '.cache',
+          new Date().toISOString().split('T')[0]!, // reuse per day only
+        ),
+      },
+    },
+    procedure: { name: 'getCloudWatchMetrics', version: 'v2025_11_10' },
+  }),
+);

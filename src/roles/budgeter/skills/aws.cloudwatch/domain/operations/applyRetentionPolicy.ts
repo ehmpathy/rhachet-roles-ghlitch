@@ -13,7 +13,7 @@ export const applyRetentionPolicy = (
   context: ContextLogTrail,
 ): void => {
   context.log.info(
-    `applying retention policy of ${input.retentionInDays} days to ${input.logGroupName}...`,
+    `AWS API: put-retention-policy for ${input.logGroupName} (${input.retentionInDays} days)`,
     {},
   );
 
@@ -23,7 +23,7 @@ export const applyRetentionPolicy = (
   );
 
   context.log.info(
-    `retention policy applied to ${input.logGroupName}`,
+    `AWS API: put-retention-policy completed for ${input.logGroupName}`,
     {},
   );
 };

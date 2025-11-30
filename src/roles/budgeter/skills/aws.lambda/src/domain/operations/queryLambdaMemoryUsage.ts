@@ -3,7 +3,7 @@
  * .why = determines memory utilization to identify over-provisioning
  */
 import { ContextLogTrail } from 'as-procedure';
-import { BadRequestError } from 'helpful-errors';
+import { BadRequestError, UnexpectedCodePathError } from 'helpful-errors';
 import { join } from 'path';
 import { withSimpleCachingOnDisk } from 'with-simple-caching';
 import { withRetry } from 'wrapper-fns';
@@ -17,9 +17,10 @@ const queryLambdaMemoryUsageLogic = async (
   input: {
     functionName: string;
     daysLookback: number;
+    asOfDate: string;
   },
   context: ContextLogTrail,
-): Promise<number | undefined> => {
+): Promise<number | null> => {
   // validate inputs
   if (!input.functionName?.trim()) {
     throw new BadRequestError('functionName is required', {
@@ -50,11 +51,12 @@ const queryLambdaMemoryUsageLogic = async (
   // bail fast if log group doesn't exist
   if (!logGroupExists) return undefined;
 
-  // start query
+  // start query using asOfDate for time boundaries
+  const asOfTime = new Date(input.asOfDate).getTime();
   const startTime = Math.floor(
-    (Date.now() - input.daysLookback * 24 * 60 * 60 * 1000) / 1000,
+    (asOfTime - input.daysLookback * 24 * 60 * 60 * 1000) / 1000,
   );
-  const endTime = Math.floor(Date.now() / 1000);
+  const endTime = Math.floor(asOfTime / 1000);
 
   const queryString =
     'fields @timestamp, @message | filter @message like /REPORT RequestId/ | parse @message "Max Memory Used: * MB" as max_memory | stats max(max_memory) as max_memory_used';
@@ -104,7 +106,16 @@ const queryLambdaMemoryUsageLogic = async (
   // bail fast if no results
   if (results.results.length === 0) return undefined;
 
-  const maxMemoryField = results.results[0]!.find(
+  // fail fast: validate we have results array structure
+  const firstResult = results.results[0];
+  if (!firstResult) {
+    throw new UnexpectedCodePathError(
+      'results.results[0] is unexpectedly undefined despite length > 0',
+      { resultsLength: results.results.length },
+    );
+  }
+
+  const maxMemoryField = firstResult.find(
     (field) => field.field === 'max_memory_used',
   );
 
@@ -114,12 +125,27 @@ const queryLambdaMemoryUsageLogic = async (
     !maxMemoryField.value ||
     maxMemoryField.value === 'null'
   ) {
-    return undefined;
+    return null;
   }
 
-  return parseFloat(maxMemoryField.value);
+  const parsedValue = parseFloat(maxMemoryField.value);
+
+  // fail fast: validate parsed value is a valid number
+  if (isNaN(parsedValue)) {
+    throw new UnexpectedCodePathError(
+      'max_memory_used value is not a valid number',
+      { value: maxMemoryField.value, parsedValue },
+    );
+  }
+
+  return parsedValue;
 };
 
+/**
+ * .what = cached wrapper for queryLambdaMemoryUsage
+ * .why = caches max memory results per function+lookback to avoid redundant CloudWatch queries
+ * .note = cache is scoped by day, so results are reused within the same day
+ */
 const queryLambdaMemoryUsageWithCache = withSimpleCachingOnDisk(
   queryLambdaMemoryUsageLogic,
   {
@@ -128,11 +154,12 @@ const queryLambdaMemoryUsageWithCache = withSimpleCachingOnDisk(
         path: join(
           __dirname,
           '.cache',
+          'memory-usage',
           new Date().toISOString().split('T')[0]!, // reuse per day only
         ),
       },
     },
-    procedure: { name: 'queryLambdaMemoryUsage', version: 'v2025_11_09' },
+    procedure: { name: 'queryLambdaMemoryUsage', version: 'v2025_11_10' },
   },
 );
 
@@ -142,12 +169,4 @@ const queryLambdaMemoryUsageWithCache = withSimpleCachingOnDisk(
  */
 export const queryLambdaMemoryUsage = withRetry(
   queryLambdaMemoryUsageWithCache,
-  {
-    retries: 3,
-    onRetry: (error, attempt) => {
-      console.error(
-        `queryLambdaMemoryUsage retry attempt ${attempt}/3 due to: ${error.message}`,
-      );
-    },
-  },
 );

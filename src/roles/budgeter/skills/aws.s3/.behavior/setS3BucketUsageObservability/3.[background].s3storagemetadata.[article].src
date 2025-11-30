@@ -1,0 +1,13 @@
+
+npx rhachet act -s openai.chatgpt.talk --ask \
+'
+s3 table metadata; when was it released, is it publicly available, what does it do, how much does it cost, how can it be activated for a bucket (by hand and by sdk)
+'
+
+'
+put this into a markdown
+'
+
+'
+escape nested codefences \\\
+'

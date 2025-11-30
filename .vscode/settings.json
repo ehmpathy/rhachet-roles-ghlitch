@@ -6,5 +6,9 @@
     "MISINTENT",
     "relship",
     "uncollectible"
-  ]
+  ],
+  "terraform.languageServer.enable": false,
+  "eslint.enable": false,
+  "yaml.validate": false,
+  "cSpell.enabled": false
 }

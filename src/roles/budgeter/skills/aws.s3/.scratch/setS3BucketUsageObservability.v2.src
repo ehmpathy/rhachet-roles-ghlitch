@@ -1,0 +1,18 @@
+boot `npx rhachet roles boot --repo ehmpathy --role mechanic`
+
+---
+
+create a src/roles/budgeter/skills/aws.s3/setS3BucketUsageObservability.v2.sh
+
+based on src/roles/budgeter/skills/aws.s3/.behavior/setS3BucketUsageObservability/3.[blueprint].observability.provisions.v2.i1.md
+
+fulfill steps 1-5 on a given bucket name
+
+---
+
+do not look at src/roles/budgeter/skills/aws.s3/setS3BucketUsageObservability.sh
+
+start fresh;
+
+look at src/roles/budgeter/skills/aws.s3/getS3BucketUsageEvaluation.sh if desired
+---

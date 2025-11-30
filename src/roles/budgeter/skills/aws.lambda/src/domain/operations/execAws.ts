@@ -9,5 +9,5 @@ export const execAws = withLogTrail(
   (input: string): string => {
     return execSync(input, { encoding: 'utf-8' }).trim();
   },
-  { name: 'execAws', log: { level: LogLevel.INFO } },
+  { name: 'execAws', log: { level: LogLevel.DEBUG } },
 );

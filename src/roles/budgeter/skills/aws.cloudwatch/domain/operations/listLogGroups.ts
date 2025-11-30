@@ -26,7 +26,14 @@ const listLogGroupsLogic = async (
   const fetchAllPages = async (
     token?: string,
     accumulated: CloudWatchLogGroup[] = [],
+    pageNum: number = 1,
   ): Promise<CloudWatchLogGroup[]> => {
+    // log AWS API call
+    context.log.info(
+      `fetching log groups page ${pageNum} (${accumulated.length} fetched so far)...`,
+      {},
+    );
+
     // fetch next page from AWS
     const response = await client.send(
       new DescribeLogGroupsCommand({ nextToken: token }),
@@ -46,9 +53,14 @@ const listLogGroupsLogic = async (
     // combine with accumulated results
     const updated = [...accumulated, ...logGroups];
 
+    context.log.info(
+      `page ${pageNum} fetched: ${logGroups.length} log groups (${updated.length} total)`,
+      {},
+    );
+
     // continue pagination if more pages exist
     return response.nextToken
-      ? fetchAllPages(response.nextToken, updated)
+      ? fetchAllPages(response.nextToken, updated, pageNum + 1)
       : updated;
   };
 
