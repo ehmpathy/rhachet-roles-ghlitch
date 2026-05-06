@@ -1,0 +1,25 @@
+ignores:
+  - depcheck
+  - declapract
+  - declapract-typescript-ehmpathy
+  - "@commitlint/config-conventional"
+  - serverless-prune-plugin
+  - husky
+  - if-env
+  - rhachet
+  - "@tsconfig/node20"
+  - "@tsconfig/strictest"
+  - "@biomejs/biome"
+  - esbuild-register
+  - "@swc/core"
+  - "@swc/jest"
+  - tsc-alias
+  - tsx
+  - "@src/*"
+  - "@src/.*"
+  - yalc
+  - rhachet-roles-bhrain
+  - rhachet-roles-bhuild
+  - rhachet-roles-ehmpathy
+  - rhachet-brains-anthropic
+  - rhachet-roles-ghlitch

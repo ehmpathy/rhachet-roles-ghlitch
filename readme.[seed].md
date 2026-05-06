@@ -1,0 +1,2 @@
+- dependable; with rhachet roles, you can depend on consistent performance, since the full context is explicitly known and stable
+- precision; with .briefs, you can become as precise as required, as you can supply the focus.acuity required

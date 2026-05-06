@@ -1,0 +1,10 @@
+{
+  // explicit shards run specific test patterns in their own shard
+  // this enables parallelism for slow test files
+  "explicit": [],
+
+  // dynamic shards split the rest of tests (not in explicit patterns)
+  "dynamic": {
+    "shards": 1
+  }
+}

@@ -1,0 +1,57 @@
+slug: ghlitch
+readme: dist/domain.roles/readme.md
+roles:
+  - slug: observer
+    readme: dist/domain.roles/observer/readme.md
+    briefs:
+      dirs: dist/domain.roles/observer/briefs
+    skills:
+      dirs: dist/domain.roles/observer/skills
+    inits:
+      dirs: dist/domain.roles/observer/inits
+    boot: dist/domain.roles/observer/boot.yml
+  - slug: deployer
+    readme: dist/domain.roles/deployer/readme.md
+    briefs:
+      dirs: dist/domain.roles/deployer/briefs
+    skills:
+      dirs: dist/domain.roles/deployer/skills
+    inits:
+      dirs: dist/domain.roles/deployer/inits
+    boot: dist/domain.roles/deployer/boot.yml
+  - slug: detective
+    readme: dist/domain.roles/detective/readme.md
+    briefs:
+      dirs: dist/domain.roles/detective/briefs
+    skills:
+      dirs: dist/domain.roles/detective/skills
+    inits:
+      dirs: dist/domain.roles/detective/inits
+    boot: dist/domain.roles/detective/boot.yml
+  - slug: budgeter
+    readme: dist/domain.roles/budgeter/readme.md
+    briefs:
+      dirs: dist/domain.roles/budgeter/briefs
+    skills:
+      dirs: dist/domain.roles/budgeter/skills
+    inits:
+      dirs: dist/domain.roles/budgeter/inits
+    boot: dist/domain.roles/budgeter/boot.yml
+  - slug: alerter
+    readme: dist/domain.roles/alerter/readme.md
+    briefs:
+      dirs: dist/domain.roles/alerter/briefs
+    skills:
+      dirs: dist/domain.roles/alerter/skills
+    inits:
+      dirs: dist/domain.roles/alerter/inits
+    boot: dist/domain.roles/alerter/boot.yml
+  - slug: hardener
+    readme: dist/domain.roles/hardener/readme.md
+    briefs:
+      dirs: dist/domain.roles/hardener/briefs
+    skills:
+      dirs: dist/domain.roles/hardener/skills
+    inits:
+      dirs: dist/domain.roles/hardener/inits
+    boot: dist/domain.roles/hardener/boot.yml
