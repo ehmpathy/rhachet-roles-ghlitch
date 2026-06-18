@@ -6,6 +6,7 @@ import { ROLE_DEPLOYER } from './deployer/getDeployerRole';
 import { ROLE_DETECTIVE } from './detective/getDetectiveRole';
 import { ROLE_HARDENER } from './hardener/getHardenerRole';
 import { ROLE_OBSERVER } from './observer/getObserverRole';
+import { ROLE_OPERATOR } from './operator/getOperatorRole';
 
 /**
  * .what = returns the ghlitch registry of predefined roles
@@ -19,6 +20,7 @@ export const getRoleRegistry = (): RoleRegistry =>
     readme: { uri: `${__dirname}/readme.md` },
     roles: [
       ROLE_OBSERVER,
+      ROLE_OPERATOR,
       ROLE_DEPLOYER,
       ROLE_DETECTIVE,
       ROLE_BUDGETER,

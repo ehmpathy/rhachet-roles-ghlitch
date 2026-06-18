@@ -10,6 +10,17 @@ roles:
     inits:
       dirs: dist/domain.roles/observer/inits
     boot: dist/domain.roles/observer/boot.yml
+    keyrack: dist/domain.roles/observer/keyrack.yml
+  - slug: operator
+    readme: dist/domain.roles/operator/readme.md
+    briefs:
+      dirs: dist/domain.roles/operator/briefs
+    skills:
+      dirs: dist/domain.roles/operator/skills
+    inits:
+      dirs: dist/domain.roles/operator/inits
+    boot: dist/domain.roles/operator/boot.yml
+    keyrack: dist/domain.roles/operator/keyrack.yml
   - slug: deployer
     readme: dist/domain.roles/deployer/readme.md
     briefs:

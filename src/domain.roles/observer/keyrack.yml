@@ -1,0 +1,8 @@
+org: ehmpath
+
+env.prod: []
+env.prep: []
+env.test: []
+env.all:
+  - key: AWS_PROFILE
+    is-optional-if-has: AWS_ACCESS_KEY_ID

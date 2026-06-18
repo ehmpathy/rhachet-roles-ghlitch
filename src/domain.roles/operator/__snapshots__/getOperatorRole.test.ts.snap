@@ -1,0 +1,20 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOperatorRole given: [edge] minimal contract surface when: only identity fields are extracted then: it matches the expected minimal structure 1`] = `
+{
+  "name": "Operator",
+  "slug": "operator",
+}
+`;
+
+exports[`getOperatorRole given: the operator role when: inspected then: it matches the expected structure 1`] = `
+{
+  "hasBoot": true,
+  "hasBriefDirs": true,
+  "hasKeyrack": true,
+  "hasSkillDirs": true,
+  "name": "Operator",
+  "purpose": "operational support",
+  "slug": "operator",
+}
+`;

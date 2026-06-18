@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getDeployerRole given: [edge] optional properties when: keyrack is accessed then: it is absent (not configured for deployer) 1`] = `undefined`;
+
+exports[`getDeployerRole given: the deployer role when: inspected then: it matches the expected structure 1`] = `
+{
+  "hasBoot": true,
+  "hasBriefDirs": true,
+  "hasKeyrack": false,
+  "hasSkillDirs": true,
+  "name": "Deployer",
+  "purpose": "orchestrate and execute deployments safely",
+  "slug": "deployer",
+}
+`;
