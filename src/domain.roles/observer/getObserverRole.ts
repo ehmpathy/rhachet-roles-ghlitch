@@ -10,6 +10,7 @@ export const ROLE_OBSERVER: Role = Role.build({
   purpose: 'see all that goes on in the system',
   readme: { uri: `${__dirname}/readme.md` },
   boot: { uri: `${__dirname}/boot.yml` },
+  keyrack: { uri: `${__dirname}/keyrack.yml` },
   traits: [],
   briefs: {
     dirs: { uri: `${__dirname}/briefs` },

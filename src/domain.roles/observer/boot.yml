@@ -3,4 +3,8 @@ always:
     say: []
 
   skills:
-    say: []
+    say:
+      - skills/query.database.sh
+      - skills/query.cloudwatch.logs.sh
+      - skills/query.cloudwatch.metrics.sh
+      - skills/aws.ssm.param.check.sh

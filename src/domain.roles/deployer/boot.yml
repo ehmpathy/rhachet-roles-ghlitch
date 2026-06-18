@@ -3,4 +3,9 @@ always:
     say: []
 
   skills:
-    say: []
+    say:
+      - skills/deploy.sh
+      - skills/aws.cloudformation.status.sh
+      - skills/aws.cloudformation.rollback.sh
+      - skills/provision.database.sh
+      - skills/provision.terraform.sh

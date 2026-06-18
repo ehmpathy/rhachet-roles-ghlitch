@@ -23,3 +23,8 @@ ignores:
   - rhachet-roles-ehmpathy
   - rhachet-brains-anthropic
   - rhachet-roles-ghlitch
+  - rhachet-brains-xai
+  - rhachet-roles-rhachet
+  - as-procedure
+  - type-fns
+  - test-fns

@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getRoleRegistry given: [edge] query for absent role when: searched by unknown slug then: it returns undefined 1`] = `undefined`;
+
+exports[`getRoleRegistry given: the ghlitch role registry when: loaded then: it matches the expected structure 1`] = `
+{
+  "roleCount": 7,
+  "roleSlugs": [
+    "alerter",
+    "budgeter",
+    "deployer",
+    "detective",
+    "hardener",
+    "observer",
+    "operator",
+  ],
+  "slug": "ghlitch",
+}
+`;
