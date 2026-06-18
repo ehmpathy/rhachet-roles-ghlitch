@@ -22,6 +22,3 @@ jobs:
     with:
       creds-aws-region: us-east-1
       creds-aws-role-arn: ${{ vars.CREDS_CICD_AWS_DEV_OIDC_ROLE_ARN }} # use aws auth via oidc, if this repo supplies it
-    secrets:
-      USPTO_ODP_API_KEY: ${{ secrets.USPTO_ODP_API_KEY }}
-      GOOGLE_CLOUD_RHIGHT_SERVICE_ACCOUNT_CREDS: ${{ secrets.GOOGLE_CLOUD_RHIGHT_SERVICE_ACCOUNT_CREDS }}
