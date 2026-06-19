@@ -1,6 +1,8 @@
 always:
   briefs:
-    say: []
+    say:
+      - briefs/im_a.ghlitch_cat.md
+      - briefs/im_a.ghlitch_cat.story=captain_whiskers.md
 
   skills:
     say: []
