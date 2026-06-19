@@ -1,10 +1,10 @@
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import util from 'util';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import util from 'node:util';
 
+import { jest } from '@jest/globals';
 import { keyrack } from 'rhachet/keyrack';
 
-// eslint-disable-next-line no-undef
 jest.setTimeout(90000); // we're calling downstream apis
 
 // set console.log to not truncate nested objects
