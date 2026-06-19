@@ -6,7 +6,8 @@
  * - prevent executing financially impacting mutations
  */
 if (
-  (process.env.NODE_ENV !== 'test' || process.env.STAGE) &&
-  process.env.I_KNOW_WHAT_IM_DOING !== 'true'
+  (process.env.NODE_ENV !== 'test' ||
+    (process.env.CONFIG && process.env.CONFIG !== 'test')) &&
+  process.env.I_KNOW_THE_RISKS !== 'true'
 )
-  throw new Error(`unit-test is not targeting stage 'test'`);
+  throw new Error(`unit-test config must be 'test'`);

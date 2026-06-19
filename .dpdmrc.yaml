@@ -1,0 +1,25 @@
+# dpdm exclude patterns
+# each entry is joined with | to form a single regex for --exclude
+#
+# with --transform flag, type imports are erased before analysis
+# and test files are excluded via glob pattern '!(*.test).ts'
+# so excludes are rarely needed even for devDependencies
+#
+# never exclude prod dependencies — you'd ship cycles to consumers
+#
+# known internal cycles in packages (not fixable by us):
+# - domain-objects: DomainObject.js <-> hydrateNestedDomainObjects.js
+# - helpful-errors: HelpfulError.js <-> withHelpfulError.js
+# - with-simple-cache: getCacheFromCacheChoiceOrFromForKeyArgs.js <-> withExtendableCacheAsync.js
+# - rhachet: enweaveOneStitcher.js <-> enweaveOne*.js
+# - declastruct-aws: sdks/index.js <-> getDeclastructAwsProvider.js
+# - bottleneck: Bottleneck.js <-> Group.js
+# - aws-sdk: auth provider cycles
+exclude:
+  - domain-objects
+  - helpful-errors
+  - with-simple-cache
+  - rhachet
+  - declastruct-aws
+  - bottleneck
+  - aws-sdk

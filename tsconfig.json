@@ -12,11 +12,12 @@
     "outDir": "dist",
     "target": "es2020",
     "lib": [
+      "ES2022",
       "DOM"
     ],
     "incremental": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "node16",
+    "moduleResolution": "node16",
     "baseUrl": ".",
     "paths": {
       "@src/*": [
@@ -32,6 +33,7 @@
     "@tsconfig/node20/tsconfig.json"
   ],
   "exclude": [
+    ".agent/.cache",
     "dist",
     "coverage",
     "node_modules"

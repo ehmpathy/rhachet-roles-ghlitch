@@ -36,9 +36,9 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         COMMIT_MSG: ${{ inputs.commit-message }}
+        REPO_URL: https://github.com/${{ inputs.repository }}
       run: |
         set -euo pipefail
-        REPO_URL="https://github.com/${{ inputs.repository }}"
 
         # check if this is a release commit
         if [[ "$COMMIT_MSG" != chore\(release\):* ]]; then
