@@ -103,7 +103,7 @@ echo "   └─ env: $ENV"
 echo ""
 
 # source aws credentials from keyrack
-AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
 if [[ -z "$AWS_PROFILE" ]]; then
   echo "🐈 wet paws..."
   echo ""
@@ -115,7 +115,7 @@ fi
 
 # export credentials from SSO profile
 echo "   export credentials from: $AWS_PROFILE"
-if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null)"; then
+if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"; then
   echo "🐈 wet paws..."
   echo ""
   echo "⛵ deploy"

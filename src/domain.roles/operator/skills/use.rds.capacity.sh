@@ -79,9 +79,9 @@ fi
 # try to source aws credentials from keyrack (skip if AWS creds already set, e.g., in CI)
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   # unlock keyrack first to refresh AWS SSO if needed
-  rhx keyrack unlock --owner ehmpath --env "$ENV" 2>/dev/null || true
+  rhx keyrack unlock --owner ehmpath --env "$ENV" || true
 
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
   if [[ -n "$AWS_PROFILE" ]]; then
     # export static credentials only — do NOT export AWS_PROFILE
     # AWS SDK prefers AWS_PROFILE over static creds, which causes SSO failures

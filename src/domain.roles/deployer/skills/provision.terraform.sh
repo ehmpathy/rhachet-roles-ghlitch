@@ -149,7 +149,7 @@ echo "   └─ cmd: terraform ${TERRAFORM_ARGS[*]}"
 echo ""
 
 # get AWS profile from keyrack
-AWS_PROFILE_NAME=$(rhx keyrack get --key AWS_PROFILE --env "$ENV" --owner ehmpath --value 2>/dev/null || echo "")
+AWS_PROFILE_NAME=$(rhx keyrack get --key AWS_PROFILE --env "$ENV" --owner ehmpath --value || echo "")
 if [[ -z "$AWS_PROFILE_NAME" ]]; then
   echo "🐈 wet paws..."
   echo ""
@@ -161,7 +161,7 @@ fi
 
 # export credentials from AWS SSO profile
 echo "   export credentials from: $AWS_PROFILE_NAME"
-CREDS=$(aws configure export-credentials --profile "$AWS_PROFILE_NAME" --format env 2>/dev/null || echo "")
+CREDS=$(aws configure export-credentials --profile "$AWS_PROFILE_NAME" --format env || echo "")
 if [[ -z "$CREDS" ]]; then
   echo "🐈 wet paws..."
   echo ""

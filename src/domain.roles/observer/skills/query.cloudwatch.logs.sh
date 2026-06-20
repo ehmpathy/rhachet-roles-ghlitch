@@ -197,7 +197,7 @@ fi
 
 # source aws credentials from keyrack (skip if already set)
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
@@ -390,7 +390,7 @@ if [[ -n "$LAMBDA" ]]; then
   LOG_GROUP="/aws/lambda/$PREFIX-$ENV-$LAMBDA"
   LOG_GROUPS=("$LOG_GROUP")
 
-  if ! aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" --query 'logGroups[0].logGroupName' --output text 2>/dev/null | grep -q "$LOG_GROUP"; then
+  if ! aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" --query 'logGroups[0].logGroupName' --output text | grep -q "$LOG_GROUP"; then
     echo "🐈 belay that..."
     echo ""
     echo "🔮 query.cloudwatch.logs"

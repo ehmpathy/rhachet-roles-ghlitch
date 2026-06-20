@@ -66,7 +66,7 @@ echo "🦺 use.testdb"
 # export AWS credentials from keyrack (needed for SSM params at schema apply)
 echo "   ├─ export AWS credentials..."
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_SSO_PROFILE=$(rhx keyrack get --key AWS_PROFILE --owner ehmpath --env prep --value 2>/dev/null || echo "")
+  AWS_SSO_PROFILE=$(rhx keyrack get --key AWS_PROFILE --owner ehmpath --env prep --value || echo "")
   if [[ -z "$AWS_SSO_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
@@ -75,7 +75,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
     echo "   └─ hint: rhx keyrack unlock --owner ehmpath --env prep"
     exit 1
   fi
-  if ! eval "$(aws configure export-credentials --profile "$AWS_SSO_PROFILE" --format env 2>/dev/null)"; then
+  if ! eval "$(aws configure export-credentials --profile "$AWS_SSO_PROFILE" --format env)"; then
     echo "🐈 wet paws..."
     echo ""
     echo "🦺 use.testdb"

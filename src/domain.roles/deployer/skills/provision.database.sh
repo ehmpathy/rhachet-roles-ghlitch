@@ -169,9 +169,9 @@ echo "   ensure database connectivity..."
 echo ""
 
 # source aws credentials from keyrack (use.rds.capacity may have unlocked it)
-AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
 if [[ -n "$AWS_PROFILE" ]]; then
-  eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null)" || true
+  eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)" || true
 fi
 unset AWS_PROFILE AWS_DEFAULT_PROFILE 2>/dev/null || true
 

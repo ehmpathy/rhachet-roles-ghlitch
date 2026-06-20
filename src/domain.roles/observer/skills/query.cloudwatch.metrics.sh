@@ -173,7 +173,7 @@ fi
 
 # source aws credentials from keyrack (skip if already set)
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
@@ -185,7 +185,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
 
   # export static credentials only — do NOT export AWS_PROFILE
   # AWS SDK prefers AWS_PROFILE over static creds, which causes SSO failures
-  if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null)"; then
+  if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"; then
     echo "🐈 wet paws..."
     echo ""
     echo "🔮 query.cloudwatch.metrics"
@@ -234,7 +234,7 @@ if [[ "$NAMESPACE" == "sqs" ]]; then
   mapfile -t QUEUES < <(aws sqs list-queues \
     --queue-name-prefix "$PREFIX-$ENV" \
     --query 'QueueUrls' \
-    --output text 2>/dev/null | tr '\t' '\n' | xargs -I{} basename {} | sort)
+    --output text | tr '\t' '\n' | xargs -I{} basename {} | sort)
 
   # filter by queue name if specified
   if [[ -n "$QUEUE" ]]; then
@@ -269,7 +269,7 @@ if [[ "$NAMESPACE" == "sqs" ]]; then
       --period "$SECONDS_AGO" \
       --statistics "$STAT" \
       --query "Datapoints[0].$STAT" \
-      --output text 2>/dev/null || echo "0")
+      --output text)
 
     if [[ "$RESULT" == "None" || -z "$RESULT" ]]; then
       RESULT="0"
@@ -314,7 +314,7 @@ else
       --period "$SECONDS_AGO" \
       --statistics Sum \
       --query 'Datapoints[0].Sum' \
-      --output text 2>/dev/null || echo "0")
+      --output text)
 
     if [[ "$RESULT" == "None" || -z "$RESULT" ]]; then
       RESULT="0"

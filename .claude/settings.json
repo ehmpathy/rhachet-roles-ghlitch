@@ -301,18 +301,6 @@
           },
           {
             "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --role librarian",
-            "timeout": 30,
-            "author": "repo=bhrain/role=librarian"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --role reflector",
-            "timeout": 30,
-            "author": "repo=bhrain/role=reflector"
-          },
-          {
-            "type": "command",
             "command": "./node_modules/.bin/rhachet roles boot --role reviewer",
             "timeout": 30,
             "author": "repo=bhrain/role=reviewer"
@@ -370,36 +358,6 @@
             "command": "./node_modules/.bin/rhachet roles boot --repo ehmpathy --role mechanic",
             "timeout": 60,
             "author": "repo=ehmpathy/role=mechanic"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role alerter",
-            "timeout": 60,
-            "author": "repo=ghlitch/role=alerter"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role budgeter",
-            "timeout": 60,
-            "author": "repo=ghlitch/role=budgeter"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role deployer",
-            "timeout": 60,
-            "author": "repo=ghlitch/role=deployer"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role detective",
-            "timeout": 60,
-            "author": "repo=ghlitch/role=detective"
-          },
-          {
-            "type": "command",
-            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role hardener",
-            "timeout": 60,
-            "author": "repo=ghlitch/role=hardener"
           },
           {
             "type": "command",
