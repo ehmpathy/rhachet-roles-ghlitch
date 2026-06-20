@@ -131,7 +131,7 @@ echo "   └─ stack: $STACK_NAME"
 echo ""
 
 # source aws credentials from keyrack
-AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$KEYRACK_ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$KEYRACK_ENV" --key AWS_PROFILE --value || echo "")
 if [[ -z "$AWS_PROFILE" ]]; then
   echo "🐈 wet paws..."
   echo ""
@@ -142,7 +142,7 @@ if [[ -z "$AWS_PROFILE" ]]; then
 fi
 
 # export credentials
-if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null)"; then
+if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"; then
   echo "🐈 wet paws..."
   echo ""
   echo "⛵ aws.cloudformation.rollback"
@@ -163,11 +163,11 @@ LAST_SEEN=""
 while true; do
   # get current stack status
   STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
-    --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "UNKNOWN")
+    --query 'Stacks[0].StackStatus' --output text)
 
   # get recent events
   EVENTS=$(aws cloudformation describe-stack-events --stack-name "$STACK_NAME" \
-    --max-items 10 --output json 2>/dev/null)
+    --max-items 10 --output json)
 
   # show new events (in reverse order so oldest first)
   echo "$EVENTS" | jq -r --arg last "$LAST_SEEN" '

@@ -86,7 +86,7 @@ fi
 
 # source aws credentials from keyrack (skip if already set)
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""

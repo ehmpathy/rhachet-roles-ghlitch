@@ -125,7 +125,7 @@ fi
 
 # source aws credentials from keyrack (skip if already set)
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value 2>/dev/null || echo "")
+  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
@@ -136,7 +136,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   fi
 
   # export static credentials only
-  if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env 2>/dev/null)"; then
+  if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"; then
     echo "🐈 wet paws..."
     echo ""
     echo "🔮 aws.ssm.param.check"
@@ -156,7 +156,7 @@ echo ""
 # check single parameter
 check_param() {
   local param_name="$1"
-  if aws ssm get-parameter --name "$param_name" --query 'Parameter.Name' --output text >/dev/null 2>&1; then
+  if aws ssm get-parameter --name "$param_name" --query 'Parameter.Name' --output text >/dev/null; then
     echo "   ✅ $param_name"
   else
     echo "   ❌ $param_name (not found)"
@@ -183,7 +183,7 @@ if [[ -n "$PATTERN" ]]; then
   params=$(aws ssm describe-parameters \
     --parameter-filters "Key=Name,Option=Contains,Values=$PATTERN" \
     --query 'Parameters[].Name' \
-    --output text 2>/dev/null || echo "")
+    --output text)
 
   if [[ -z "$params" ]]; then
     echo "   (none found)"
