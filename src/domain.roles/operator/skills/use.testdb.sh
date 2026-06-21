@@ -31,23 +31,36 @@
 ######################################################################
 set -euo pipefail
 
-# help
-if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "🐈 heres the deal..."
-  echo ""
-  echo "🦺 use.testdb"
-  echo ""
-  echo "usage:"
-  echo "  rhx use.testdb"
-  echo ""
-  echo "prerequisites:"
-  echo "  - docker daemon active"
-  echo ""
-  echo "provides:"
-  echo "  - postgres at localhost:7821"
-  echo "  - schema from provision/schema/sql applied"
-  exit 0
-fi
+# parse args (skip rhachet args, check for help)
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --skill|--repo|--role)
+      shift 2
+      ;;
+    --)
+      shift
+      ;;
+    help|--help|-h)
+      echo "🐈 heres the deal..."
+      echo ""
+      echo "🦺 use.testdb"
+      echo ""
+      echo "usage:"
+      echo "  rhx use.testdb"
+      echo ""
+      echo "prerequisites:"
+      echo "  - docker daemon active"
+      echo ""
+      echo "provides:"
+      echo "  - postgres at localhost:7821"
+      echo "  - schema from provision/schema/sql applied"
+      exit 0
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 # check docker is active
 if ! docker info >/dev/null 2>&1; then
@@ -63,37 +76,15 @@ echo "🐈 chartin course..."
 echo ""
 echo "🦺 use.testdb"
 
-# export AWS credentials from keyrack (needed for SSM params at schema apply)
-echo "   ├─ export AWS credentials..."
-if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  AWS_SSO_PROFILE=$(rhx keyrack get --key AWS_PROFILE --owner ehmpath --env prep --value || echo "")
-  if [[ -z "$AWS_SSO_PROFILE" ]]; then
-    echo "🐈 wet paws..."
-    echo ""
-    echo "🦺 use.testdb"
-    echo "   ├─ absent AWS_PROFILE from keyrack for env=prep"
-    echo "   └─ hint: rhx keyrack unlock --owner ehmpath --env prep"
-    exit 1
-  fi
-  if ! eval "$(aws configure export-credentials --profile "$AWS_SSO_PROFILE" --format env)"; then
-    echo "🐈 wet paws..."
-    echo ""
-    echo "🦺 use.testdb"
-    echo "   ├─ absent credentials from profile $AWS_SSO_PROFILE"
-    echo "   └─ hint: aws sso login --profile $AWS_SSO_PROFILE"
-    exit 1
-  fi
-  unset AWS_PROFILE
-fi
-
-# remove stale container by name (docker:clear only removes by port)
+# remove stale container by name
 echo "   ├─ clear stale containers..."
 docker rm -f jobsdb 2>/dev/null || true
 docker rm -f testdb 2>/dev/null || true
+docker rm -f ghlitch-testdb 2>/dev/null || true
 
 # start the testdb
 echo "   └─ start testdb..."
-ACCESS=prep CONFIG=test npm run start:testdb
+npm run start:testdb
 
 echo ""
 echo "🐈 caught it!"

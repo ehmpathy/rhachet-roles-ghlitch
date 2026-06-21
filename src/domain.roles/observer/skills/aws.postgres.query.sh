@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ######################################################################
-# 🔮 query.database — run readonly SQL queries against the database
+# 🔮 aws.postgres.query — run readonly SQL queries against the database
 #
 # .what = executes SQL queries with readonly safety
 #
@@ -10,10 +10,10 @@
 #         - investigate issues
 #
 # usage:
-#   rhx query.database --env prod --sql "SELECT * FROM job LIMIT 5"
-#   rhx query.database --env prod --sql "SELECT uuid, status FROM job WHERE id = 123"
-#   echo "SELECT * FROM job LIMIT 5" | rhx query.database --env prod --sql @stdin
-#   rhx query.database help
+#   rhx aws.postgres.query --env prod --sql "SELECT * FROM job LIMIT 5"
+#   rhx aws.postgres.query --env prod --sql "SELECT uuid, status FROM job WHERE id = 123"
+#   echo "SELECT * FROM job LIMIT 5" | rhx aws.postgres.query --env prod --sql @stdin
+#   rhx aws.postgres.query help
 #
 # options:
 #   --env ENV       environment: test, prep, or prod (required)
@@ -34,42 +34,59 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# help
-if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "🐈 heres the deal..."
-  echo ""
-  echo "🔮 query.database"
-  echo ""
-  echo "usage:"
-  echo "  rhx query.database --env <env> --sql <query>"
-  echo "  echo 'SELECT ...' | rhx query.database --env <env> --sql @stdin"
-  echo ""
-  echo "options:"
-  echo "  --env      environment: test, prep, or prod"
-  echo "  --sql      SQL query to execute (use @stdin to read from stdin)"
-  echo "  --format   output format: table (default), csv, json"
-  echo ""
-  echo "safety:"
-  echo "  - readonly enforced at connection level"
-  echo "  - PostgreSQL rejects INSERT/UPDATE/DELETE/DROP"
-  exit 0
-fi
+# save original args to pass to TypeScript
+ORIGINAL_ARGS=("$@")
 
-# extract --env from args
+# parse arguments
 ENV=""
-ARGS=("$@")
-for i in "${!ARGS[@]}"; do
-  if [[ "${ARGS[$i]}" == "--env" ]]; then
-    ENV="${ARGS[$((i+1))]}"
-    break
-  fi
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --env)
+      ENV="$2"
+      shift 2
+      ;;
+    --sql|--format)
+      # pass through to TypeScript
+      shift 2
+      ;;
+    --skill|--repo|--role)
+      # rhachet passes these, skip them
+      shift 2
+      ;;
+    --)
+      shift
+      ;;
+    help|--help|-h)
+      echo "🐈 heres the deal..."
+      echo ""
+      echo "🔮 aws.postgres.query"
+      echo ""
+      echo "usage:"
+      echo "  rhx aws.postgres.query --env <env> --sql <query>"
+      echo "  echo 'SELECT ...' | rhx aws.postgres.query --env <env> --sql @stdin"
+      echo ""
+      echo "options:"
+      echo "  --env      environment: test, prep, or prod"
+      echo "  --sql      SQL query to execute (use @stdin to read from stdin)"
+      echo "  --format   output format: table (default), csv, json"
+      echo ""
+      echo "safety:"
+      echo "  - readonly enforced at connection level"
+      echo "  - PostgreSQL rejects INSERT/UPDATE/DELETE/DROP"
+      exit 0
+      ;;
+    *)
+      # unknown arg, TypeScript will handle
+      shift
+      ;;
+  esac
 done
 
 # validate env
 if [[ -z "$ENV" ]]; then
   echo "🐈 belay that..."
   echo ""
-  echo "🔮 query.database"
+  echo "🔮 aws.postgres.query"
   echo "   ├─ absent required arg: --env"
   echo "   └─ must be: test, prep, or prod"
   exit 2
@@ -78,7 +95,7 @@ fi
 if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   echo "🐈 belay that..."
   echo ""
-  echo "🔮 query.database"
+  echo "🔮 aws.postgres.query"
   echo "   ├─ invalid env: $ENV"
   echo "   └─ must be: test, prep, or prod"
   exit 2
@@ -90,7 +107,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
-    echo "🔮 query.database"
+    echo "🔮 aws.postgres.query"
     echo "   ├─ absent AWS_PROFILE from keyrack for env=$ENV"
     echo "   └─ hint: rhx keyrack unlock --owner ehmpath --env $ENV"
     exit 1
@@ -102,9 +119,9 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   unset AWS_PROFILE AWS_DEFAULT_PROFILE
 fi
 
-# set STAGE for getConfig()
-export STAGE="$ENV"
+# set ACCESS for TypeScript error hints
+export ACCESS="$ENV"
 export NODE_ENV="production"
 
 # run the TypeScript implementation
-exec npx tsx "$SCRIPT_DIR/query.database.ts" "$@"
+exec npx tsx "$SCRIPT_DIR/aws.postgres.query.ts" "${ORIGINAL_ARGS[@]}"

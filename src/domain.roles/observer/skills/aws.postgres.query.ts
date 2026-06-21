@@ -1,8 +1,8 @@
 #!/usr/bin/env npx tsx
 
-import { execSync } from 'child_process';
+import { execSync } from 'node:child_process';
 /**
- * 🔮 query.database — run readonly SQL queries against the database
+ * 🔮 aws.postgres.query — run readonly SQL queries against the database
  *
  * .what = executes SQL queries with readonly safety
  * .why  = enables quick database queries for debug
@@ -10,9 +10,9 @@ import { execSync } from 'child_process';
  * safety: getDatabaseConnection({ mode: 'readonly' }) sets default_transaction_read_only=on
  *         PostgreSQL rejects any INSERT/UPDATE/DELETE/DROP at the driver level
  */
-import path from 'path';
+import path from 'node:path';
 
-const main = async () => {
+const main = async (): Promise<void> => {
   // dynamic import from git root (allows use in any repo with getDatabaseConnection)
   const gitRoot = execSync('git rev-parse --show-toplevel', {
     encoding: 'utf-8',
@@ -21,13 +21,13 @@ const main = async () => {
     path.join(gitRoot, 'src/utils/database/getDatabaseConnection')
   );
 
-  // parse args
+  // parse args (shell already sets STAGE env var)
   const args = process.argv.slice(2);
   let sql = '';
   let format = 'table';
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]!;
+    const arg = args[i] ?? '';
     if (arg === '--sql') {
       const value = args[++i];
       if (value === '@stdin') {
@@ -42,10 +42,8 @@ const main = async () => {
       }
     } else if (arg === '--format') {
       format = args[++i] ?? 'table';
-    } else if (
-      ['--env', '--limit', '--repo', '--role', '--skill'].includes(arg)
-    ) {
-      i++; // skip value
+    } else if (arg.startsWith('--')) {
+      i++; // skip unknown flag value
     } else if (arg === '--') {
       // skip separator
     }
@@ -55,7 +53,7 @@ const main = async () => {
   if (!sql) {
     console.error('🐈 belay that...');
     console.error('');
-    console.error('🔮 query.database');
+    console.error('🔮 aws.postgres.query');
     console.error('   └─ absent required arg: --sql');
     process.exit(2);
   }
@@ -91,7 +89,7 @@ const main = async () => {
     console.error('');
     console.error('🐈 caught it!');
     console.error('');
-    console.error('🔮 query.database');
+    console.error('🔮 aws.postgres.query');
     console.error(`   └─ rows: ${result.rows.length}`);
   } finally {
     await dbConnection.end();
@@ -101,7 +99,22 @@ const main = async () => {
 main().catch((error) => {
   console.error('🐈 wet paws...');
   console.error('');
-  console.error('🔮 query.database');
-  console.error(`   └─ ${error.message}`);
+  console.error('🔮 aws.postgres.query');
+  // handle AggregateError (e.g., connection refused)
+  if (error?.errors?.length) {
+    const firstError = error.errors[0];
+    console.error(
+      `   └─ ${firstError.message || firstError.code || 'connection error'}`,
+    );
+    const hint =
+      process.env.ACCESS === 'test' ? 'rhx use.testdb' : 'rhx use.rds.capacity';
+    console.error(`   └─ hint: ${hint}`);
+  } else {
+    const errorMessage =
+      error instanceof Error
+        ? error.message || error.toString()
+        : String(error) || 'unknown error';
+    console.error(`   └─ ${errorMessage}`);
+  }
   process.exit(1);
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ######################################################################
-# 🔮 query.cloudwatch.logs — query cloudwatch logs for lambdas
+# 🔮 aws.cloudwatch.query — query cloudwatch logs for lambdas
 #
 # .what = searches cloudwatch logs via Logs Insights
 #
@@ -10,15 +10,15 @@
 #         - investigate errors in test/prep/prod
 #
 # usage:
-#   rhx query.cloudwatch.logs --list --env prod
-#   rhx query.cloudwatch.logs --lambda "cronTask" --env prod
-#   rhx query.cloudwatch.logs --lambda "cronTask" --env prod --since 1h
-#   rhx query.cloudwatch.logs --lambda "cronTask" --env prod --filter "ERROR"
-#   rhx query.cloudwatch.logs --prefix "svc-foo" --env prod --since 30m --filter "error"
-#   rhx query.cloudwatch.logs --prefix "svc-" --env prod --filter "abc123" --since 1h
-#   rhx query.cloudwatch.logs --prefix "svc-" --env prod --filter "abc123" --filter "FOO" --since 1h  # AND logic
-#   rhx query.cloudwatch.logs --env prod --query '@message like /foo/ or @message like /bar/' --since 1h
-#   rhx query.cloudwatch.logs help
+#   rhx aws.cloudwatch.query --list --env prod
+#   rhx aws.cloudwatch.query --lambda "cronTask" --env prod
+#   rhx aws.cloudwatch.query --lambda "cronTask" --env prod --since 1h
+#   rhx aws.cloudwatch.query --lambda "cronTask" --env prod --filter "ERROR"
+#   rhx aws.cloudwatch.query --prefix "svc-foo" --env prod --since 30m --filter "error"
+#   rhx aws.cloudwatch.query --prefix "svc-" --env prod --filter "abc123" --since 1h
+#   rhx aws.cloudwatch.query --prefix "svc-" --env prod --filter "abc123" --filter "FOO" --since 1h  # AND logic
+#   rhx aws.cloudwatch.query --env prod --query '@message like /foo/ or @message like /bar/' --since 1h
+#   rhx aws.cloudwatch.query help
 #
 # options:
 #   --lambda NAME   lambda function name (without service prefix)
@@ -34,9 +34,9 @@
 #   --tail          follow logs in real-time
 #
 # output:
-#   - .agent/.cache/repo=ghlitch/role=observer/skills/query.cloudwatch.logs/$isotimestamp.query.input.md
-#   - .agent/.cache/repo=ghlitch/role=observer/skills/query.cloudwatch.logs/$isotimestamp.query.output.json
-#   - .agent/.cache/repo=ghlitch/role=observer/skills/query.cloudwatch.logs/$isotimestamp.query.output.md
+#   - .agent/.cache/repo=ghlitch/role=observer/skills/aws.cloudwatch.query/$isotimestamp.query.input.md
+#   - .agent/.cache/repo=ghlitch/role=observer/skills/aws.cloudwatch.query/$isotimestamp.query.output.json
+#   - .agent/.cache/repo=ghlitch/role=observer/skills/aws.cloudwatch.query/$isotimestamp.query.output.md
 #
 # guarantee:
 #   - exit 0 = query completed
@@ -50,12 +50,12 @@ GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 
 # help
 if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo ""
   echo "usage:"
-  echo "  rhx query.cloudwatch.logs --lambda <name> --env <env>"
-  echo "  rhx query.cloudwatch.logs --prefix <prefix> --env <env>"
-  echo "  rhx query.cloudwatch.logs --list --env <env>"
+  echo "  rhx aws.cloudwatch.query --lambda <name> --env <env>"
+  echo "  rhx aws.cloudwatch.query --prefix <prefix> --env <env>"
+  echo "  rhx aws.cloudwatch.query --list --env <env>"
   echo ""
   echo "options:"
   echo "  --lambda     lambda function name"
@@ -74,7 +74,7 @@ fi
 ISO_TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
 
 # output directory and file paths (standard skill cache dir)
-OUTPUT_DIR="$GIT_ROOT/.agent/.cache/repo=ghlitch/role=observer/skills/query.cloudwatch.logs"
+OUTPUT_DIR="$GIT_ROOT/.agent/.cache/repo=ghlitch/role=observer/skills/aws.cloudwatch.query"
 OUTPUT_INPUT="$OUTPUT_DIR/$ISO_TIMESTAMP.query.input.md"
 OUTPUT_JSON="$OUTPUT_DIR/$ISO_TIMESTAMP.query.output.json"
 OUTPUT_MD="$OUTPUT_DIR/$ISO_TIMESTAMP.query.output.md"
@@ -84,7 +84,7 @@ PREFIX=$(jq -r '.name' "$GIT_ROOT/package.json" 2>/dev/null || echo "")
 if [[ -z "$PREFIX" ]]; then
   echo "🐈 belay that..."
   echo ""
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo "   └─ absent service name from package.json"
   exit 2
 fi
@@ -147,12 +147,12 @@ while [[ $# -gt 0 ]]; do
     help|--help|-h)
       echo "🐈 heres the deal..."
       echo ""
-      echo "🔮 query.cloudwatch.logs"
+      echo "🔮 aws.cloudwatch.query"
       echo ""
       echo "usage:"
-      echo "  rhx query.cloudwatch.logs --lambda <name> --env <env>"
-      echo "  rhx query.cloudwatch.logs --prefix <prefix> --env <env>"
-      echo "  rhx query.cloudwatch.logs --list --env <env>"
+      echo "  rhx aws.cloudwatch.query --lambda <name> --env <env>"
+      echo "  rhx aws.cloudwatch.query --prefix <prefix> --env <env>"
+      echo "  rhx aws.cloudwatch.query --list --env <env>"
       echo ""
       echo "options:"
       echo "  --lambda     lambda function name"
@@ -169,7 +169,7 @@ while [[ $# -gt 0 ]]; do
     *)
       echo "🐈 belay that..."
       echo ""
-      echo "🔮 query.cloudwatch.logs"
+      echo "🔮 aws.cloudwatch.query"
       echo "   └─ unknown option: $1"
       exit 2
       ;;
@@ -180,7 +180,7 @@ done
 if [[ -z "$ENV" ]]; then
   echo "🐈 belay that..."
   echo ""
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo "   ├─ absent required arg: --env"
   echo "   └─ must be: test, prep, or prod"
   exit 2
@@ -189,7 +189,7 @@ fi
 if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   echo "🐈 belay that..."
   echo ""
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo "   ├─ invalid env: $ENV"
   echo "   └─ must be: test, prep, or prod"
   exit 2
@@ -201,7 +201,7 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   if [[ -z "$AWS_PROFILE" ]]; then
     echo "🐈 wet paws..."
     echo ""
-    echo "🔮 query.cloudwatch.logs"
+    echo "🔮 aws.cloudwatch.query"
     echo "   ├─ absent AWS_PROFILE from keyrack for env=$ENV"
     echo "   └─ hint: rhx keyrack unlock --owner ehmpath --env $ENV"
     exit 1
@@ -223,7 +223,7 @@ convert_since_to_seconds() {
   else
     echo "🐈 belay that..." >&2
     echo "" >&2
-    echo "🔮 query.cloudwatch.logs" >&2
+    echo "🔮 aws.cloudwatch.query" >&2
     echo "   └─ invalid --since format: $since (use 5m, 1h, 2d)" >&2
     exit 2
   fi
@@ -374,7 +374,7 @@ EOF
 if [[ "$LIST_ONLY" == true ]]; then
   echo "🐈 chartin course..."
   echo ""
-  echo "🔮 query.cloudwatch.logs --list --env $ENV"
+  echo "🔮 aws.cloudwatch.query --list --env $ENV"
   echo "   └─ log groups for $PREFIX-$ENV"
   echo ""
   aws logs describe-log-groups \
@@ -393,7 +393,7 @@ if [[ -n "$LAMBDA" ]]; then
   if ! aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" --query 'logGroups[0].logGroupName' --output text | grep -q "$LOG_GROUP"; then
     echo "🐈 belay that..."
     echo ""
-    echo "🔮 query.cloudwatch.logs"
+    echo "🔮 aws.cloudwatch.query"
     echo "   ├─ log group not found: $LOG_GROUP"
     echo "   │"
     echo "   └─ available log groups:"
@@ -415,19 +415,19 @@ else
   if [[ ${#LOG_GROUPS[@]} -eq 0 ]]; then
     echo "🐈 belay that..."
     echo ""
-    echo "🔮 query.cloudwatch.logs"
+    echo "🔮 aws.cloudwatch.query"
     echo "   └─ no log groups found with prefix: /aws/lambda/$PREFIX-$ENV"
     exit 2
   fi
 
   echo "🐈 chartin course..."
   echo ""
-  echo "🔮 query.cloudwatch.logs --env $ENV"
+  echo "🔮 aws.cloudwatch.query --env $ENV"
   echo "   └─ found ${#LOG_GROUPS[@]} log groups with prefix /aws/lambda/$PREFIX-$ENV"
 fi
 
 echo ""
-echo "🔮 query.cloudwatch.logs"
+echo "🔮 aws.cloudwatch.query"
 echo "   ├─ log group: $LOG_GROUP"
 echo "   ├─ since: $SINCE ago"
 if [[ -n "$CUSTOM_FILTER" ]]; then
@@ -508,7 +508,7 @@ fi
 if [[ -z "$QUERY_ID" ]]; then
   echo "🐈 wet paws..."
   echo ""
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo "   └─ query start failed"
   exit 1
 fi
@@ -525,7 +525,7 @@ while [[ $POLL_COUNT -lt $MAX_POLLS ]]; do
   elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
     echo "🐈 wet paws..."
     echo ""
-    echo "🔮 query.cloudwatch.logs"
+    echo "🔮 aws.cloudwatch.query"
     echo "   └─ query $STATUS"
     exit 1
   fi
@@ -539,7 +539,7 @@ echo ""
 if [[ "$STATUS" != "Complete" ]]; then
   echo "🐈 wet paws..."
   echo ""
-  echo "🔮 query.cloudwatch.logs"
+  echo "🔮 aws.cloudwatch.query"
   echo "   └─ query timed out (status: $STATUS)"
   exit 1
 fi
@@ -565,7 +565,7 @@ generate_output_summary "$OUTPUT_JSON" "$OUTPUT_MD"
 echo ""
 echo "🐈 caught it!"
 echo ""
-echo "🔮 query.cloudwatch.logs"
+echo "🔮 aws.cloudwatch.query"
 echo "   └─ observed"
 echo ""
 
