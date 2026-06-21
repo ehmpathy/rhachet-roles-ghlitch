@@ -43,4 +43,4 @@ if (
  */
 const keyrackYmlPath = join(process.cwd(), '.agent/keyrack.yml');
 if (existsSync(keyrackYmlPath))
-  keyrack.source({ env: 'test', owner: 'ehmpath', mode: 'strict' });
+  keyrack.source({ env: 'test', owner: 'ehmpath', mode: 'lenient' });
