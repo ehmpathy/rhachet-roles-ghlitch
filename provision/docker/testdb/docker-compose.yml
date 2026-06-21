@@ -1,0 +1,16 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:15
+    container_name: ghlitch-testdb
+    command: postgres -c 'max_connections=500'
+    ports:
+      - 7821:5432
+    environment:
+      POSTGRES_PASSWORD: a-secure-password
+      POSTGRES_DB: ghlitch_testdb
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d ghlitch_testdb']
+      interval: 5s
+      timeout: 5s
+      retries: 5

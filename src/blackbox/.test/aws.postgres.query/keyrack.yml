@@ -1,0 +1,7 @@
+# keyrack for aws.postgres.query acceptance test
+# uses ehmpath keyrack for test and prep env credentials
+org: ehmpath
+env.test:
+  - AWS_PROFILE
+env.prep:
+  - AWS_PROFILE

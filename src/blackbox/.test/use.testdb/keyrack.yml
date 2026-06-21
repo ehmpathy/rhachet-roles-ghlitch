@@ -1,0 +1,5 @@
+# keyrack for use.testdb acceptance test
+# uses ehmpath keyrack for prep env credentials (AWS)
+org: ehmpath
+env.prep:
+  - AWS_PROFILE
