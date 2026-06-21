@@ -21,28 +21,11 @@ describe('aws.postgres.query', () => {
           { at: 'node_modules', to: 'node_modules' },
           { at: 'package.json', to: 'package.json' },
           { at: 'provision', to: 'provision' },
-          {
-            at: '.agent/keyrack.yml',
-            to: 'src/blackbox/.test/aws.postgres.query/keyrack.yml',
-          },
         ],
       });
 
-      // unlock keyrack for test env (required for skill execution)
-      execSync('npx rhx keyrack unlock --owner ehmpath --env test', {
-        cwd: tempDir,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
-
-      // unlock keyrack for prep env (required for use.testdb AWS credentials)
-      execSync('npx rhx keyrack unlock --owner ehmpath --env prep', {
-        cwd: tempDir,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
-
       // init rhachet roles (observer for query, operator for testdb)
+      // .note = no keyrack unlock needed - fixture has hardcoded testdb connection
       const initOutput = execSync(
         'npx rhachet init --roles ghlitch/observer ghlitch/operator',
         {
@@ -126,12 +109,19 @@ describe('aws.postgres.query', () => {
 
     when('[t3] real SQL query is executed against testdb', () => {
       const queryResult = useBeforeAll(async () => {
+        // set dummy AWS creds to skip keyrack lookup
+        // the fixture has hardcoded localhost:7821 connection - no AWS needed
         const output = execSync(
           'npx rhx aws.postgres.query --env test --sql "SELECT 1 as value" --format json',
           {
             cwd: scene.tempDir,
             encoding: 'utf8',
             stdio: 'pipe',
+            env: {
+              ...process.env,
+              AWS_ACCESS_KEY_ID: 'test-dummy-key',
+              AWS_SECRET_ACCESS_KEY: 'test-dummy-secret',
+            },
           },
         );
         return { output };

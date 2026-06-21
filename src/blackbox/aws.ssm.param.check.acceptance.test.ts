@@ -19,21 +19,11 @@ describe('aws.ssm.param.check', () => {
         symlink: [
           { at: 'node_modules', to: 'node_modules' },
           { at: 'package.json', to: 'package.json' },
-          {
-            at: '.agent/keyrack.yml',
-            to: 'src/blackbox/.test/aws.postgres.query/keyrack.yml',
-          },
         ],
       });
 
-      // unlock keyrack for test env (required for skill execution)
-      execSync('npx rhx keyrack unlock --owner ehmpath --env test', {
-        cwd: tempDir,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
-
-      // init rhachet roles (required for skill to be found)
+      // init rhachet roles (observer for ssm param check)
+      // .note = no keyrack unlock needed - tests don't actually call AWS
       const initOutput = execSync('npx rhachet init --roles ghlitch/observer', {
         cwd: tempDir,
         encoding: 'utf8',
@@ -128,10 +118,17 @@ describe('aws.ssm.param.check', () => {
     when('[t4] no mode is specified', () => {
       const errorResult = useBeforeAll(async () => {
         try {
+          // set dummy AWS creds to bypass keyrack lookup
+          // test validates mode check, not credential check
           execSync('npx rhx aws.ssm.param.check --env test', {
             cwd: scene.tempDir,
             encoding: 'utf8',
             stdio: 'pipe',
+            env: {
+              ...process.env,
+              AWS_ACCESS_KEY_ID: 'test-dummy-key',
+              AWS_SECRET_ACCESS_KEY: 'test-dummy-secret',
+            },
           });
           return { exitCode: 0, stdout: '' };
         } catch (error: unknown) {

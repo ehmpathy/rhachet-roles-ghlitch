@@ -18,21 +18,11 @@ describe('use.testdb', () => {
           { at: 'node_modules', to: 'node_modules' },
           { at: 'package.json', to: 'package.json' },
           { at: 'provision', to: 'provision' },
-          {
-            at: '.agent/keyrack.yml',
-            to: 'src/blackbox/.test/use.testdb/keyrack.yml',
-          },
         ],
       });
 
-      // unlock keyrack for prep env (required for AWS credentials)
-      execSync('npx rhx keyrack unlock --owner ehmpath --env prep', {
-        cwd: tempDir,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
-
-      // init rhachet roles (required for skill to be found)
+      // init rhachet roles (operator for testdb)
+      // .note = no keyrack unlock needed - uses local docker only
       const initOutput = execSync('npx rhachet init --roles ghlitch/operator', {
         cwd: tempDir,
         encoding: 'utf8',
