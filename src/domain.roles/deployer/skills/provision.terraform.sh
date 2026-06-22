@@ -9,15 +9,16 @@
 #         uses the credential chain properly.
 #
 # usage:
-#   rhx provision.terraform --env prep init
-#   rhx provision.terraform --env prep plan
-#   rhx provision.terraform --env prep apply
-#   rhx provision.terraform --env prod plan
-#   rhx provision.terraform --env prod apply
+#   rhx provision.terraform init --env prep
+#   rhx provision.terraform plan --env prep
+#   rhx provision.terraform apply --env prep --approve
+#   rhx provision.terraform plan --env prod
+#   rhx provision.terraform apply --env prod --approve
 #   rhx provision.terraform help
 #
 # options:
 #   --env ENV     environment: test, prep, or prod (required)
+#   --approve     auto-approve terraform apply (no prompt)
 #   <tf-args>     terraform arguments (init, plan, apply, etc.)
 #
 # guarantee:
@@ -34,15 +35,16 @@ if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   echo "⛵ provision.terraform"
   echo ""
   echo "usage:"
-  echo "  rhx provision.terraform --env <env> <terraform-args>"
+  echo "  rhx provision.terraform <command> --env <env> [--approve]"
   echo ""
   echo "options:"
-  echo "  --env    environment: test, prep, or prod"
+  echo "  --env      environment: test, prep, or prod"
+  echo "  --approve  auto-approve terraform apply (no prompt)"
   echo ""
   echo "examples:"
-  echo "  rhx provision.terraform --env prep init"
-  echo "  rhx provision.terraform --env prep plan"
-  echo "  rhx provision.terraform --env prod apply"
+  echo "  rhx provision.terraform init --env prep"
+  echo "  rhx provision.terraform plan --env prep"
+  echo "  rhx provision.terraform apply --env prod --approve"
   exit 0
 fi
 
@@ -51,6 +53,7 @@ unset AWS_PROFILE 2>/dev/null || true
 
 # parse arguments (filter out rhachet passthrough and --env)
 ENV=""
+APPROVE=false
 TERRAFORM_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -58,6 +61,18 @@ while [[ $# -gt 0 ]]; do
     --env)
       ENV="$2"
       shift 2
+      ;;
+    --approve)
+      APPROVE=true
+      shift
+      ;;
+    -auto-approve)
+      echo "🐈 belay that..."
+      echo ""
+      echo "⛵ provision.terraform"
+      echo "   ├─ invalid flag: -auto-approve"
+      echo "   └─ hint: use --approve instead"
+      exit 2
       ;;
     --skill|--repo|--role)
       # rhachet passthrough args - skip with value
@@ -72,15 +87,16 @@ while [[ $# -gt 0 ]]; do
       echo "⛵ provision.terraform"
       echo ""
       echo "usage:"
-      echo "  rhx provision.terraform --env <env> <terraform-args>"
+      echo "  rhx provision.terraform <command> --env <env> [--approve]"
       echo ""
       echo "options:"
-      echo "  --env    environment: test, prep, or prod"
+      echo "  --env      environment: test, prep, or prod"
+      echo "  --approve  auto-approve terraform apply (no prompt)"
       echo ""
       echo "examples:"
-      echo "  rhx provision.terraform --env prep init"
-      echo "  rhx provision.terraform --env prep plan"
-      echo "  rhx provision.terraform --env prod apply"
+      echo "  rhx provision.terraform init --env prep"
+      echo "  rhx provision.terraform plan --env prep"
+      echo "  rhx provision.terraform apply --env prod --approve"
       exit 0
       ;;
     *)
@@ -100,6 +116,15 @@ if [[ -z "$ENV" ]]; then
   exit 2
 fi
 
+if [[ "$ENV" == "dev" ]]; then
+  echo "🐈 belay that..."
+  echo ""
+  echo "⛵ provision.terraform"
+  echo "   ├─ invalid env: dev"
+  echo "   └─ hint: use --env prep instead (supports dev/ directory for backcompat)"
+  exit 2
+fi
+
 if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   echo "🐈 belay that..."
   echo ""
@@ -115,20 +140,48 @@ if [[ ${#TERRAFORM_ARGS[@]} -eq 0 ]]; then
   echo ""
   echo "⛵ provision.terraform"
   echo "   ├─ absent terraform command"
-  echo "   └─ example: rhx provision.terraform --env prep plan"
+  echo "   └─ example: rhx provision.terraform plan --env prep"
   exit 2
 fi
-
-# map env to directory name (prep -> dev for backwards compat)
-case "$ENV" in
-  test) ENV_DIR="test" ;;
-  prep) ENV_DIR="dev" ;;
-  prod) ENV_DIR="prod" ;;
-esac
 
 # find repo root and environments directory
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 ENVIRONMENTS_DIR="$REPO_ROOT/provision/aws/environments"
+
+# map env to directory name
+# for prep: accept either dev/ or prep/ directory (dev is legacy alias)
+case "$ENV" in
+  test) ENV_DIR="test" ;;
+  prep)
+    HAS_DEV_DIR=$([[ -d "$ENVIRONMENTS_DIR/dev" ]] && echo "true" || echo "false")
+    HAS_PREP_DIR=$([[ -d "$ENVIRONMENTS_DIR/prep" ]] && echo "true" || echo "false")
+
+    # failfast if both exist (ambiguous)
+    if [[ "$HAS_DEV_DIR" == "true" && "$HAS_PREP_DIR" == "true" ]]; then
+      echo "🐈 belay that..."
+      echo ""
+      echo "⛵ provision.terraform"
+      echo "   ├─ ambiguous: both dev/ and prep/ directories exist"
+      echo "   └─ remove one to resolve"
+      exit 2
+    fi
+
+    # use whichever exists
+    if [[ "$HAS_DEV_DIR" == "true" ]]; then
+      ENV_DIR="dev"
+    elif [[ "$HAS_PREP_DIR" == "true" ]]; then
+      ENV_DIR="prep"
+    else
+      echo "🐈 belay that..."
+      echo ""
+      echo "⛵ provision.terraform"
+      echo "   ├─ directory not found: $ENVIRONMENTS_DIR/prep (or dev)"
+      echo "   └─ ensure terraform environment is configured"
+      exit 2
+    fi
+    ;;
+  prod) ENV_DIR="prod" ;;
+esac
 
 if [[ ! -d "$ENVIRONMENTS_DIR/$ENV_DIR" ]]; then
   echo "🐈 belay that..."
@@ -177,6 +230,11 @@ unset AWS_PROFILE AWS_DEFAULT_PROFILE
 echo ""
 echo "   run terraform..."
 echo ""
+
+# add -auto-approve if --approve was passed
+if [[ "$APPROVE" == "true" ]]; then
+  TERRAFORM_ARGS+=("-auto-approve")
+fi
 
 # run terraform in the target directory
 cd "$ENVIRONMENTS_DIR/$ENV_DIR"
