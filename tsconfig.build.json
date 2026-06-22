@@ -13,6 +13,7 @@
     "**/*.test.js",
     "**/.test/**/*",
     "**/.scratch/**/*",
-    "**/__test*__/**/*" // todo: deprecate this pattern in favor of .test
+    "**/__test*__/**/*", // todo: deprecate this pattern in favor of .test
+    "**/skills/**/*.ts" // skills are run via tsx, not compiled
   ]
 }

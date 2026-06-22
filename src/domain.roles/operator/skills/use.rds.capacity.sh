@@ -102,7 +102,7 @@ echo "🦺 use.rds.capacity --env $ENV"
 echo "   └─ env: $ENV"
 
 # open the vpc tunnel
-"$SCRIPT_DIR/use.vpc.tunnel.ts"
+npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts"
 
 # extract host and port from tunnel plan
 npx declastruct plan --wish "$SCRIPT_DIR/use.vpc.tunnel.ts" --into .temp/tunnel.plan.json
