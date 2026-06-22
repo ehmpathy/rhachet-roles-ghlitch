@@ -79,6 +79,15 @@ if [[ -z "$ENV" ]]; then
   exit 2
 fi
 
+# validate --since format early (before keyrack check)
+if [[ -n "$SINCE" ]]; then
+  if ! [[ "$SINCE" =~ ^[0-9]+[mhd]$ ]]; then
+    echo "🐈 belay that... invalid --since format: $SINCE" >&2
+    echo "   └─ expected: Nm, Nh, or Nd (e.g., 30m, 1h, 7d)" >&2
+    exit 2
+  fi
+fi
+
 # parse --uri if provided
 if [[ -n "$URI" ]]; then
   # extract bucket and prefix from s3://bucket/prefix format
