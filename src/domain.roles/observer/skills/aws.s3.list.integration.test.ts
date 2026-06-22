@@ -10,7 +10,7 @@ const maskDynamicOutput = (output: string): string => {
   return (
     output
       // strip ANSI escape codes (terminal dim, reset, colors, etc.)
-      // eslint-disable-next-line no-control-regex
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes are intentional
       .replace(/\x1b\[[0-9;]*m/g, '')
       .replace(/asof=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/g, 'asof=TIMESTAMP')
       .replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g, 'YYYY-MM-DD HH:MM:SS')
