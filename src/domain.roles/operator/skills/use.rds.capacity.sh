@@ -96,18 +96,39 @@ export ACCESS="$ENV"
 export NODE_ENV="production"
 export AWS_SDK_LOAD_CONFIG=1
 
-echo "🐈 chartin course..."
+echo "🐈 rise and shine..."
 echo ""
 echo "🦺 use.rds.capacity --env $ENV"
 echo "   └─ env: $ENV"
 
+# read tunnel config from repo's config/
+CONFIG_JSON=$(npx tsx -e "
+  import { getConfig } from './src/utils/config/getConfig';
+  (async () => {
+    const c = await getConfig();
+    console.log(JSON.stringify({
+      bastion: c.database.tunnel.bastion,
+      cluster: c.database.tunnel.cluster,
+      host: c.database.tunnel.local.host,
+      port: c.database.tunnel.local.port,
+      account: c.aws.account,
+    }));
+  })();
+")
+
+export VPC_TUNNEL_BASTION=$(echo "$CONFIG_JSON" | jq -r '.bastion')
+export VPC_TUNNEL_CLUSTER=$(echo "$CONFIG_JSON" | jq -r '.cluster')
+export VPC_TUNNEL_HOST=$(echo "$CONFIG_JSON" | jq -r '.host')
+export VPC_TUNNEL_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
+export AWS_ACCOUNT_ID=$(echo "$CONFIG_JSON" | jq -r '.account')
+export AWS_REGION="us-east-1"
+
 # open the vpc tunnel
 npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts"
 
-# extract host and port from tunnel plan
-npx declastruct plan --wish "$SCRIPT_DIR/use.vpc.tunnel.ts" --into .temp/tunnel.plan.json
-DB_HOST=$(jq -r '.changes[] | select(.forResource.class == "DeclaredUnixHostAlias") | .state.desired.from' .temp/tunnel.plan.json)
-DB_PORT=$(jq -r '.changes[] | select(.forResource.class == "DeclaredAwsVpcTunnel") | .state.desired.from.port' .temp/tunnel.plan.json)
+# read host and port from exported config
+DB_HOST="$VPC_TUNNEL_HOST"
+DB_PORT="$VPC_TUNNEL_PORT"
 
 # await for the database to have capacity (awakens serverless rds if paused)
 echo "   ├─ await capacity..."
