@@ -85,12 +85,8 @@ const runSkill = (
 /**
  * .what = helper to unlock keyrack for test env
  * .why = integration tests require aws credentials from keyrack
- * .note = skips if AWS credentials already set (e.g., via OIDC in CI)
  */
 const unlockKeyrack = (): void => {
-  // skip if AWS credentials already set (e.g., via OIDC in CI)
-  if (process.env.AWS_ACCESS_KEY_ID) return;
-
   try {
     execSync('rhx keyrack unlock --owner ehmpath --env test', {
       encoding: 'utf-8',
