@@ -1,0 +1,199 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.s3.get given: [case1] --help flag when: [t0] --help is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.get
+   usage:
+     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
+     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/key format (preferred)
+     --bucket    s3 bucket name (alternative)
+     --key       object key (alternative)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.get given: [case2] -h flag when: [t0] -h is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.get
+   usage:
+     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
+     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/key format (preferred)
+     --bucket    s3 bucket name (alternative)
+     --key       object key (alternative)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.get given: [case3] help as positional arg when: [t0] help is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.get
+   usage:
+     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
+     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/key format (preferred)
+     --bucket    s3 bucket name (alternative)
+     --key       object key (alternative)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.get given: [case4] credentials not unlocked when: [t0] skill runs without prior unlock then: error output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.s3.get
+   ├─ absent AWS_PROFILE from keyrack for env=nonexistent
+   └─ hint: rhx keyrack unlock --owner ehmpath --env nonexistent
+
+🔐 keyrack
+   └─ ehmpathy.nonexistent.AWS_PROFILE
+      ├─ status: absent 🫧
+      └─ tip: rhx keyrack set --key AWS_PROFILE --env nonexistent --vault aws.config
+
+"
+`;
+
+exports[`aws.s3.get given: [case5] absent --env when: [t0] skill runs without --env then: error output matches snapshot 1`] = `
+"🐈 belay that... --env required
+"
+`;
+
+exports[`aws.s3.get given: [case6] absent --bucket and --uri when: [t0] skill runs without bucket or uri then: error output matches snapshot 1`] = `
+"🐈 belay that... --uri or --bucket required
+"
+`;
+
+exports[`aws.s3.get given: [case7] invalid --uri format (not s3://) when: [t0] skill runs with https:// uri then: error output matches snapshot 1`] = `
+"🐈 belay that... invalid --uri format, expected s3://bucket/key
+"
+`;
+
+exports[`aws.s3.get given: [case8] --uri without key (just bucket) when: [t0] skill runs with uri that has no key then: error output matches snapshot 1`] = `
+"🐈 belay that... invalid --uri format, expected s3://bucket/key
+"
+`;
+
+exports[`aws.s3.get given: [case9] unknown option when: [t0] skill runs with --unknown-flag then: error output matches snapshot 1`] = `
+"🐈 belay that... unknown option: --unknown-flag
+"
+`;
+
+exports[`aws.s3.get given: [case10] fetch file that exists via --uri when: [t0] skill fetches hello.md then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/date=2026-06-21/hello.md
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__date=2026-06-21__hello.md/asof=TIMESTAMP.md
+   └─ preview
+      ├─
+      │
+      │  hi
+      │
+      └─
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.get given: [case11] fetch file via --bucket and --key when: [t0] skill fetches hello.md via separate flags then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --bucket rhachet-roles-ghlitch-test --key demo/date=2026-06-21/hello.md
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__date=2026-06-21__hello.md/asof=TIMESTAMP.md
+   └─ preview
+      ├─
+      │
+      │  hi
+      │
+      └─
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.get given: [case12] fetch binary file (png) when: [t0] skill fetches png file then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/85412205.png
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=85412205.png/asof=TIMESTAMP.png
+   └─ (binary file)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.get given: [case13] fetch file that does not exist when: [t0] skill fetches nonexistent file then: error output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/nonexistent-file-12345.txt
+   └─ failed to fetch
+"
+`;
+
+exports[`aws.s3.get given: [case14] fetch from nonexistent bucket when: [t0] skill fetches from fake bucket then: error output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.s3.get --env test --uri s3://nonexistent-bucket-xyz-12345/some-file.txt
+   └─ failed to fetch
+"
+`;
+
+exports[`aws.s3.get given: [case15] fetch file with nested path when: [t0] skill fetches file in nested folder then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/date=2026-06-21/hello.md
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__date=2026-06-21__hello.md/asof=TIMESTAMP.md
+   └─ preview
+      ├─
+      │
+      │  hi
+      │
+      └─
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.get given: [case16] fetch and auto-gunzip .gz file when: [t0] skill fetches a .gz file then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/test-compressed.txt.gz
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__test-compressed.txt.gz/asof=TIMESTAMP.txt
+   └─ preview
+      ├─
+      │
+      │  compressed content for test
+      │
+      └─
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.get given: [case17] --bucket provided without --key when: [t0] skill runs with --bucket but no --key then: error output matches snapshot 1`] = `
+"🐈 belay that... --uri or --key required
+"
+`;
+
+exports[`aws.s3.get given: [case18] fetch empty file (0 bytes) when: [t0] skill fetches empty file (0 bytes) then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/empty-file-for-test.txt
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__empty-file-for-test.txt/asof=TIMESTAMP.txt
+   └─ (binary file)
+
+🐈 smooth sailin!
+"
+`;

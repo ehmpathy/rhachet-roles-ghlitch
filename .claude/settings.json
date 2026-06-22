@@ -376,6 +376,18 @@
             "command": "./node_modules/.bin/rhachet roles boot --repo rhachet --role enroller",
             "timeout": 60,
             "author": "repo=rhachet/role=enroller"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --role learner",
+            "timeout": 30,
+            "author": "repo=bhrain/role=learner"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role deployer",
+            "timeout": 60,
+            "author": "repo=ghlitch/role=deployer"
           }
         ]
       },
