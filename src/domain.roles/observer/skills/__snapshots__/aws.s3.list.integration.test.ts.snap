@@ -172,12 +172,11 @@ exports[`aws.s3.list given: [case14] list with --prefix flag when: [t0] skill us
 
 🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test --prefix demo/
    ├─ path: s3://rhachet-roles-ghlitch-test/demo/
-   ├─ found: 4 objects
+   ├─ found: 3 objects
    └─ objects
       ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
       ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ demo/empty-file-for-test.txt (0 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
 
 🐈 smooth sailin!
 "
@@ -188,10 +187,10 @@ exports[`aws.s3.list given: [case15] list with --limit when: [t0] skill limits t
 
 🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
    ├─ path: s3://rhachet-roles-ghlitch-test/
-   ├─ found: 5 objects
+   ├─ found: 4 objects
    └─ objects
       ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ ... and 4 more
+      └─ ... and 3 more
 
 🐈 smooth sailin!
 "
