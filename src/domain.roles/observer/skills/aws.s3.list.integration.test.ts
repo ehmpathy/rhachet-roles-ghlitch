@@ -1,4 +1,3 @@
-import { ConstraintError } from 'helpful-errors';
 import { given, then, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
@@ -79,24 +78,6 @@ const runSkill = (
     }
     // rethrow unexpected errors (ENOENT, TypeError, etc.)
     throw error;
-  }
-};
-
-/**
- * .what = helper to unlock keyrack for test env
- * .why = integration tests require aws credentials from keyrack
- */
-const unlockKeyrack = (): void => {
-  try {
-    execSync('rhx keyrack unlock --owner ehmpath --env test', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    throw new ConstraintError('keyrack unlock failed', {
-      hint: 'run: rhx keyrack unlock --owner ehmpath --env test',
-      cause: error instanceof Error ? error : undefined,
-    });
   }
 };
 
@@ -314,10 +295,6 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case9] list buckets', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill runs with only --env', () => {
       const result = useThen('skill runs', () => runSkill('--env test'));
 
@@ -360,10 +337,6 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case10] list objects in bucket via --bucket', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists test bucket', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --bucket ${TEST_BUCKET}`),
@@ -408,10 +381,6 @@ describe('aws.s3.list', () => {
   });
 
   given('[case11] list objects via --uri', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists via s3:// uri', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/`),
@@ -440,10 +409,6 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case12] list with prefix that has objects', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists demo/ prefix', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/demo/`),
@@ -476,10 +441,6 @@ describe('aws.s3.list', () => {
   });
 
   given('[case13] list with prefix that has no objects', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists prefix with no objects', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/nonexistent-prefix/`),
@@ -503,10 +464,6 @@ describe('aws.s3.list', () => {
     // .note = verifies output format for zero objects in bucket
     //         uses prefix technique since we cannot create empty buckets in test
     //         output is identical to an actual empty bucket
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists bucket with zero objects', () => {
       // use a prefix that will never match any objects
       const result = useThen('skill runs', () =>
@@ -534,10 +491,6 @@ describe('aws.s3.list', () => {
   });
 
   given('[case14] list with --prefix flag', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill uses --bucket and --prefix', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --bucket ${TEST_BUCKET} --prefix demo/`),
@@ -562,10 +515,6 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case15] list with --limit', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill limits to 1 result', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --bucket ${TEST_BUCKET} --limit 1`),
@@ -597,10 +546,6 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case16] list with --since filter', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists with --since 30d', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --bucket ${TEST_BUCKET} --since 30d`),
@@ -625,10 +570,6 @@ describe('aws.s3.list', () => {
   });
 
   given('[case17] list with --since filter that excludes all', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill lists with --since 1m (very recent)', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/demo/ --since 1m`),

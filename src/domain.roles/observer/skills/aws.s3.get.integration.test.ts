@@ -1,4 +1,3 @@
-import { ConstraintError } from 'helpful-errors';
 import { given, then, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
@@ -88,24 +87,6 @@ const maskDynamicOutput = (output: string): string => {
       .replace(/\(\d+ Bytes\/s\)/g, '(X Bytes/s)')
       .replace(/Completed \d+ Bytes\/\d+ Bytes/g, 'Completed X Bytes/X Bytes')
   );
-};
-
-/**
- * .what = helper to unlock keyrack for test env
- * .why = integration tests require aws credentials from keyrack
- */
-const unlockKeyrack = (): void => {
-  try {
-    execSync('rhx keyrack unlock --owner ehmpath --env test', {
-      encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    throw new ConstraintError('keyrack unlock failed', {
-      hint: 'run: rhx keyrack unlock --owner ehmpath --env test',
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
 };
 
 describe('aws.s3.get', () => {
@@ -371,10 +352,6 @@ describe('aws.s3.get', () => {
   // ============================================================
 
   given('[case10] fetch file that exists via --uri', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches hello.md', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/${TEST_FILE_KEY}`),
@@ -417,10 +394,6 @@ describe('aws.s3.get', () => {
   });
 
   given('[case11] fetch file via --bucket and --key', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches hello.md via separate flags', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --bucket ${TEST_BUCKET} --key ${TEST_FILE_KEY}`),
@@ -441,10 +414,6 @@ describe('aws.s3.get', () => {
   });
 
   given('[case12] fetch binary file (png)', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches png file', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/${TEST_PNG_KEY}`),
@@ -482,10 +451,6 @@ describe('aws.s3.get', () => {
   // ============================================================
 
   given('[case13] fetch file that does not exist', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches nonexistent file', () => {
       const result = useThen('skill runs', () =>
         runSkill(
@@ -514,10 +479,6 @@ describe('aws.s3.get', () => {
   });
 
   given('[case14] fetch from nonexistent bucket', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches from fake bucket', () => {
       const result = useThen('skill runs', () =>
         runSkill(
@@ -546,10 +507,6 @@ describe('aws.s3.get', () => {
   // ============================================================
 
   given('[case15] fetch file with nested path', () => {
-    beforeAll(() => {
-      unlockKeyrack();
-    });
-
     when('[t0] skill fetches file in nested folder', () => {
       const result = useThen('skill runs', () =>
         runSkill(`--env test --uri s3://${TEST_BUCKET}/${TEST_FILE_KEY}`),
@@ -579,7 +536,6 @@ describe('aws.s3.get', () => {
     const TEST_EMPTY_KEY = 'demo/empty-file-for-test.txt';
 
     beforeAll(() => {
-      unlockKeyrack();
       // create empty file in test bucket
       execSync(
         `echo -n "" | aws s3 cp - s3://${TEST_BUCKET}/${TEST_EMPTY_KEY}`,
@@ -632,7 +588,6 @@ describe('aws.s3.get', () => {
 
   given('[case16] fetch and auto-gunzip .gz file', () => {
     beforeAll(() => {
-      unlockKeyrack();
       // create and upload .gz test file
       execSync(
         `echo "${TEST_GZ_CONTENT}" | gzip | aws s3 cp - s3://${TEST_BUCKET}/${TEST_GZ_KEY}`,
