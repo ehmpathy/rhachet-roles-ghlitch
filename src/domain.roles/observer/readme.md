@@ -14,6 +14,8 @@ used to watch all that goes on — surfaces anomalies, tracks patterns, adds hea
 | `query.cloudwatch.logs` | query CloudWatch Logs via Logs Insights |
 | `query.cloudwatch.metrics` | query lambda/sqs metrics via CloudWatch |
 | `aws.ssm.param.check` | check if SSM parameters exist |
+| `aws.s3.list` | list S3 bucket contents by prefix |
+| `aws.s3.get` | fetch S3 object contents (auto-gunzips .gz files) |
 
 ### examples
 
@@ -29,4 +31,10 @@ rhx query.cloudwatch.metrics --env prod --metric Invocations --since 7d
 
 # check ssm params
 rhx aws.ssm.param.check --env prep --pattern 'ahbode.svc-jobs.*'
+
+# list s3 objects
+rhx aws.s3.list --env prod --uri s3://my-bucket/logs/ --since 1h
+
+# fetch s3 object
+rhx aws.s3.get --env prod --uri s3://my-bucket/logs/2026-06-20.log.gz
 ```

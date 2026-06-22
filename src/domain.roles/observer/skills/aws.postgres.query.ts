@@ -87,7 +87,7 @@ const main = async (): Promise<void> => {
     }
 
     console.error('');
-    console.error('🐈 caught it!');
+    console.error('🐈 smooth sailin!');
     console.error('');
     console.error('🔮 aws.postgres.query');
     console.error(`   └─ rows: ${result.rows.length}`);

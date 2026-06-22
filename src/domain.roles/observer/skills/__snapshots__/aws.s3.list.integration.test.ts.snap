@@ -1,0 +1,232 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.s3.list given: [case1] --help flag when: [t0] --help is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.list
+   usage:
+     rhx aws.s3.list --env <env>                              # list buckets
+     rhx aws.s3.list --env <env> --uri s3://bucket/prefix/    # list objects
+     rhx aws.s3.list --env <env> --bucket <name>              # list objects
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/prefix format
+     --bucket    s3 bucket name
+     --prefix    filter objects by prefix
+     --since     filter by recency (1h, 1d, 7d)
+     --limit     max results (default: 50)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.list given: [case2] -h flag when: [t0] -h is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.list
+   usage:
+     rhx aws.s3.list --env <env>                              # list buckets
+     rhx aws.s3.list --env <env> --uri s3://bucket/prefix/    # list objects
+     rhx aws.s3.list --env <env> --bucket <name>              # list objects
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/prefix format
+     --bucket    s3 bucket name
+     --prefix    filter objects by prefix
+     --since     filter by recency (1h, 1d, 7d)
+     --limit     max results (default: 50)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.list given: [case3] help as positional arg when: [t0] help is passed then: help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.s3.list
+   usage:
+     rhx aws.s3.list --env <env>                              # list buckets
+     rhx aws.s3.list --env <env> --uri s3://bucket/prefix/    # list objects
+     rhx aws.s3.list --env <env> --bucket <name>              # list objects
+
+   options:
+     --env       environment: test, prep, prod (required)
+     --uri       s3://bucket/prefix format
+     --bucket    s3 bucket name
+     --prefix    filter objects by prefix
+     --since     filter by recency (1h, 1d, 7d)
+     --limit     max results (default: 50)
+     --help      show this help
+"
+`;
+
+exports[`aws.s3.list given: [case4] credentials not unlocked when: [t0] skill runs without prior unlock then: error output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.s3.list
+   ├─ absent AWS_PROFILE from keyrack for env=nonexistent
+   └─ hint: rhx keyrack unlock --owner ehmpath --env nonexistent
+
+🔐 keyrack
+   └─ ehmpathy.nonexistent.AWS_PROFILE
+      ├─ status: absent 🫧
+      └─ tip: rhx keyrack set --key AWS_PROFILE --env nonexistent --vault aws.config
+
+"
+`;
+
+exports[`aws.s3.list given: [case5] absent --env when: [t0] skill runs without --env then: error output matches snapshot 1`] = `
+"🐈 belay that... --env required
+"
+`;
+
+exports[`aws.s3.list given: [case6] invalid --uri format (not s3://) when: [t0] skill runs with https:// uri then: error output matches snapshot 1`] = `
+"🐈 belay that... invalid --uri format, expected s3://bucket/prefix
+"
+`;
+
+exports[`aws.s3.list given: [case7] invalid --since format when: [t0] skill runs with --since abc then: error output matches snapshot 1`] = `
+"🐈 belay that... invalid --since format: abc
+   └─ expected: Nm, Nh, or Nd (e.g., 30m, 1h, 7d)
+"
+`;
+
+exports[`aws.s3.list given: [case8] unknown option when: [t0] skill runs with --unknown-flag then: error output matches snapshot 1`] = `
+"🐈 belay that... unknown option: --unknown-flag
+"
+`;
+
+exports[`aws.s3.list given: [case9] list buckets when: [t0] skill runs with only --env then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test
+   ├─ found: 4 buckets
+   └─ buckets
+      ├─ declastruct-demo-cloudtrail-1777847711 (2026-05-03)
+      ├─ ehmpathy-sdk-aws-s3-test-bucket (2026-06-06)
+      ├─ ehmpathy-simple-on-disk-cache-test-bucket (2026-06-03)
+      └─ rhachet-roles-ghlitch-test (2026-06-21)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case10] list objects in bucket via --bucket when: [t0] skill lists test bucket then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
+   ├─ path: s3://rhachet-roles-ghlitch-test/
+   ├─ found: 4 objects
+   └─ objects
+      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case11] list objects via --uri when: [t0] skill lists via s3:// uri then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --uri s3://rhachet-roles-ghlitch-test/
+   ├─ path: s3://rhachet-roles-ghlitch-test/
+   ├─ found: 4 objects
+   └─ objects
+      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case12] list with prefix that has objects when: [t0] skill lists demo/ prefix then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --uri s3://rhachet-roles-ghlitch-test/demo/
+   ├─ path: s3://rhachet-roles-ghlitch-test/demo/
+   ├─ found: 3 objects
+   └─ objects
+      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case13] list with prefix that has no objects when: [t0] skill lists prefix with no objects then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --uri s3://rhachet-roles-ghlitch-test/nonexistent-prefix/
+   ├─ path: s3://rhachet-roles-ghlitch-test/nonexistent-prefix/
+   └─ (empty)
+"
+`;
+
+exports[`aws.s3.list given: [case14] list with --prefix flag when: [t0] skill uses --bucket and --prefix then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test --prefix demo/
+   ├─ path: s3://rhachet-roles-ghlitch-test/demo/
+   ├─ found: 4 objects
+   └─ objects
+      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/empty-file-for-test.txt (0 bytes, YYYY-MM-DD HH:MM:SS)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case15] list with --limit when: [t0] skill limits to 1 result then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
+   ├─ path: s3://rhachet-roles-ghlitch-test/
+   ├─ found: 5 objects
+   └─ objects
+      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ ... and 4 more
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case16] list with --since filter when: [t0] skill lists with --since 30d then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
+   ├─ path: s3://rhachet-roles-ghlitch-test/
+   ├─ found: 4 objects (since 30d)
+   └─ objects
+      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
+      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
+
+🐈 smooth sailin!
+"
+`;
+
+exports[`aws.s3.list given: [case17] list with --since filter that excludes all when: [t0] skill lists with --since 1m (very recent) then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --uri s3://rhachet-roles-ghlitch-test/demo/
+   ├─ path: s3://rhachet-roles-ghlitch-test/demo/
+   └─ (empty since 1m)
+"
+`;
+
+exports[`aws.s3.list given: [case18] empty bucket scenario (zero objects output format) when: [t0] skill lists bucket with zero objects then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test --prefix zzz-empty-bucket-test-never-exists/
+   ├─ path: s3://rhachet-roles-ghlitch-test/zzz-empty-bucket-test-never-exists/
+   └─ (empty)
+"
+`;
