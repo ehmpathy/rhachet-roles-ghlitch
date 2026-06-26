@@ -96,7 +96,7 @@
     "@types/pg": "8.11.6",
     "cz-conventional-changelog": "3.3.0",
     "declapract": "0.13.27",
-    "declapract-typescript-ehmpathy": "0.48.3",
+    "declapract-typescript-ehmpathy": "0.49.3",
     "declastruct": "1.9.1",
     "declastruct-github": "1.4.0",
     "depcheck": "1.4.3",

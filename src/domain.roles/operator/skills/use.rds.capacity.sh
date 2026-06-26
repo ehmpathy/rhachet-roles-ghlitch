@@ -26,9 +26,29 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+ARGS=("$@")
+
+# help — checked before validation, and scans all args
+# .note = rhx passes --skill/--repo/--role before user args, so check all positions
+for arg in "${ARGS[@]}"; do
+  if [[ "$arg" == "help" || "$arg" == "--help" || "$arg" == "-h" ]]; then
+    echo "🐈 heres the deal..."
+    echo ""
+    echo "🦺 use.rds.capacity"
+    echo ""
+    echo "usage:"
+    echo "  rhx use.rds.capacity --env test"
+    echo "  rhx use.rds.capacity --env prep"
+    echo "  rhx use.rds.capacity --env prod"
+    echo ""
+    echo "options:"
+    echo "  --env   environment: test, prep, or prod (required)"
+    exit 0
+  fi
+done
+
 # parse --env from args (or fallback to ACCESS env var for backwards compat)
 ENV=""
-ARGS=("$@")
 for i in "${!ARGS[@]}"; do
   if [[ "${ARGS[$i]}" == "--env" ]]; then
     ENV="${ARGS[$((i+1))]}"
@@ -58,22 +78,6 @@ if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   echo "   ├─ invalid env: $ENV"
   echo "   └─ must be: test, prep, or prod"
   exit 2
-fi
-
-# help
-if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "🐈 heres the deal..."
-  echo ""
-  echo "🦺 use.rds.capacity"
-  echo ""
-  echo "usage:"
-  echo "  rhx use.rds.capacity --env test"
-  echo "  rhx use.rds.capacity --env prep"
-  echo "  rhx use.rds.capacity --env prod"
-  echo ""
-  echo "options:"
-  echo "  --env   environment: test, prep, or prod (required)"
-  exit 0
 fi
 
 # try to source aws credentials from keyrack (skip if AWS creds already set, e.g., in CI)
@@ -116,12 +120,31 @@ CONFIG_JSON=$(npx tsx -e "
   })();
 ")
 
-export VPC_TUNNEL_BASTION=$(echo "$CONFIG_JSON" | jq -r '.bastion')
-export VPC_TUNNEL_CLUSTER=$(echo "$CONFIG_JSON" | jq -r '.cluster')
+export VPC_TUNNEL_BASTION=$(echo "$CONFIG_JSON" | jq -r '.bastion.exid')
+export VPC_TUNNEL_CLUSTER=$(echo "$CONFIG_JSON" | jq -r '.cluster.name')
 export VPC_TUNNEL_HOST=$(echo "$CONFIG_JSON" | jq -r '.host')
 export VPC_TUNNEL_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
 export AWS_ACCOUNT_ID=$(echo "$CONFIG_JSON" | jq -r '.account')
 export AWS_REGION="us-east-1"
+
+# fail fast when tunnel config is absent — guide the caller to fix their repo config
+# .note = placeholder "null" means config was never filled in for this env; never proceed with it
+absentKeys=()
+if [[ -z "$VPC_TUNNEL_BASTION" || "$VPC_TUNNEL_BASTION" == "null" ]]; then absentKeys+=("database.tunnel.bastion.exid"); fi
+if [[ -z "$VPC_TUNNEL_CLUSTER" || "$VPC_TUNNEL_CLUSTER" == "null" ]]; then absentKeys+=("database.tunnel.cluster.name"); fi
+if [[ -z "$AWS_ACCOUNT_ID" || "$AWS_ACCOUNT_ID" == "null" ]]; then absentKeys+=("aws.account"); fi
+if [[ ${#absentKeys[@]} -gt 0 ]]; then
+  echo "" >&2
+  echo "🐈 belay that..." >&2
+  echo "" >&2
+  echo "🦺 use.rds.capacity --env $ENV" >&2
+  echo "   ├─ absent tunnel config for env: $ENV" >&2
+  for key in "${absentKeys[@]}"; do
+    echo "   ├─ absent: $key" >&2
+  done
+  echo "   └─ hint: set these in your repo config for $ENV (currently \"null\")" >&2
+  exit 2
+fi
 
 # open the vpc tunnel
 npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts"
