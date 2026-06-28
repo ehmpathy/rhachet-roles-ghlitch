@@ -1,0 +1,209 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.cloudwatch.logs.query given: [case1] --help flag when: [t0] --help is passed then: help output matches snapshot 1`] = `
+"🔮 aws.cloudwatch.logs.query
+
+usage:
+  rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
+  rhx aws.cloudwatch.logs.query --prefix <prefix> --env <env>
+  rhx aws.cloudwatch.logs.query --list --env <env>
+
+options:
+  --lambda     lambda function name
+  --prefix     search log groups by prefix
+  --env        environment: test, prep, or prod
+  --since      how far back (default: 1h) - 5m, 1h, 2d
+  --filter     filter by term (can repeat for AND)
+  --query      raw Logs Insights filter clause
+  --limit      max events (default: 100)
+  --list       list available log groups
+  --tail       follow logs in real-time
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case2] -h flag when: [t0] -h is passed then: help output matches snapshot 1`] = `
+"🔮 aws.cloudwatch.logs.query
+
+usage:
+  rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
+  rhx aws.cloudwatch.logs.query --prefix <prefix> --env <env>
+  rhx aws.cloudwatch.logs.query --list --env <env>
+
+options:
+  --lambda     lambda function name
+  --prefix     search log groups by prefix
+  --env        environment: test, prep, or prod
+  --since      how far back (default: 1h) - 5m, 1h, 2d
+  --filter     filter by term (can repeat for AND)
+  --query      raw Logs Insights filter clause
+  --limit      max events (default: 100)
+  --list       list available log groups
+  --tail       follow logs in real-time
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case3] help as positional arg when: [t0] help is passed then: help output matches snapshot 1`] = `
+"🔮 aws.cloudwatch.logs.query
+
+usage:
+  rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
+  rhx aws.cloudwatch.logs.query --prefix <prefix> --env <env>
+  rhx aws.cloudwatch.logs.query --list --env <env>
+
+options:
+  --lambda     lambda function name
+  --prefix     search log groups by prefix
+  --env        environment: test, prep, or prod
+  --since      how far back (default: 1h) - 5m, 1h, 2d
+  --filter     filter by term (can repeat for AND)
+  --query      raw Logs Insights filter clause
+  --limit      max events (default: 100)
+  --list       list available log groups
+  --tail       follow logs in real-time
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case4] absent --env when: [t0] skill runs without --env then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case5] invalid --env value when: [t0] skill runs with --env invalid then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ invalid env: invalid
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case6] unknown option when: [t0] skill runs with --unknown-flag then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   └─ unknown option: --unknown-flag
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case7] credentials not unlocked when: [t0] skill runs without prior unlock then: error output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ absent AWS_PROFILE from keyrack for env=test
+   └─ hint: rhx keyrack unlock --owner ehmpath --env test
+
+🔐 keyrack
+   └─ ehmpathy.test.AWS_PROFILE
+      ├─ status: absent 🫧
+      └─ tip: rhx keyrack set --owner ehmpath --key AWS_PROFILE --env test
+
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case8] list mode with test env when: [t0] skill lists log groups for test env then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.logs.query --list --env test
+   └─ log groups for rhachet-roles-ghlitch-test
+      └─ /aws/lambda/rhachet-roles-ghlitch-test-echo
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case9] list mode with prod env when: [t0] skill lists log groups for prod env then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.logs.query --list --env prod
+   └─ log groups for rhachet-roles-ghlitch-prod
+      └─ (none)
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case10] list mode with prep env when: [t0] skill lists log groups for prep env then: output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.logs.query --list --env prep
+   └─ log groups for rhachet-roles-ghlitch-prep
+      └─ /aws/lambda/rhachet-roles-ghlitch-prep-echo
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case11] --tail without --lambda when: [t0] skill runs with --tail but no --lambda then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query --tail
+   ├─ --tail requires --lambda to specify a single log group
+   └─ hint: rhx aws.cloudwatch.logs.query --env test --lambda <name> --tail
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case12] --tail without --lambda in prep env when: [t0] skill runs with --tail but no --lambda then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query --tail
+   ├─ --tail requires --lambda to specify a single log group
+   └─ hint: rhx aws.cloudwatch.logs.query --env prep --lambda <name> --tail
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case13] query mode with nonexistent lambda when: [t0] skill queries nonexistent lambda then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ log group not found: /aws/lambda/rhachet-roles-ghlitch-test-nonexistent-lambda-name-xyz
+   └─ available log groups:
+      └─ /aws/lambda/rhachet-roles-ghlitch-test-echo
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case14] query mode with nonexistent lambda in prep env when: [t0] skill queries nonexistent lambda then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ log group not found: /aws/lambda/rhachet-roles-ghlitch-prep-nonexistent-lambda-name-xyz
+   └─ available log groups:
+      └─ /aws/lambda/rhachet-roles-ghlitch-prep-echo
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case15] invalid --since format when: [t0] skill runs with --since abc then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   └─ invalid --since format: abc (use 5m, 1h, 2d)
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case16] query mode with valid lambda when: [t0] skill queries all log groups then: output structure matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.logs.query --env test
+   └─ found 1 log group with prefix /aws/lambda/rhachet-roles-ghlitch-test
+
+🔮 aws.cloudwatch.logs.query
+   ├─ log group: /aws/lambda/rhachet-roles-ghlitch-test (all)
+   ├─ since: 5m ago
+   ├─ filter: UNLIKELY_MATCH_STRING_xyz123 (AND)
+   ├─ input: .agent/.cache/MASKED_CACHE_PATH
+   ├─ query via Logs Insights...
+   ├─ json: .agent/.cache/MASKED_CACHE_PATH
+   └─ summary: .agent/.cache/MASKED_CACHE_PATH
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.logs.query
+   └─ observed
+
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case17] query mode with prep env when: [t0] skill queries all log groups then: output structure matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   └─ no log groups found with prefix: /aws/lambda/nonexistent-svc-xyz-prep
+"
+`;

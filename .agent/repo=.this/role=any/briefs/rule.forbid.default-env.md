@@ -63,7 +63,7 @@ fi
 
 ```bash
 rhx aws.s3.list --env prod --uri s3://bucket/prefix
-rhx query.cloudwatch.logs --env prep --lambda myFunction
+rhx aws.cloudwatch.logs.query --env prep --lambda myFunction
 ```
 
 ### negative
