@@ -187,10 +187,10 @@ exports[`aws.cloudwatch.logs.query given: [case16] query mode with valid lambda 
    ├─ log group: /aws/lambda/rhachet-roles-ghlitch-test (all)
    ├─ since: 5m ago
    ├─ filter: UNLIKELY_MATCH_STRING_xyz123 (AND)
-   ├─ input: /home/vlad/git/ehmpathy/_worktrees/rhachet-roles-ghlitch.vlad.fix-logs-devalias/.agent/.cache/MASKED_CACHE_PATH
+   ├─ input: .agent/.cache/MASKED_CACHE_PATH
    ├─ query via Logs Insights...
-   ├─ json: /home/vlad/git/ehmpathy/_worktrees/rhachet-roles-ghlitch.vlad.fix-logs-devalias/.agent/.cache/MASKED_CACHE_PATH
-   └─ summary: /home/vlad/git/ehmpathy/_worktrees/rhachet-roles-ghlitch.vlad.fix-logs-devalias/.agent/.cache/MASKED_CACHE_PATH
+   ├─ json: .agent/.cache/MASKED_CACHE_PATH
+   └─ summary: .agent/.cache/MASKED_CACHE_PATH
 
 🐈 caught it!
 

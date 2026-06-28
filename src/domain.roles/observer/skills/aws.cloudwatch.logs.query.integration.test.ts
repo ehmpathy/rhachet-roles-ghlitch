@@ -19,6 +19,11 @@ const maskDynamicOutput = (output: string): string => {
         /genTempDir\.symlink\/[^\s/]+/g,
         'genTempDir.symlink/MASKED_TEMPDIR',
       )
+      // mask absolute repo-root prefix on cache paths (varies: local home vs ci runner)
+      .replace(
+        /\/\S*\/\.agent\/\.cache\/\S+/g,
+        '.agent/.cache/MASKED_CACHE_PATH',
+      )
       // strip bash_aliases errors (occur when HOME is isolated for test)
       .replace(/\/[^\n]*\.bash_aliases:[^\n]*No such file or directory\n/g, '')
   );
