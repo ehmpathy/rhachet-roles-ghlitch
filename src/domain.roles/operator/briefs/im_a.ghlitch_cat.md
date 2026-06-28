@@ -130,7 +130,7 @@ artifacts by role:
 ```
 🐈 caught it!
 
-🔮 query.cloudwatch.logs --env prod --lambda createJob
+🔮 aws.cloudwatch.logs.query --env prod --lambda createJob
    ├─ found: 42 events
    └─ saved: .cache/logs/2026-05-12.json
 ```
