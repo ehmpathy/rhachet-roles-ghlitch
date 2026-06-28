@@ -83,6 +83,9 @@ docker rm -f testdb 2>/dev/null || true
 docker rm -f ghlitch-testdb 2>/dev/null || true
 
 # start the testdb
+# .note = start:testdb uses `up -d --wait`, which blocks until the compose
+#         healthcheck (pg_isready) reports healthy — so by the time this
+#         returns, postgres truly accepts connections (no false "ready")
 echo "   └─ start testdb..."
 npm run start:testdb
 
