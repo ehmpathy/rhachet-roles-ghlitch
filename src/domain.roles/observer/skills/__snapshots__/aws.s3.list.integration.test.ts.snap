@@ -111,38 +111,6 @@ exports[`aws.s3.list given: [case9] list buckets when: [t0] skill runs with only
 "
 `;
 
-exports[`aws.s3.list given: [case10] list objects in bucket via --bucket when: [t0] skill lists test bucket then: output matches snapshot 1`] = `
-"🐈 chartin course...
-
-🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
-   ├─ path: s3://rhachet-roles-ghlitch-test/
-   ├─ found: 4 objects
-   └─ objects
-      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
-
-🐈 smooth sailin!
-"
-`;
-
-exports[`aws.s3.list given: [case11] list objects via --uri when: [t0] skill lists via s3:// uri then: output matches snapshot 1`] = `
-"🐈 chartin course...
-
-🔮 aws.s3.list --env test --uri s3://rhachet-roles-ghlitch-test/
-   ├─ path: s3://rhachet-roles-ghlitch-test/
-   ├─ found: 4 objects
-   └─ objects
-      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
-
-🐈 smooth sailin!
-"
-`;
-
 exports[`aws.s3.list given: [case12] list with prefix that has objects when: [t0] skill lists demo/ prefix then: output matches snapshot 1`] = `
 "🐈 chartin course...
 
@@ -174,36 +142,6 @@ exports[`aws.s3.list given: [case14] list with --prefix flag when: [t0] skill us
    ├─ path: s3://rhachet-roles-ghlitch-test/demo/
    ├─ found: 3 objects
    └─ objects
-      ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)
-
-🐈 smooth sailin!
-"
-`;
-
-exports[`aws.s3.list given: [case15] list with --limit when: [t0] skill limits to 1 result then: output matches snapshot 1`] = `
-"🐈 chartin course...
-
-🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
-   ├─ path: s3://rhachet-roles-ghlitch-test/
-   ├─ found: 4 objects
-   └─ objects
-      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
-      └─ ... and 3 more
-
-🐈 smooth sailin!
-"
-`;
-
-exports[`aws.s3.list given: [case16] list with --since filter when: [t0] skill lists with --since 30d then: output matches snapshot 1`] = `
-"🐈 chartin course...
-
-🔮 aws.s3.list --env test --bucket rhachet-roles-ghlitch-test
-   ├─ path: s3://rhachet-roles-ghlitch-test/
-   ├─ found: 4 objects (since 30d)
-   └─ objects
-      ├─ 85412205.png (4806 bytes, YYYY-MM-DD HH:MM:SS)
       ├─ demo/ (0 bytes, YYYY-MM-DD HH:MM:SS)
       ├─ demo/date=2026-06-21/ (0 bytes, YYYY-MM-DD HH:MM:SS)
       └─ demo/date=2026-06-21/hello.md (2 bytes, YYYY-MM-DD HH:MM:SS)

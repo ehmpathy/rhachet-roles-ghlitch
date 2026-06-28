@@ -169,8 +169,8 @@ exports[`aws.s3.get given: [case15] fetch file with nested path when: [t0] skill
 exports[`aws.s3.get given: [case16] fetch and auto-gunzip .gz file when: [t0] skill fetches a .gz file then: output matches snapshot 1`] = `
 "🐈 chartin course...
 
-🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/test-compressed.txt.gz
-   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__test-compressed.txt.gz/asof=TIMESTAMP.txt
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/tmp-itest-get/test-compressed.txt.gz
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=tmp-itest-get__test-compressed.txt.gz/asof=TIMESTAMP.txt
    └─ preview
       ├─
       │
@@ -190,8 +190,8 @@ exports[`aws.s3.get given: [case17] --bucket provided without --key when: [t0] s
 exports[`aws.s3.get given: [case18] fetch empty file (0 bytes) when: [t0] skill fetches empty file (0 bytes) then: output matches snapshot 1`] = `
 "🐈 chartin course...
 
-🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/empty-file-for-test.txt
-   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=demo__empty-file-for-test.txt/asof=TIMESTAMP.txt
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/tmp-itest-get/empty-file-for-test.txt
+   ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=tmp-itest-get__empty-file-for-test.txt/asof=TIMESTAMP.txt
    └─ (binary file)
 
 🐈 smooth sailin!

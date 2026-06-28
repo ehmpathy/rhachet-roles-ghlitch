@@ -374,8 +374,11 @@ describe('aws.s3.list', () => {
         expect(result.stdout).toContain('smooth sailin');
       });
 
-      then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+      // .note = no exact snapshot here: this reads the whole bucket recursively,
+      //         so a concurrent writer (e.g. aws.s3.get temp files) would make an
+      //         exact-inventory snapshot flaky. structural asserts cover the behavior.
+      then('it reports an object count', () => {
+        expect(result.stdout).toMatch(/found: \d+ objects/);
       });
     });
   });
@@ -398,8 +401,9 @@ describe('aws.s3.list', () => {
         expect(result.stdout).toMatch(/found: \d+ objects/);
       });
 
-      then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+      // .note = whole-bucket read; structural assert instead of flaky exact snapshot
+      then('it finds the png fixture', () => {
+        expect(result.stdout).toContain('85412205.png');
       });
     });
   });
@@ -531,13 +535,11 @@ describe('aws.s3.list', () => {
       });
 
       then('it shows "and N more" message', () => {
-        expect(result.stdout).toContain('... and');
-        expect(result.stdout).toContain('more');
+        expect(result.stdout).toMatch(/\.\.\. and \d+ more/);
       });
 
-      then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
-      });
+      // .note = no exact snapshot: --limit caps display but the "and N more"
+      //         tail counts the whole bucket, which a concurrent writer perturbs.
     });
   });
 
@@ -563,8 +565,10 @@ describe('aws.s3.list', () => {
         expect(result.stdout).toMatch(/found: \d+ objects/);
       });
 
-      then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+      // .note = whole-bucket read with time filter; structural assert instead of
+      //         flaky exact-inventory snapshot (concurrent writers perturb it).
+      then('it finds the png fixture', () => {
+        expect(result.stdout).toContain('85412205.png');
       });
     });
   });
