@@ -47,7 +47,7 @@
     "build:complete:repo": "npx rhachet repo introspect",
     "build:complete": "npm run build:complete:dist && npm run build:complete:repo",
     "build": "npm run build:clean && npm run build:compile && npm run build:complete --if-present",
-    "start:testdb": "docker compose -f provision/docker/testdb/docker-compose.yml up -d",
+    "start:testdb": "docker compose -f provision/docker/testdb/docker-compose.yml up -d --wait",
     "stop:testdb": "docker compose -f provision/docker/testdb/docker-compose.yml down",
     "test:commits": "LAST_TAG=$(git describe --tags --abbrev=0 @^ 2> /dev/null || git rev-list --max-parents=0 HEAD) && npx commitlint --from $LAST_TAG --to HEAD --verbose",
     "test:types": "tsc -p ./tsconfig.json --noEmit",
