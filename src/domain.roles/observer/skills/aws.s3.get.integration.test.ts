@@ -15,7 +15,10 @@ const TEST_BUCKET = 'rhachet-roles-ghlitch-test';
 const TEST_FILE_KEY = 'demo/date=2026-06-21/hello.md';
 const TEST_FILE_CONTENT = 'hi';
 const TEST_PNG_KEY = '85412205.png';
-const TEST_GZ_KEY = 'demo/test-compressed.txt.gz';
+// .note = temp files live under a dedicated prefix (NOT demo/, NOT bucket fixtures)
+//         so concurrent aws.s3.list shards never count them in demo/ or fixture assertions
+const TEST_TMP_PREFIX = 'tmp-itest-get';
+const TEST_GZ_KEY = `${TEST_TMP_PREFIX}/test-compressed.txt.gz`;
 const TEST_GZ_CONTENT = 'compressed content for test';
 
 /**
@@ -533,7 +536,7 @@ describe('aws.s3.get', () => {
   // ============================================================
 
   given('[case18] fetch empty file (0 bytes)', () => {
-    const TEST_EMPTY_KEY = 'demo/empty-file-for-test.txt';
+    const TEST_EMPTY_KEY = `${TEST_TMP_PREFIX}/empty-file-for-test.txt`;
 
     beforeAll(() => {
       // create empty file in test bucket
