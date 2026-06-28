@@ -382,6 +382,12 @@
             "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role deployer",
             "timeout": 60,
             "author": "repo=ghlitch/role=deployer"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --role librarian",
+            "timeout": 30,
+            "author": "repo=bhrain/role=librarian"
           }
         ]
       },
