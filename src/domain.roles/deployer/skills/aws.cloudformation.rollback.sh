@@ -124,6 +124,12 @@ else
   exit 2
 fi
 
+# prod gate: prod rollbacks mutate prod and require a deploy.uses grant
+if [[ "$ENV" == "prod" ]]; then
+  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter deploy.uses --env prod || exit $?
+fi
+
 echo "🐈 chartin course..."
 echo ""
 echo "⛵ aws.cloudformation.rollback --stack $STACK_NAME"

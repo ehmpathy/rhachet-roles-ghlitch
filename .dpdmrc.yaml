@@ -15,6 +15,7 @@
 # - declastruct-aws: sdks/index.js <-> getDeclastructAwsProvider.js
 # - bottleneck: Bottleneck.js <-> Group.js
 # - aws-sdk: auth provider cycles
+# - aws-crypto: crc32/crc32c index.js <-> aws_crc32(c).js
 exclude:
   - domain-objects
   - helpful-errors
@@ -23,3 +24,4 @@ exclude:
   - declastruct-aws
   - bottleneck
   - aws-sdk
+  - aws-crypto

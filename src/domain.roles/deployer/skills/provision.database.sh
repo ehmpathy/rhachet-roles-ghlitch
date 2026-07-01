@@ -154,6 +154,13 @@ if [[ "$MODE" != "plan" && "$MODE" != "apply" ]]; then
   exit 2
 fi
 
+# prod gate: only a prod APPLY is gated; plan stays open (it only reads).
+# placed before the rds wake so a blocked apply never touches prod.
+if [[ "$ENV" == "prod" && "$MODE" == "apply" ]]; then
+  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter provision.uses --env prod || exit $?
+fi
+
 # output header
 echo "🐈 chartin course..."
 echo ""

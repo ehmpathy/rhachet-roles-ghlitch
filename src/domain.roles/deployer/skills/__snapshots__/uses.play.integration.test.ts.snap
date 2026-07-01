@@ -1,0 +1,303 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case1] no grant — default block when: [t0] get is run with no grant then: the get output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 deploy.uses get
+   ├─ local: unset
+   ├─ org: unset
+   └─ global: not blocked
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case1] no grant — default block when: [t1] the prod gate is checked then: the gate-blocked output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case2] set --quant 1 — one-shot, auto-revoke when: [t0] a human grants 1 prod use then: the set output matches snapshot 1`] = `
+"🐈 smooth sailin!
+
+🦺 deploy.uses set
+   ├─ granted: 1
+   ├─ env: prod
+   └─ scope: local (this repo)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case3] allow — unlimited grant does not revoke when: [t0] a human grants unlimited prod access then: the allow output matches snapshot 1`] = `
+"🐈 smooth sailin!
+
+🦺 deploy.uses allow
+   ├─ granted: unlimited
+   ├─ env: prod
+   └─ scope: local (this repo)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case4] block re-locks after allow when: [t0] a human blocks after a prior allow then: the block output matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 deploy.uses block
+   ├─ revoked (local)
+   └─ env: prod
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case8] only humans may grant (TTY guard) when: [t0] a non-human (no TTY) attempts to grant then: the TTY-guard refusal output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses set
+   └─ only humans can run this command
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case9] help is supported when: [t0] help is requested then: deploy.uses help matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🦺 deploy.uses — prod gate for deploys (deploy, rollback)
+
+usage:
+  rhx deploy.uses get
+  rhx deploy.uses set --quant 1 --env prod
+  rhx deploy.uses allow --env prod
+  rhx deploy.uses block --env prod
+  rhx deploy.uses del --env prod
+  rhx deploy.uses block --global
+  rhx deploy.uses allow --org ehmpathy --env prod
+
+commands:
+  get    check state across local/org/global
+  set    grant N prod uses (one-shot, auto-revokes)
+  allow  grant unlimited prod access
+  block  revoke — sets a hard local lock (wins over org policy)
+  del    remove local config — defers to org/global (NOT a lock)
+
+note: block and del differ — block locks, del just clears local state.
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case9] help is supported when: [t0] help is requested then: provision.uses help matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🦺 provision.uses — prod gate for provisions (terraform, database)
+
+usage:
+  rhx provision.uses get
+  rhx provision.uses set --quant 1 --env prod
+  rhx provision.uses allow --env prod
+  rhx provision.uses block --env prod
+  rhx provision.uses del --env prod
+  rhx provision.uses block --global
+  rhx provision.uses allow --org ehmpathy --env prod
+
+commands:
+  get    check state across local/org/global
+  set    grant N prod uses (one-shot, auto-revokes)
+  allow  grant unlimited prod access
+  block  revoke — sets a hard local lock (wins over org policy)
+  del    remove local config — defers to org/global (NOT a lock)
+
+note: block and del differ — block locks, del just clears local state.
+note: only 'apply' is gated; 'plan' stays open.
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case10] a corrupt grant file fails loud, never a silent default when: [t0] the prod gate reads a corrupt local grant file then: the corrupt-file malfunction output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 meter state
+   └─ corrupt meter state file: <repo>/.meter/deploy.uses.jsonc
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t0] deploy.sh runs against prod with no grant then: the gate output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case12] org + global scope command outputs match snapshots when: [t0] org and global policies are set then: get across all scopes matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 deploy.uses get
+   ├─ local: unset
+   ├─ org (freeze policy; never grants prod on its own):
+   │  ├─ ehmpathy: not frozen
+   │  └─ ahbode: frozen (hard stop)
+   └─ global: blocked
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case12] org + global scope command outputs match snapshots when: [t0] org and global policies are set then: global block output matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 deploy.uses block --global
+   └─ global: blocked (all repos)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case12] org + global scope command outputs match snapshots when: [t0] org and global policies are set then: org allow output matches snapshot (never grants prod) 1`] = `
+"🐈 smooth sailin!
+
+🦺 deploy.uses allow --org ehmpathy
+   ├─ org ehmpathy: freeze lifted (not frozen)
+   └─ note: does NOT grant prod — a local grant is still required
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case12] org + global scope command outputs match snapshots when: [t0] org and global policies are set then: org block output matches snapshot (hard freeze) 1`] = `
+"🐈 anchors away!
+
+🦺 deploy.uses block --org ahbode
+   └─ org ahbode: frozen (hard stop — local allow cannot bypass)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case14] constraint-error variants are snapped (negative paths) when: [t0] set is called without --env then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses set
+   └─ absent required arg: --env (e.g. --env prod)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case14] constraint-error variants are snapped (negative paths) when: [t1] set is called without --quant then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses set
+   └─ absent required arg: --quant N (or 'infinite')
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case14] constraint-error variants are snapped (negative paths) when: [t2] set is called with a non-numeric --quant then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses set
+   └─ --quant must be a non-negative integer or 'infinite'
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case14] constraint-error variants are snapped (negative paths) when: [t3] allow --org is called without an org name then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses allow --org
+   └─ absent required arg: --org <name|@all>
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case14] constraint-error variants are snapped (negative paths) when: [t4] an unknown option is passed then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 deploy.uses
+   └─ unknown option: --bogus
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case15] del clears local config — output snapped when: [t0] del is run after a local grant then: it succeeds (exit 0) and matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 deploy.uses del
+   ├─ local config removed for env: prod
+   └─ defers to org/global
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: TTY guard refusal matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses set
+   └─ only humans can run this command
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: allow matches snapshot 1`] = `
+"🐈 smooth sailin!
+
+🦺 provision.uses allow
+   ├─ granted: unlimited
+   ├─ env: prod
+   └─ scope: local (this repo)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: block matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 provision.uses block
+   ├─ revoked (local)
+   └─ env: prod
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: constraint error (absent --env) matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses set
+   └─ absent required arg: --env (e.g. --env prod)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: del matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 provision.uses del
+   ├─ local config removed for env: prod
+   └─ defers to org/global
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: gate-blocked matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 provision.uses --env prod
+   ├─ prod is locked: global freeze in effect
+   └─ a human must lift it: rhx provision.uses allow --global
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: get (unset) matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 provision.uses get
+   ├─ local: unset
+   ├─ org: unset
+   └─ global: not blocked
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: global block matches snapshot 1`] = `
+"🐈 anchors away!
+
+🦺 provision.uses block --global
+   └─ global: blocked (all repos)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: org allow matches snapshot (never grants prod) 1`] = `
+"🐈 smooth sailin!
+
+🦺 provision.uses allow --org ehmpathy
+   ├─ org ehmpathy: freeze lifted (not frozen)
+   └─ note: does NOT grant prod — a local grant is still required
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision.uses is its own contract — output snapped when: [t0] provision.uses output variants are exercised then: set matches snapshot 1`] = `
+"🐈 smooth sailin!
+
+🦺 provision.uses set
+   ├─ granted: 1
+   ├─ env: prod
+   └─ scope: local (this repo)
+"
+`;
