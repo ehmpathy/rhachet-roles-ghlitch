@@ -144,6 +144,18 @@ if [[ ${#TERRAFORM_ARGS[@]} -eq 0 ]]; then
   exit 2
 fi
 
+# prod gate: only writer subcommands against prod are gated; reads stay open.
+# the read-only allowlist passes through; every other subcommand counts as a
+# writer (fail-closed), so a new mutation verb cannot slip past ungated.
+if [[ "$ENV" == "prod" ]]; then
+  TF_CMD="${TERRAFORM_ARGS[0]}"
+  TF_READONLY=" plan validate show output fmt init get providers version graph "
+  if [[ "$TF_READONLY" != *" $TF_CMD "* ]]; then
+    DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter provision.uses --env prod || exit $?
+  fi
+fi
+
 # find repo root and environments directory
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 ENVIRONMENTS_DIR="$REPO_ROOT/provision/aws/environments"

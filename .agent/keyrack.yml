@@ -9,4 +9,5 @@ env.all: null
 env.prod: null
 env.prep:
   - EHMPATHY_SEATURTLE_PROD_GITHUB_TOKEN
-env.test: null
+env.test:
+  - AWS_PROFILE

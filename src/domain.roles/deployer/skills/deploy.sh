@@ -96,6 +96,12 @@ if [[ "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   exit 2
 fi
 
+# prod gate: deploys to prod require an explicit deploy.uses grant
+if [[ "$ENV" == "prod" ]]; then
+  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter deploy.uses --env prod || exit $?
+fi
+
 echo "🐈 chartin course..."
 echo ""
 echo "⛵ deploy --env $ENV"
