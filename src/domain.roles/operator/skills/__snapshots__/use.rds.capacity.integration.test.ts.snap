@@ -1,0 +1,55 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`use.rds.capacity given: [case1] absent --env when: [t0] skill runs without --env then: its output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 use.rds.capacity
+   ├─ absent required arg: --env
+   └─ hint: rhx use.rds.capacity help
+"
+`;
+
+exports[`use.rds.capacity given: [case2] invalid --env when: [t0] skill runs with a bogus env then: its output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 use.rds.capacity
+   ├─ invalid env: bogus
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`use.rds.capacity given: [case3] ssm config is placeholder "null" for tunnel targets when: [t0] skill runs with valid --env but absent config then: its output matches snapshot 1`] = `
+"🐈 rise and shine...
+
+🦺 use.rds.capacity --env prep
+   └─ env: prep
+🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prep
+   └─ env: prep
+
+🐈 belay that...
+
+🦺 use.vpc.tunnel --env prep
+   ├─ absent tunnel config for env: prep
+   ├─ absent: database.tunnel.bastion.exid
+   ├─ absent: database.tunnel.cluster.name
+   ├─ absent: aws.account
+   └─ hint: set these in your repo config for prep (currently "null")
+"
+`;
+
+exports[`use.rds.capacity given: [case4] help requested without --env when: [t0] help is passed as positional arg then: its output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🦺 use.rds.capacity
+
+usage:
+  rhx use.rds.capacity --env test
+  rhx use.rds.capacity --env prep
+  rhx use.rds.capacity --env prod
+
+options:
+  --env   environment: test, prep, or prod (required)
+"
+`;

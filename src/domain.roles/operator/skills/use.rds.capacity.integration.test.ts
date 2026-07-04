@@ -70,6 +70,8 @@ const setStubConfig = (input: {
   bastionExid: string;
   clusterName: string;
   account: string;
+  host: string;
+  port: string;
 }): void => {
   const configDir = join(input.cwd, 'src/utils/config');
   mkdirSync(configDir, { recursive: true });
@@ -80,7 +82,7 @@ const setStubConfig = (input: {
     tunnel: {
       bastion: { exid: ${JSON.stringify(input.bastionExid)} },
       cluster: { name: ${JSON.stringify(input.clusterName)} },
-      local: { host: 'localhost', port: 5432 },
+      local: { host: ${JSON.stringify(input.host)}, port: ${input.port} },
     },
   },
   aws: { account: ${JSON.stringify(input.account)} },
@@ -116,6 +118,10 @@ describe('use.rds.capacity', () => {
       then('it names the absent --env arg', () => {
         expect(result.stdout + result.stderr).toContain('--env');
       });
+
+      then('its output matches snapshot', () => {
+        expect(result.stdout + result.stderr).toMatchSnapshot();
+      });
     });
   });
 
@@ -132,23 +138,38 @@ describe('use.rds.capacity', () => {
       then('it explains valid envs', () => {
         expect(result.stdout + result.stderr).toContain('test, prep, or prod');
       });
+
+      then('its output matches snapshot', () => {
+        expect(result.stdout + result.stderr).toMatchSnapshot();
+      });
     });
   });
 
-  given('[case3] config is placeholder "null" for tunnel targets', () => {
+  given('[case3] ssm config is placeholder "null" for tunnel targets', () => {
     const stubbed = useBeforeAll(async () => {
+      // model a prep (ssm) env whose targets were never filled in.
+      // .note = host is non-localhost so use.vpc.tunnel takes the ssm path
+      //         and fails fast on the absent targets (localhost would short-circuit)
       setStubConfig({
         cwd: scene.dir,
         bastionExid: 'null',
         clusterName: 'null',
         account: 'null',
+        host: 'aws.ssmproxy.ahbodedb.prep',
+        port: '15432',
       });
-      return runSkill({ args: '--env test', cwd: scene.dir });
+      return runSkill({ args: '--env prep', cwd: scene.dir });
     });
 
     when('[t0] skill runs with valid --env but absent config', () => {
       then('it exits 2 (constraint, caller must fix config)', () => {
         expect(stubbed.exitCode).toBe(2);
+      });
+
+      then('it delegates to use.vpc.tunnel (composition is real)', () => {
+        // the failfast + named keys now originate from use.vpc.tunnel, whose
+        // own header surfaces here — proof the config-read was not duplicated
+        expect(stubbed.stdout + stubbed.stderr).toContain('use.vpc.tunnel');
       });
 
       then('it shows belay that', () => {
@@ -178,6 +199,10 @@ describe('use.rds.capacity', () => {
       then('it does not proceed to open the tunnel', () => {
         expect(stubbed.stdout + stubbed.stderr).not.toContain('await capacity');
       });
+
+      then('its output matches snapshot', () => {
+        expect(stubbed.stdout + stubbed.stderr).toMatchSnapshot();
+      });
     });
   });
 
@@ -201,6 +226,10 @@ describe('use.rds.capacity', () => {
 
       then('it does not show belay that', () => {
         expect(result.stdout + result.stderr).not.toContain('belay that');
+      });
+
+      then('its output matches snapshot', () => {
+        expect(result.stdout).toMatchSnapshot();
       });
     });
 
