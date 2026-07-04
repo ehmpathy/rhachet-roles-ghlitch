@@ -47,13 +47,23 @@ for arg in "${ARGS[@]}"; do
   fi
 done
 
-# parse --env from args (or fallback to ACCESS env var for backwards compat)
+# parse args — reject unknown options so a mistyped flag fails loud, not silent.
+# .note = rhx prepends --skill/--repo/--role before user args, so allowlist them.
 ENV=""
-for i in "${!ARGS[@]}"; do
-  if [[ "${ARGS[$i]}" == "--env" ]]; then
-    ENV="${ARGS[$((i+1))]}"
-    break
-  fi
+i=0
+while [[ $i -lt ${#ARGS[@]} ]]; do
+  case "${ARGS[$i]}" in
+    --env) ENV="${ARGS[$((i+1))]}"; i=$((i + 2)) ;;
+    --skill | --repo | --role) i=$((i + 2)) ;;
+    *)
+      echo "🐈 belay that..." >&2
+      echo "" >&2
+      echo "🦺 use.rds.capacity" >&2
+      echo "   ├─ unknown option: ${ARGS[$i]}" >&2
+      echo "   └─ hint: rhx use.rds.capacity help" >&2
+      exit 2
+      ;;
+  esac
 done
 
 # fallback to ACCESS env var for backwards compatibility
@@ -80,19 +90,10 @@ if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   exit 2
 fi
 
-# try to source aws credentials from keyrack (skip if AWS creds already set, e.g., in CI)
-if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  # unlock keyrack first to refresh AWS SSO if needed
-  rhx keyrack unlock --owner ehmpath --env "$ENV" || true
-
-  AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value || echo "")
-  if [[ -n "$AWS_PROFILE" ]]; then
-    # export static credentials only — do NOT export AWS_PROFILE
-    # AWS SDK prefers AWS_PROFILE over static creds, which causes SSO failures
-    eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"
-    unset AWS_PROFILE
-  fi
-fi
+# .note = aws credentials are sourced by use.vpc.tunnel on its ssm path, not here.
+#         use.rds.capacity's own work (getConfig read + pg_isready) needs no aws
+#         access, and a localhost target needs no creds at all — so the tunnel owns
+#         cred-sourcing, scoped to the one path that needs it.
 
 # set STAGE for getConfig() and ACCESS for backwards compat
 export STAGE="$ENV"
@@ -105,55 +106,31 @@ echo ""
 echo "🦺 use.rds.capacity --env $ENV"
 echo "   └─ env: $ENV"
 
-# read tunnel config from repo's config/
+# open the vpc tunnel for this env
+# .note = use.vpc.tunnel owns config-read, failfast, and tunnel-open (ssm or localhost);
+#         use.rds.capacity composes it, then awaits db capacity. a non-zero exit
+#         (e.g. absent config) propagates here via set -e, so we never reach the wait.
+#         called by $SCRIPT_DIR path (matches invoke.command.sh / invoke.vital.sh
+#         peer-call convention), so it resolves from any cwd.
+"$SCRIPT_DIR/use.vpc.tunnel.sh" --env "$ENV"
+
+# read the local endpoint from config to poll for capacity
 CONFIG_JSON=$(npx tsx -e "
   import { getConfig } from './src/utils/config/getConfig';
   (async () => {
     const c = await getConfig();
     console.log(JSON.stringify({
-      bastion: c.database.tunnel.bastion,
-      cluster: c.database.tunnel.cluster,
       host: c.database.tunnel.local.host,
       port: c.database.tunnel.local.port,
-      account: c.aws.account,
     }));
   })();
 ")
-
-export VPC_TUNNEL_BASTION=$(echo "$CONFIG_JSON" | jq -r '.bastion.exid')
-export VPC_TUNNEL_CLUSTER=$(echo "$CONFIG_JSON" | jq -r '.cluster.name')
-export VPC_TUNNEL_HOST=$(echo "$CONFIG_JSON" | jq -r '.host')
-export VPC_TUNNEL_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
-export AWS_ACCOUNT_ID=$(echo "$CONFIG_JSON" | jq -r '.account')
-export AWS_REGION="us-east-1"
-
-# fail fast when tunnel config is absent — guide the caller to fix their repo config
-# .note = placeholder "null" means config was never filled in for this env; never proceed with it
-absentKeys=()
-if [[ -z "$VPC_TUNNEL_BASTION" || "$VPC_TUNNEL_BASTION" == "null" ]]; then absentKeys+=("database.tunnel.bastion.exid"); fi
-if [[ -z "$VPC_TUNNEL_CLUSTER" || "$VPC_TUNNEL_CLUSTER" == "null" ]]; then absentKeys+=("database.tunnel.cluster.name"); fi
-if [[ -z "$AWS_ACCOUNT_ID" || "$AWS_ACCOUNT_ID" == "null" ]]; then absentKeys+=("aws.account"); fi
-if [[ ${#absentKeys[@]} -gt 0 ]]; then
-  echo "" >&2
-  echo "🐈 belay that..." >&2
-  echo "" >&2
-  echo "🦺 use.rds.capacity --env $ENV" >&2
-  echo "   ├─ absent tunnel config for env: $ENV" >&2
-  for key in "${absentKeys[@]}"; do
-    echo "   ├─ absent: $key" >&2
-  done
-  echo "   └─ hint: set these in your repo config for $ENV (currently \"null\")" >&2
-  exit 2
-fi
-
-# open the vpc tunnel
-npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts"
-
-# read host and port from exported config
-DB_HOST="$VPC_TUNNEL_HOST"
-DB_PORT="$VPC_TUNNEL_PORT"
+DB_HOST=$(echo "$CONFIG_JSON" | jq -r '.host')
+DB_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
 
 # await for the database to have capacity (awakens serverless rds if paused)
+echo ""
+echo "🦺 use.rds.capacity --env $ENV"
 echo "   ├─ await capacity..."
 echo "   ├─ host: $DB_HOST"
 echo "   └─ port: $DB_PORT"

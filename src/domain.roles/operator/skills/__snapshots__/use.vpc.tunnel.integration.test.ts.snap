@@ -1,0 +1,151 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`use.vpc.tunnel given: [case1] absent --env when: [t0] skill runs without --env then: its output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 use.vpc.tunnel
+   ├─ absent required arg: --env
+   └─ hint: rhx use.vpc.tunnel help
+"
+`;
+
+exports[`use.vpc.tunnel given: [case2] invalid --env when: [t0] skill runs with a bogus env then: its output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 use.vpc.tunnel --env bogus
+   ├─ invalid env: bogus
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`use.vpc.tunnel given: [case3] localhost target (local testdb, no bastion) when: [t0] skill runs with a localhost config host then: its output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env test
+   └─ env: test
+
+🦺 use.vpc.tunnel --env test
+   ├─ target: localhost (local testdb)
+   └─ no ssm tunnel needed
+
+🐈 smooth sailin!
+
+🦺 use.vpc.tunnel --env test
+   └─ points at localhost:7821
+"
+`;
+
+exports[`use.vpc.tunnel given: [case4] ssm target with placeholder "null" bastion/cluster/account when: [t0] skill runs with valid --env but absent ssm config then: its output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prep
+   └─ env: prep
+
+🐈 belay that...
+
+🦺 use.vpc.tunnel --env prep
+   ├─ absent tunnel config for env: prep
+   ├─ absent: database.tunnel.bastion.exid
+   ├─ absent: database.tunnel.cluster.name
+   ├─ absent: aws.account
+   └─ hint: set these in your repo config for prep (currently "null")
+"
+`;
+
+exports[`use.vpc.tunnel given: [case5] placeholder "null" local port when: [t0] skill runs with an absent local port then: its output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prep
+   └─ env: prep
+
+🐈 belay that...
+
+🦺 use.vpc.tunnel --env prep
+   ├─ absent tunnel config for env: prep
+   ├─ absent: database.tunnel.local.port
+   └─ hint: set it in your repo config for prep (currently "null")
+"
+`;
+
+exports[`use.vpc.tunnel given: [case6] help requested when: [t0] help is passed as positional arg then: its output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🦺 use.vpc.tunnel
+
+usage:
+  rhx use.vpc.tunnel --env test
+  rhx use.vpc.tunnel --env prep
+  rhx use.vpc.tunnel --env prod
+
+options:
+  --env    environment: test, prep, or prod (required)
+  --help   show this help
+
+behavior:
+  - derives the tunnel target per-env from repo config
+  - localhost target (local testdb) skips the ssm tunnel
+  - otherwise opens the ssm tunnel via declastruct
+"
+`;
+
+exports[`use.vpc.tunnel given: [case6] help requested when: [t0b] --help is passed after other args (rhx passthrough) then: its output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+🦺 use.vpc.tunnel
+
+usage:
+  rhx use.vpc.tunnel --env test
+  rhx use.vpc.tunnel --env prep
+  rhx use.vpc.tunnel --env prod
+
+options:
+  --env    environment: test, prep, or prod (required)
+  --help   show this help
+
+behavior:
+  - derives the tunnel target per-env from repo config
+  - localhost target (local testdb) skips the ssm tunnel
+  - otherwise opens the ssm tunnel via declastruct
+"
+`;
+
+exports[`use.vpc.tunnel given: [case7] prod ssm target with placeholder "null" config when: [t0] skill runs with --env prod but absent ssm config then: its output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prod
+   └─ env: prod
+
+🐈 belay that...
+
+🦺 use.vpc.tunnel --env prod
+   ├─ absent tunnel config for env: prod
+   ├─ absent: database.tunnel.bastion.exid
+   ├─ absent: database.tunnel.cluster.name
+   ├─ absent: aws.account
+   └─ hint: set these in your repo config for prod (currently "null")
+"
+`;
+
+exports[`use.vpc.tunnel given: [case8] a removed old-interface arg (--bastion) when: [t0] skill runs with a no-longer-supported --bastion then: its output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 use.vpc.tunnel
+   ├─ unknown option: --bastion
+   └─ hint: rhx use.vpc.tunnel help
+"
+`;
+
+exports[`use.vpc.tunnel given: [case9] placeholder "null" local host when: [t0] skill runs with an absent local host then: its output matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prep
+   └─ env: prep
+
+🐈 belay that...
+
+🦺 use.vpc.tunnel --env prep
+   ├─ absent tunnel config for env: prep
+   ├─ absent: database.tunnel.local.host
+   └─ hint: set it in your repo config for prep (currently "null")
+"
+`;
