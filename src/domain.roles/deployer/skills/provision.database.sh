@@ -188,13 +188,17 @@ export ACCESS="$ENV"
 export NODE_ENV="production"
 export AWS_SDK_LOAD_CONFIG=1
 
-# run sql-schema-control
+# scope the oidc grant getConfig hands to sql-schema-control:
+#   - plan reads only  → GRANT=plan  (reader grant; least privilege)
+#   - apply runs DDL   → GRANT=apply (writer grant; the default)
+# set explicitly per mode so plan never borrows the writer grant, and a stale
+# GRANT=plan from the caller's shell never starves an apply of its DDL rights.
 if [[ "$MODE" == "plan" ]]; then
   echo "   plan schema changes..."
-  npm run provision:schema:plan
+  GRANT=plan npm run provision:schema:plan
 elif [[ "$MODE" == "apply" ]]; then
   echo "   apply schema changes..."
-  npm run provision:schema:apply
+  GRANT=apply npm run provision:schema:apply
 fi
 
 echo ""
