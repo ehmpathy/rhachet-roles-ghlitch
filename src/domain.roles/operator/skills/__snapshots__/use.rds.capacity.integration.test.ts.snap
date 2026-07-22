@@ -22,20 +22,25 @@ exports[`use.rds.capacity given: [case3] ssm config is placeholder "null" for tu
 "🐈 rise and shine...
 
 🦺 use.rds.capacity --env prep
-   └─ env: prep
-🐈 chartin course...
-
-🦺 use.vpc.tunnel --env prep
-   └─ env: prep
-
-🐈 belay that...
-
-🦺 use.vpc.tunnel --env prep
-   ├─ absent tunnel config for env: prep
-   ├─ absent: database.tunnel.bastion.exid
-   ├─ absent: database.tunnel.cluster.name
-   ├─ absent: aws.account
-   └─ hint: set these in your repo config for prep (currently "null")
+   ├─ env: prep
+   └─ lets open the channel...
+      ├─
+      │
+      │  🐈 chartin course...
+      │
+      │  🦺 use.vpc.tunnel --env prep
+      │     └─ env: prep
+      │
+      │  🐈 belay that...
+      │
+      │  🦺 use.vpc.tunnel --env prep
+      │     ├─ absent tunnel config for env: prep
+      │     ├─ absent: database.tunnel.bastion.exid
+      │     ├─ absent: database.tunnel.cluster.name
+      │     ├─ absent: aws.account
+      │     └─ hint: set these in your repo config for prep (currently "null")
+      │
+      └─
 "
 `;
 

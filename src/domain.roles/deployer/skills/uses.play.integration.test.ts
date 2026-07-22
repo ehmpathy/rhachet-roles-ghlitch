@@ -1,6 +1,6 @@
 import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -17,58 +17,53 @@ const FIXTURE = 'src/domain.roles/deployer/skills/__test_assets__';
  */
 
 /**
- * .what = type guard for Node.js execSync error shape
- * .why = execSync throws errors with stdout/stderr/status; TypeScript lacks types
- * .note = external boundary - Node.js child_process API
- */
-const isExecSyncError = (
-  error: unknown,
-): error is { stdout?: string; stderr?: string; status: number } => {
-  if (error === null || typeof error !== 'object') return false;
-  if (!('status' in error)) return false;
-  const obj = error as Record<string, unknown>;
-  return typeof obj.status === 'number';
-};
-
-/**
  * .what = run a deployer skill from a temp repo; HOME=cwd isolates global/org
  *         meter state into the temp dir (never the real home)
  * .why = exercises the real src skill end-to-end against isolated state
+ * .note = spawnSync (not execSync) so stdout AND stderr are captured on BOTH
+ *         success and failure. uses.check emits its status (e.g. the cicd auth line,
+ *         the quota-consumed note) on stderr even on exit 0 — execSync would discard
+ *         that, so a success-path stderr assertion needs spawnSync.
  */
 const runSkill = (input: {
   skill: string;
   args: string;
   cwd: string;
   asHuman?: boolean;
+  env?: Record<string, string>;
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/${input.skill}`;
 
   // HOME=cwd routes ~/.rhachet/... global+org state into the temp repo.
-  // __I_AM_HUMAN bypasses the TTY guard for mutations (execSync has no TTY).
+  // __I_AM_HUMAN bypasses the TTY guard for mutations (spawnSync has no TTY).
+  // input.env overrides ambient values (e.g. CI) so the cicd-auth path is deterministic
+  // regardless of whether the test host itself sets CI.
   const env: Record<string, string> = {
     ...process.env,
     HOME: input.cwd,
+    ...(input.env ?? {}),
   };
   if (input.asHuman ?? true) env.__I_AM_HUMAN = 'true';
 
-  try {
-    const stdout = execSync(`bash "${skillPath}" ${input.args}`, {
-      encoding: 'utf-8',
-      cwd: input.cwd,
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    return { stdout, stderr: '', exitCode: 0 };
-  } catch (error: unknown) {
-    if (isExecSyncError(error)) {
-      return {
-        stdout: error.stdout ?? '',
-        stderr: error.stderr ?? '',
-        exitCode: error.status,
-      };
-    }
-    throw error;
+  const result = spawnSync(
+    'bash',
+    ['-c', `bash "${skillPath}" ${input.args}`],
+    { encoding: 'utf-8', cwd: input.cwd, env },
+  );
+
+  // status is the exit code; null only when the process was killed by a signal,
+  // which we never expect here — fail loud rather than mask it as a 0/2.
+  if (result.status === null) {
+    throw new Error(
+      `skill ${input.skill} did not exit normally: ${result.error?.message ?? 'killed by signal'}`,
+    );
   }
+
+  return {
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    exitCode: result.status,
+  };
 };
 
 /**
@@ -85,6 +80,16 @@ const setupRepo = (input: { slug: string }): string =>
       { at: 'node_modules', to: 'node_modules' },
       { at: '.agent/keyrack.yml', to: `${FIXTURE}/keyrack.yml` },
       { at: 'package.json', to: `${FIXTURE}/package.json` },
+      // provision.database reads its operator siblings (_.nest.sh, use.rds.capacity)
+      // via $GIT_ROOT/src/domain.roles/operator/skills. the temp repo IS the git root,
+      // so symlink that dir in — else the skill dies at the `source _.nest.sh` step
+      // right after the gate, before it can proceed (case18 proves it proceeds PAST the
+      // gate). skills in other cases (deploy.uses, uses.check) never read it, so this is
+      // inert for them.
+      {
+        at: 'src/domain.roles/operator/skills',
+        to: 'src/domain.roles/operator/skills',
+      },
     ],
   });
 
@@ -973,6 +978,246 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
       then('TTY guard refusal matches snapshot', () => {
         expect(scene.ttyGuard.exitCode).toBe(2);
         expect(scene.ttyGuard.stdout + scene.ttyGuard.stderr).toMatchSnapshot();
+      });
+    });
+  });
+
+  given(
+    '[case17] --auth as-cicd defers the prod gate to CI (the CI-aware path)',
+    () => {
+      // the cicd auth is an explicit opt-in: in CI (CI=true) it defers prod-apply
+      // authorization to the ambient github-environment approval and skips the local
+      // human meter. the guard requires the ambient CI marker so a local shell that
+      // passes --auth as-cicd by mistake can never skip the meter.
+      const scene = useBeforeAll(async () => {
+        const dir = setupRepo({ slug: 'uses-auth-cicd' });
+        return {
+          // in CI, --auth as-cicd → the gate passes with no local grant (exit 0)
+          inCi: runSkill({
+            skill: 'uses._.check.sh',
+            args: '--meter provision.uses --env prod --auth as-cicd',
+            cwd: dir,
+            env: { CI: 'true' },
+          }),
+          // outside CI, --auth as-cicd → belay (exit 2), never a silent bypass
+          outsideCi: runSkill({
+            skill: 'uses._.check.sh',
+            args: '--meter provision.uses --env prod --auth as-cicd',
+            cwd: dir,
+            env: { CI: '' },
+          }),
+          // a non-prod env with --auth as-cicd stays ungated regardless of CI (exit 0)
+          prepInCi: runSkill({
+            skill: 'uses._.check.sh',
+            args: '--meter provision.uses --env prep --auth as-cicd',
+            cwd: dir,
+            env: { CI: 'true' },
+          }),
+          // an invalid --auth value is a constraint error (exit 2)
+          badAuth: runSkill({
+            skill: 'uses._.check.sh',
+            args: '--meter provision.uses --env prod --auth bogus',
+            cwd: dir,
+            env: { CI: 'true' },
+          }),
+        };
+      });
+
+      when('[t0] --auth as-cicd is used inside CI (CI=true)', () => {
+        then('the gate passes without a local grant (exit 0)', () => {
+          expect(scene.inCi.exitCode).toBe(0);
+        });
+
+        then('it emits a visible authorization line (never silent)', () => {
+          // the defer to the github-environment approval must be visible in the CI
+          // log — a silent prod authorization is a surprise. on stderr so a caller
+          // capturing stdout to grep schema output stays unpolluted.
+          expect(scene.inCi.stderr).toContain(
+            'authorized via github-environment approval',
+          );
+        });
+
+        then('the cicd-auth authorization line matches snapshot', () => {
+          expect(scene.inCi.stderr).toMatchSnapshot();
+        });
+      });
+
+      when('[t1] --auth as-cicd is used outside CI (CI absent)', () => {
+        then(
+          'it belays (exit 2) — the flag cannot bypass the meter locally',
+          () => {
+            expect(scene.outsideCi.exitCode).toBe(2);
+            expect(scene.outsideCi.stdout + scene.outsideCi.stderr).toContain(
+              'CI environment',
+            );
+          },
+        );
+
+        then('the cicd-auth belay output matches snapshot', () => {
+          expect(
+            scene.outsideCi.stdout + scene.outsideCi.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t2] --auth as-cicd is used on a non-prod env', () => {
+        then('it stays ungated (exit 0) — non-prod is never gated', () => {
+          expect(scene.prepInCi.exitCode).toBe(0);
+        });
+
+        then(
+          'it short-circuits before the auth block (no cicd auth line)',
+          () => {
+            // non-prod exits at the ungated guard BEFORE the auth block, so the flag
+            // never triggers a cicd deferral here — proven by the absence of the
+            // authorization line. (silent-by-contract shared path, so nothing to snap.)
+            expect(scene.prepInCi.stderr).not.toContain(
+              'authorized via github-environment approval',
+            );
+          },
+        );
+      });
+
+      when('[t3] an invalid --auth value is passed', () => {
+        then('it is a constraint error (exit 2)', () => {
+          expect(scene.badAuth.exitCode).toBe(2);
+          expect(scene.badAuth.stdout + scene.badAuth.stderr).toContain(
+            '--auth',
+          );
+        });
+
+        then('the invalid-auth error output matches snapshot', () => {
+          expect(scene.badAuth.stdout + scene.badAuth.stderr).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  given(
+    '[case18] provision.database --auth as-cicd wires the cicd auth through',
+    () => {
+      // proves the hookup end-to-end: provision.database passes --auth through to
+      // uses.check. with --auth as-cicd + CI=true, a prod apply is NOT blocked by the
+      // local meter — it clears the gate and proceeds (later it fails on config, since
+      // this temp repo has no getConfig; that later failure is out of scope here). the
+      // proof it cleared the gate: the "chartin course" header prints only AFTER it.
+      const scene = useBeforeAll(async () => {
+        const dir = setupRepo({ slug: 'uses-db-auth-cicd' });
+        return {
+          applyInCi: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prod --mode apply --auth as-cicd',
+            cwd: dir,
+            env: { CI: 'true' },
+          }),
+          applyOutsideCi: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prod --mode apply --auth as-cicd',
+            cwd: dir,
+            env: { CI: '' },
+          }),
+        };
+      });
+
+      when('[t0] prod apply --auth as-cicd runs inside CI', () => {
+        then('the local meter does NOT block it (no block hint)', () => {
+          // the block hints — never present when the gate defers to CI. (the meter
+          // name "provision.uses" DOES appear in the success authorization line, so we
+          // assert on the block hints, not the meter name.)
+          const out = scene.applyInCi.stdout + scene.applyInCi.stderr;
+          expect(out).not.toContain('prod is locked');
+          expect(out).not.toContain('set --quant');
+        });
+
+        then('it emits the cicd authorization line then proceeds', () => {
+          // the auth line (stderr) proves the gate deferred to CI; "chartin course"
+          // (stdout, only printed AFTER the gate) proves it proceeded past it.
+          expect(scene.applyInCi.stderr).toContain(
+            'authorized via github-environment approval',
+          );
+          expect(scene.applyInCi.stdout).toContain('chartin course');
+        });
+
+        then(
+          'the gate-cleared stdout head matches snapshot (volatile tail masked)',
+          () => {
+            // past the gate the skill prints its header + the "lets get some sun..."
+            // connectivity branch, then opens the sub.bucket and reaches db connectivity
+            // — which fails on this config-less temp repo with volatile temp-dir paths.
+            // slice at the sub.bucket open (the 6-space "├─" frame line, distinct from the
+            // 3-space header branches) so the snapshot is the deterministic, cleanly
+            // terminated head down to the "└─ lets get some sun..." branch. (the stderr
+            // auth line is snapshotted by case17 t0 — identical — so it is not re-snapped.)
+            const stdoutHead = scene.applyInCi.stdout.split('\n      ├─')[0];
+            expect(stdoutHead).toMatchSnapshot();
+          },
+        );
+      });
+
+      when('[t1] prod apply --auth as-cicd runs outside CI', () => {
+        then('it belays before the gate (exit 2), never past it', () => {
+          expect(scene.applyOutsideCi.exitCode).toBe(2);
+          const out = scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr;
+          expect(out).toContain('CI environment');
+          expect(out).not.toContain('chartin course');
+        });
+
+        then('the passthrough belay output matches snapshot', () => {
+          expect(
+            scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  given('[case19] provision.database rejects a bad --auth', () => {
+    // a bad --auth is a first-class caller mistake — fail fast (exit 2) and snap the
+    // belay so reviewers vibecheck it and drift is caught.
+    const scene = useBeforeAll(async () => {
+      const dir = setupRepo({ slug: 'uses-db-bad-auth' });
+      return {
+        badAuth: runSkill({
+          skill: 'provision.database.sh',
+          args: '--which livedb --env prod --mode apply --auth bogus',
+          cwd: dir,
+        }),
+      };
+    });
+
+    when('[t0] an invalid --auth value is passed', () => {
+      then('it is a constraint error (exit 2) and matches snapshot', () => {
+        expect(scene.badAuth.exitCode).toBe(2);
+        expect(scene.badAuth.stdout + scene.badAuth.stderr).toContain(
+          'invalid auth',
+        );
+        expect(scene.badAuth.stdout + scene.badAuth.stderr).toMatchSnapshot();
+      });
+    });
+  });
+
+  given('[case20] provision.database help documents --auth', () => {
+    // help is a contract surface too — snap it so the --auth option docs are
+    // vibecheck-able and drift is caught.
+    const scene = useBeforeAll(async () => {
+      const dir = setupRepo({ slug: 'uses-db-help' });
+      return {
+        help: runSkill({
+          skill: 'provision.database.sh',
+          args: 'help',
+          cwd: dir,
+        }),
+      };
+    });
+
+    when('[t0] help is requested', () => {
+      then('it documents --auth (exit 0)', () => {
+        expect(scene.help.exitCode).toBe(0);
+        expect(scene.help.stdout).toContain('--auth');
+      });
+
+      then('the help output matches snapshot', () => {
+        expect(scene.help.stdout).toMatchSnapshot();
       });
     });
   });

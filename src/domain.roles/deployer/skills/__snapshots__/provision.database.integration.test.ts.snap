@@ -1,0 +1,62 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`provision.database (connectivity + stdout forwarding) given: [case1] a prep plan runs against the real testdb when: [t1] the schema step emits its stdout then: the FULL skill stdout matches snapshot (temp path + token masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.database --which livedb --env prep --mode plan
+   ├─ which: livedb
+   ├─ env: prep
+   ├─ mode: plan
+   └─ lets get some sun...
+      ├─
+      │
+      │  🐈 rise and shine...
+      │
+      │  🦺 use.rds.capacity --env prep
+      │     ├─ env: prep
+      │     └─ lets open the channel...
+      │        ├─
+      │        │
+      │        │  🐈 chartin course...
+      │        │
+      │        │  🦺 use.vpc.tunnel --env prep
+      │        │     └─ env: prep
+      │        │
+      │        │  🦺 use.vpc.tunnel --env prep
+      │        │     ├─ target: localhost (local testdb)
+      │        │     └─ no ssm tunnel needed
+      │        │
+      │        │  🐈 smooth sailin!
+      │        │
+      │        │  🦺 use.vpc.tunnel --env prep
+      │        │     └─ points at localhost:7821
+      │        │
+      │        └─
+      │
+      │  🦺 use.rds.capacity --env prep
+      │     ├─ await capacity...
+      │     ├─ host: localhost
+      │     └─ port: 7821
+      │  localhost:7821 - accepting connections
+      │
+      │  🐈 caught it!
+      │
+      │  🦺 use.rds.capacity
+      │     └─ database ready
+      │
+      └─
+
+   plan schema changes...
+
+> svc-test@0.0.0 provision:schema:plan <tmp>
+> node provision/schema/plan.js
+
+Everything is up to date
+verified-live-db-read: source=live token=live-db-token-<ts>
+
+🐈 smooth sailin!
+
+⛵ provision.database --which livedb --env prep --mode plan
+   └─ provisioned
+"
+`;

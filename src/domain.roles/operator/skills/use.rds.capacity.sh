@@ -104,7 +104,7 @@ export AWS_SDK_LOAD_CONFIG=1
 echo "🐈 rise and shine..."
 echo ""
 echo "🦺 use.rds.capacity --env $ENV"
-echo "   └─ env: $ENV"
+echo "   ├─ env: $ENV"
 
 # open the vpc tunnel for this env
 # .note = use.vpc.tunnel owns config-read, failfast, and tunnel-open (ssm or localhost);
@@ -112,7 +112,15 @@ echo "   └─ env: $ENV"
 #         (e.g. absent config) propagates here via set -e, so we never reach the wait.
 #         called by $SCRIPT_DIR path (matches invoke.command.sh / invoke.vital.sh
 #         peer-call convention), so it resolves from any cwd.
-"$SCRIPT_DIR/use.vpc.tunnel.sh" --env "$ENV"
+# frame use.vpc.tunnel's full output in its own treestruct sub.bucket so it is
+# clearly delineated under its own header; run_sub_bucket preserves the exit code,
+# so an absent-config failfast still propagates via set -e.
+source "$SCRIPT_DIR/_.nest.sh"
+echo "   └─ lets open the channel..."
+# explicit `|| exit $?` — run_sub_bucket runs the child in a process substitution,
+# so a bare call would not reliably trip set -e; forward the child exit code so an
+# absent-config failfast propagates exactly like a direct call would.
+run_sub_bucket "      " "$SCRIPT_DIR/use.vpc.tunnel.sh" --env "$ENV" || exit $?
 
 # read the local endpoint from config to poll for capacity
 CONFIG_JSON=$(npx tsx -e "

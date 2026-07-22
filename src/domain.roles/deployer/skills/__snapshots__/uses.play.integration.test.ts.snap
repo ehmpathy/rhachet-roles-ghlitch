@@ -301,3 +301,67 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision
    └─ scope: local (this repo)
 "
 `;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t0] --auth as-cicd is used inside CI (CI=true) then: the cicd-auth authorization line matches snapshot 1`] = `
+"🦺 provision.uses --env prod --auth as-cicd
+   └─ authorized via github-environment approval (CI)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t1] --auth as-cicd is used outside CI (CI absent) then: the cicd-auth belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses --env prod --auth as-cicd
+   ├─ --auth as-cicd requires the CI environment (CI=true), which is absent
+   └─ cicd auth defers to the github-environment approval; run it in CI
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t3] an invalid --auth value is passed then: the invalid-auth error output matches snapshot 1`] = `
+"error: uses.check --auth must be 'as-cicd' (got: bogus)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --auth as-cicd wires the cicd auth through when: [t0] prod apply --auth as-cicd runs inside CI then: the gate-cleared stdout head matches snapshot (volatile tail masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.database --which livedb --env prod --mode apply
+   ├─ which: livedb
+   ├─ env: prod
+   ├─ mode: apply
+   └─ lets get some sun..."
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --auth as-cicd wires the cicd auth through when: [t1] prod apply --auth as-cicd runs outside CI then: the passthrough belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses --env prod --auth as-cicd
+   ├─ --auth as-cicd requires the CI environment (CI=true), which is absent
+   └─ cicd auth defers to the github-environment approval; run it in CI
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --auth when: [t0] an invalid --auth value is passed then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ invalid auth: bogus
+   └─ must be: as-cicd
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case20] provision.database help documents --auth when: [t0] help is requested then: the help output matches snapshot 1`] = `
+"🐈 heres the deal...
+
+⛵ provision.database
+
+usage:
+  rhx provision.database --which livedb --env <env> --mode <mode>
+
+options:
+  --which  database target: livedb
+  --env    environment: prep or prod
+  --mode   operation: plan or apply
+  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)
+"
+`;
