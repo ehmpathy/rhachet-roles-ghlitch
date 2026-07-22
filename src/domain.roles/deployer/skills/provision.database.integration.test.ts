@@ -186,17 +186,21 @@ describe('provision.database (connectivity + stdout forwarding)', () => {
       args: '--which livedb --env prep --mode plan',
       cwd: dir,
     });
-    // mask the two genuinely non-deterministic bits so the FULL stdout is snapable:
+    // mask the non-deterministic bits so the FULL stdout is snapable:
     //   - the temp-dir path (npm prints it in its run banner) → <tmp>
     //   - the per-run token timestamp → <ts>
-    // everything else is deterministic (turtle headers, connectivity, forwarded
-    // schema output). mask the realpath first (npm resolves symlinks in the banner).
+    //   - npm's run banner appends the package dir on some npm versions (local) but
+    //     omits it on others (CI's npm 11) — strip that dir suffix so the banner is
+    //     deterministic across npm versions, else the snapshot is npm-version-fragile.
+    // all else is deterministic (turtle headers, connectivity, forwarded schema
+    // output). mask the realpath first (npm resolves symlinks in the banner).
     const stdoutMasked = result.stdout
       .split(realpathSync(dir))
       .join('<tmp>')
       .split(dir)
       .join('<tmp>')
-      .replace(/live-db-token-\d+/g, 'live-db-token-<ts>');
+      .replace(/live-db-token-\d+/g, 'live-db-token-<ts>')
+      .replace(/(provision:schema:plan) <tmp>/g, '$1');
     return { result, token, dir, stdoutMasked };
   });
 
