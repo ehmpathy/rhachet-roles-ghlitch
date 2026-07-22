@@ -3,7 +3,7 @@
   "author": "ehmpathy",
   "description": "observability, deployment, diagnostics, budgets, alerts, and security roles and skills, via rhachet",
   "private": false,
-  "version": "0.2.8",
+  "version": "0.2.9",
   "repository": "ehmpathy/rhachet-roles-ghlitch",
   "homepage": "https://github.com/ehmpathy/rhachet-roles-ghlitch",
   "keywords": [
