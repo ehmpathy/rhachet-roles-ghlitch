@@ -104,7 +104,7 @@ commands:
   del    remove local config — defers to org/global (NOT a lock)
 
 note: block and del differ — block locks, del just clears local state.
-note: only 'apply' is gated; 'plan' stays open.
+note: only prod writes are gated; reads ('plan') stay open.
 "
 `;
 
@@ -123,6 +123,16 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer 
    ├─ prod is locked: no deploy.uses grant for prod (safe default)
    └─ ask your human to grant:
         $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t2b] provision.database sync runs against prod then: the gate output matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 provision.uses --env prod
+   ├─ prod is locked: no provision.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx provision.uses set --quant 1 --env prod
 "
 `;
 
@@ -361,7 +371,62 @@ usage:
 options:
   --which  database target: livedb
   --env    environment: prep or prod
-  --mode   operation: plan or apply
+  --mode   operation: plan, apply, or sync
+  --slug   change slug (required for --mode sync; forbidden otherwise)
   --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t0] sync is called without --slug then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent required arg for sync: --slug
+   └─ hint: rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t1] --slug is passed with --mode plan then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ --slug is only valid with --mode sync (got --mode plan)
+   └─ hint: drop --slug, or use --mode sync
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t2] --slug is passed with --mode apply then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ --slug is only valid with --mode sync (got --mode apply)
+   └─ hint: drop --slug, or use --mode sync
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t4] --mode is mistyped (e.g. snyc) then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ invalid mode: snyc
+   └─ must be: plan, apply, or sync
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t5] sync is called with a bare --slug (no value) then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent required arg for sync: --slug
+   └─ hint: rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision.database sync — slug/mode constraint matrix when: [t6] --slug is followed by a flag instead of a value then: the constraint output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent required arg for sync: --slug
+   └─ hint: rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
 "
 `;

@@ -13,7 +13,7 @@ used to orchestrate deployments across environments with safety checks, rollback
 | `deploy` | deploy service to aws via SSO credentials |
 | `aws.cloudformation.status` | check cloudformation stack status and failed events |
 | `aws.cloudformation.rollback` | continue a stuck cloudformation rollback |
-| `provision.database` | apply database schema migrations via plan/apply |
+| `provision.database` | provision database schema via plan/apply, or reconcile a change's changelog via sync |
 | `provision.terraform` | run terraform with SSO credential export |
 
 ### examples
@@ -33,6 +33,9 @@ rhx aws.cloudformation.rollback --env prep
 # provision database schema
 rhx provision.database --which livedb --env prep --mode plan
 rhx provision.database --which livedb --env prep --mode apply
+
+# reconcile the changelog for a change applied out-of-band (no sql re-run)
+rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
 
 # run terraform
 rhx provision.terraform --env prep init

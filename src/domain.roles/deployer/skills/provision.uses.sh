@@ -7,7 +7,7 @@
 # .why  = prod is sacred. by default no one applies to prod from local.
 #         a human grants access explicitly; quota grants auto-revoke.
 #         independent of deploy.uses — unlock one without the other.
-#         note: only apply is gated; plan stays open.
+#         note: only prod writes are gated; reads (plan) stay open.
 #
 # usage:
 #   rhx provision.uses get                              # check state
@@ -51,7 +51,7 @@ for arg in "$@"; do
     echo "  del    remove local config — defers to org/global (NOT a lock)"
     echo ""
     echo "note: block and del differ — block locks, del just clears local state."
-    echo "note: only 'apply' is gated; 'plan' stays open."
+    echo "note: only prod writes are gated; reads ('plan') stay open."
     exit 0
   fi
 done
