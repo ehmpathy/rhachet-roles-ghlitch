@@ -72,25 +72,52 @@ if ! docker info >/dev/null 2>&1; then
   exit 2
 fi
 
+COMPOSE_FILE="provision/docker/testdb/docker-compose.yml"
+
 echo "🐈 chartin course..."
 echo ""
 echo "🦺 use.testdb"
 
-# remove stale container by name
-echo "   ├─ clear stale containers..."
-docker rm -f jobsdb 2>/dev/null || true
-docker rm -f testdb 2>/dev/null || true
-docker rm -f ghlitch-testdb 2>/dev/null || true
+# findsert-fast happy path: `up -d --wait` is a near-instant no-op when the
+# container is already healthy — so a re-run is free, no recreate per call.
+echo "   ├─ start testdb..."
+if npm run start:testdb; then
+  echo ""
+  echo "🐈 caught it!"
+  echo ""
+  echo "🦺 use.testdb"
+  echo "   └─ testdb ready at localhost:7821"
+  exit 0
+fi
 
-# start the testdb
-# .note = start:testdb uses `up -d --wait`, which blocks until the compose
-#         healthcheck (pg_isready) reports healthy — so by the time this
-#         returns, postgres truly accepts connections (no false "ready")
-echo "   └─ start testdb..."
-npm run start:testdb
+# self-heal: a start failure is most often a wedged state — a stale container that
+# leaked the port (e.g. after a crash), or a data dir left by an older postgres major
+# (pg13 vs the compose's pg15). clear any container that holds the testdb's ports
+# (declapract's provision:testdb:docker:clear, by published port so a differently-named
+# leftover is still caught), renew the anon volume (down -v), and retry once.
+echo "   ├─ start failed — self-heal..."
+for port in $(docker compose -f "$COMPOSE_FILE" config --format json | jq -r '.services[].ports[]?.published'); do
+  docker rm -f $(docker ps -a -f "publish=$port" -q) 2>/dev/null || true
+done
+docker compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
 
+echo "   └─ retry testdb..."
+if npm run start:testdb; then
+  echo ""
+  echo "🐈 caught it!"
+  echo ""
+  echo "🦺 use.testdb"
+  echo "   └─ testdb ready at localhost:7821"
+  exit 0
+fi
+
+# still wedged — surface the container logs so the cause is diagnosable, not opaque,
+# then fail loud (a silent absence would let integration tests run against no db).
 echo ""
-echo "🐈 caught it!"
+echo "🐈 wet paws..."
 echo ""
 echo "🦺 use.testdb"
-echo "   └─ testdb ready at localhost:7821"
+echo "   ├─ testdb did not start (even after volume renewal)"
+echo "   └─ container logs follow:"
+docker logs ghlitch-testdb 2>&1 || true
+exit 1

@@ -13,6 +13,8 @@
 #
 # behavior (only a LOCAL grant permits prod; org allow never grants on its own):
 #   - env != prod          → exit 0 (non-prod is never gated)
+#   - --auth as-cicd (CI)  → defer to the github-environment approval; exit 0
+#                            (skips the local meter — see the cicd-auth block below)
 #   - local quota grant    → decrement; auto-revoke at zero; exit 0
 #   - local unlimited grant→ exit 0 (no decrement)
 #   - blocked (global/org freeze, local revoke, or no local grant)
@@ -26,6 +28,7 @@ source "$SCRIPT_DIR/uses._.operations.sh"
 
 METER=""
 ENV=""
+AUTH=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -33,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     # crash under `set -e`; the absent-arg check below reports it as exit 2.
     --meter) METER="${2:-}"; shift; [[ $# -gt 0 && "$1" != --* ]] && shift || true ;;
     --env) ENV="${2:-}"; shift; [[ $# -gt 0 && "$1" != --* ]] && shift || true ;;
+    --auth) AUTH="${2:-}"; shift; [[ $# -gt 0 && "$1" != --* ]] && shift || true ;;
     --repo|--role|--skill) shift; [[ $# -gt 0 && "$1" != --* ]] && shift || true ;;
     --) shift ;;
     *) shift ;;
@@ -44,8 +48,47 @@ if [[ -z "$METER" || -z "$ENV" ]]; then
   exit 2
 fi
 
+# validate --auth if supplied — only "as-cicd" is a recognized auth source. fail loud
+# on a typo rather than silently ignore it (an ignored --auth could look like it opted
+# into the cicd auth when it did not).
+if [[ -n "$AUTH" && "$AUTH" != "as-cicd" ]]; then
+  echo "error: uses.check --auth must be 'as-cicd' (got: $AUTH)" >&2
+  exit 2
+fi
+
 # non-prod envs are never gated
 if [[ "$ENV" != "prod" ]]; then
+  exit 0
+fi
+
+# cicd auth — an explicit opt-in that defers prod authorization to the ambient
+# github-environment approval + tag ruleset (enforced by github BEFORE this job
+# runs) instead of the local human meter. this is how a prod apply gets authorized
+# in CI, where no local quota grant exists.
+#
+# guard: require an ambient CI marker (CI=true, set by github actions) so a local
+# shell that passes --auth as-cicd by mistake can NEVER skip the meter. the flag is
+# the opt-in; the CI marker proves we are truly in the trusted CI context. absent it,
+# fail loud (constraint) rather than bypass the local gate — an explicit opt-in,
+# not a silent CI=true bypass.
+#
+# note: the local/org/global meter files live in a human's ~/.rhachet storage, which
+# is absent on an ephemeral CI runner — so there is no local freeze to honor here;
+# the github environment is the sole prod authority in CI.
+if [[ "$AUTH" == "as-cicd" ]]; then
+  if [[ "${CI:-}" != "true" ]]; then
+    print_cat_header "belay that..." >&2
+    print_tree_start "🦺 $METER --env prod --auth as-cicd" >&2
+    echo "   ├─ --auth as-cicd requires the CI environment (CI=true), which is absent" >&2
+    echo "   └─ cicd auth defers to the github-environment approval; run it in CI" >&2
+    exit 2
+  fi
+  # ambient CI confirmed — the github-environment approval is the authorization.
+  # emit a visible line so the CI log shows WHY prod was permitted; a silent prod
+  # authorization would be a surprise (see rule.forbid.surprises). goes to stderr so a
+  # caller that captures stdout (e.g. to grep schema output) is never polluted.
+  print_tree_start "🦺 $METER --env prod --auth as-cicd" >&2
+  echo "   └─ authorized via github-environment approval (CI)" >&2
   exit 0
 fi
 

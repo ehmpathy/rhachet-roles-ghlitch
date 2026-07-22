@@ -24,6 +24,10 @@ const maskDynamicOutput = (output: string): string => {
  * - demo/date=2026-06-21/hello.md (2 bytes, content: "hi")
  */
 const TEST_BUCKET = 'rhachet-roles-ghlitch-test';
+// .note = temp objects live under a dedicated prefix (NOT demo/, NOT the bucket
+//         fixtures) so concurrent aws.s3.list shards never count them in demo/ or
+//         fixture assertions. mirrors aws.s3.get's TEST_TMP_PREFIX convention.
+const TEST_TMP_PREFIX = 'tmp-itest-list';
 
 /**
  * .what = type guard for Node.js execSync error shape
@@ -548,9 +552,33 @@ describe('aws.s3.list', () => {
   // ============================================================
 
   given('[case16] list with --since filter', () => {
-    when('[t0] skill lists with --since 30d', () => {
+    // .note = the --since window is time-relative, so a STATIC bucket fixture would
+    //         age out of it and break the day the fixture crosses the window edge (a
+    //         rule.forbid.time-assumptions trap — the old assert on the 85412205.png
+    //         fixture broke exactly this way once it passed 30d old). instead, upload a
+    //         FRESH object right before the read (fresh mtime = now), under a dedicated
+    //         tmp prefix so concurrent shards never perturb the demo/ or fixture
+    //         asserts. this proves --since keeps a recently-modified object, hermetic
+    //         and drift-free. mirrors aws.s3.get's TEST_TMP_PREFIX upload/cleanup.
+    const TEST_RECENT_KEY = `${TEST_TMP_PREFIX}/recent.txt`;
+
+    beforeAll(() => {
+      execSync(
+        `echo -n "recent" | aws s3 cp - s3://${TEST_BUCKET}/${TEST_RECENT_KEY}`,
+        { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] },
+      );
+    });
+
+    afterAll(() => {
+      execSync(`aws s3 rm s3://${TEST_BUCKET}/${TEST_RECENT_KEY}`, {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    });
+
+    when('[t0] skill lists with --since 1d', () => {
       const result = useThen('skill runs', () =>
-        runSkill(`--env test --bucket ${TEST_BUCKET} --since 30d`),
+        runSkill(`--env test --bucket ${TEST_BUCKET} --since 1d`),
       );
 
       then('it exits 0', () => {
@@ -558,17 +586,17 @@ describe('aws.s3.list', () => {
       });
 
       then('it shows since filter in output', () => {
-        expect(result.stdout).toContain('since 30d');
+        expect(result.stdout).toContain('since 1d');
       });
 
       then('it finds objects', () => {
         expect(result.stdout).toMatch(/found: \d+ objects/);
       });
 
-      // .note = whole-bucket read with time filter; structural assert instead of
-      //         flaky exact-inventory snapshot (concurrent writers perturb it).
-      then('it finds the png fixture', () => {
-        expect(result.stdout).toContain('85412205.png');
+      // the freshly-uploaded object is well within the 1d window, so --since must
+      // keep it — a drift-free proof that the recency filter retains in-window objects.
+      then('it finds the freshly-uploaded object', () => {
+        expect(result.stdout).toContain(TEST_RECENT_KEY);
       });
     });
   });
