@@ -612,6 +612,11 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
             args: '--which livedb --env prod --mode apply',
             cwd: dir,
           }),
+          provisionDbSync: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prod --mode sync --slug 2026_07_20.demo',
+            cwd: dir,
+          }),
           provisionTf: runSkill({
             skill: 'provision.terraform.sh',
             args: 'apply --env prod',
@@ -648,6 +653,24 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           expect(scene.provisionDb.stdout + scene.provisionDb.stderr).toContain(
             'provision.uses',
           );
+        });
+      });
+
+      when('[t2b] provision.database sync runs against prod', () => {
+        then(
+          'it is blocked by the gate too (exit 2) — sync writes prod',
+          () => {
+            expect(scene.provisionDbSync.exitCode).toBe(2);
+            expect(
+              scene.provisionDbSync.stdout + scene.provisionDbSync.stderr,
+            ).toContain('provision.uses');
+          },
+        );
+
+        then('the gate output matches snapshot', () => {
+          expect(
+            scene.provisionDbSync.stdout + scene.provisionDbSync.stderr,
+          ).toMatchSnapshot();
         });
       });
 
@@ -1221,4 +1244,159 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
       });
     });
   });
+
+  given(
+    '[case21] provision.database sync — slug/mode constraint matrix',
+    () => {
+      // sync's contract makes the illegal states unrepresentable: --slug is
+      // required for sync and forbidden elsewhere. these validations happen at the
+      // arg boundary, before any db connectivity or the prod gate, so they are
+      // testable without credentials. all are exit 2 (caller must fix).
+      const scene = useBeforeAll(async () => {
+        const dir = setupRepo({ slug: 'provision-db-sync-constraints' });
+        return {
+          syncNoSlug: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --mode sync',
+            cwd: dir,
+          }),
+          planWithSlug: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --mode plan --slug 2026_07_20.demo',
+            cwd: dir,
+          }),
+          applyWithSlug: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --mode apply --slug 2026_07_20.demo',
+            cwd: dir,
+          }),
+          typoMode: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --mode snyc',
+            cwd: dir,
+          }),
+          syncBareSlug: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --mode sync --slug',
+            cwd: dir,
+          }),
+          syncSlugAteFlag: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prep --slug --mode sync',
+            cwd: dir,
+          }),
+          help: runSkill({
+            skill: 'provision.database.sh',
+            args: 'help',
+            cwd: dir,
+          }),
+        };
+      });
+
+      when('[t0] sync is called without --slug', () => {
+        then('it is a constraint error (exit 2)', () => {
+          expect(scene.syncNoSlug.exitCode).toBe(2);
+          expect(scene.syncNoSlug.stdout + scene.syncNoSlug.stderr).toContain(
+            '--slug',
+          );
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.syncNoSlug.stdout + scene.syncNoSlug.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t1] --slug is passed with --mode plan', () => {
+        then('it is a constraint error (exit 2) — slug is sync-only', () => {
+          expect(scene.planWithSlug.exitCode).toBe(2);
+          expect(
+            scene.planWithSlug.stdout + scene.planWithSlug.stderr,
+          ).toContain('sync');
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.planWithSlug.stdout + scene.planWithSlug.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t2] --slug is passed with --mode apply', () => {
+        then('it is a constraint error (exit 2) — slug is sync-only', () => {
+          expect(scene.applyWithSlug.exitCode).toBe(2);
+          expect(
+            scene.applyWithSlug.stdout + scene.applyWithSlug.stderr,
+          ).toContain('sync');
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.applyWithSlug.stdout + scene.applyWithSlug.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t4] --mode is mistyped (e.g. snyc)', () => {
+        then('it is a constraint error (exit 2) — invalid mode', () => {
+          expect(scene.typoMode.exitCode).toBe(2);
+          expect(scene.typoMode.stdout + scene.typoMode.stderr).toContain(
+            'invalid mode',
+          );
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.typoMode.stdout + scene.typoMode.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t5] sync is called with a bare --slug (no value)', () => {
+        then('it is a constraint error (exit 2), not a set -u crash', () => {
+          // a bare --slug at the end must fail the clean absent-arg check (exit 2),
+          // never a raw bash "$2: unbound variable" crash (exit 1).
+          expect(scene.syncBareSlug.exitCode).toBe(2);
+          expect(
+            scene.syncBareSlug.stdout + scene.syncBareSlug.stderr,
+          ).toContain('--slug');
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.syncBareSlug.stdout + scene.syncBareSlug.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t6] --slug is followed by a flag instead of a value', () => {
+        then('the flag is not eaten as the slug — clean exit 2', () => {
+          // `--slug --mode sync` must not capture "--mode" as the slug value and
+          // slip past validation into a prod-write with a garbage key. the flag
+          // check leaves SLUG empty, so the absent-arg check reports exit 2.
+          expect(scene.syncSlugAteFlag.exitCode).toBe(2);
+          expect(
+            scene.syncSlugAteFlag.stdout + scene.syncSlugAteFlag.stderr,
+          ).toContain('--slug');
+        });
+
+        then('the constraint output matches snapshot', () => {
+          expect(
+            scene.syncSlugAteFlag.stdout + scene.syncSlugAteFlag.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t3] help is requested', () => {
+        then('it documents the sync mode and --slug (exit 0)', () => {
+          // case20 owns the help snapshot; here we assert the sync/--slug docs
+          // are present so a drop in that coverage fails loud.
+          expect(scene.help.exitCode).toBe(0);
+          expect(scene.help.stdout).toContain('sync');
+          expect(scene.help.stdout).toContain('--slug');
+        });
+      });
+    },
+  );
 });

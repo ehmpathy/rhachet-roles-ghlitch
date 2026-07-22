@@ -2,11 +2,13 @@
 ######################################################################
 # ⛵ provision.database — provision database schema against live envs
 #
-# .what = applies schema migrations with plan/apply pattern
+# .what = applies schema changes with a plan/apply/sync pattern
 #
-# .why  = enables schema migrations with plan/apply pattern:
+# .why  = enables schema changes with a plan/apply/sync pattern:
 #         - plan mode shows what changes will be made
 #         - apply mode executes the changes
+#         - sync mode reconciles the changelog for a change applied
+#           out-of-band (no sql re-run)
 #         - uses sql-schema-control for schema management
 #
 # usage:
@@ -15,13 +17,15 @@
 #   rhx provision.database --which livedb --env prod --mode plan
 #   rhx provision.database --which livedb --env prod --mode apply
 #   rhx provision.database --which livedb --env prod --mode apply --auth as-cicd
-#   rhx provision.database --which livedb --env prod --mode plan
+#   rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
 #   rhx provision.database help
 #
 # options:
 #   --which WHICH   database target: livedb (required)
 #   --env ENV       environment: prep or prod (required)
-#   --mode MODE     operation mode: plan or apply (required)
+#   --mode MODE     operation mode: plan, apply, or sync (required)
+#   --slug SLUG     change definition slug — the change's natural key in
+#                   control.yml (required for --mode sync; forbidden otherwise)
 #   --auth AUTH     prod-apply authorization source: as-cicd (optional). in CI, defers
 #                   the prod-apply gate to the github-environment approval instead of
 #                   the local human meter (requires CI=true). local runs omit it.
@@ -50,7 +54,8 @@ if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   echo "options:"
   echo "  --which  database target: livedb"
   echo "  --env    environment: prep or prod"
-  echo "  --mode   operation: plan or apply"
+  echo "  --mode   operation: plan, apply, or sync"
+  echo "  --slug   change slug (required for --mode sync; forbidden otherwise)"
   echo "  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)"
   exit 0
 fi
@@ -63,6 +68,7 @@ SKILL_DIR="$GIT_ROOT/src/domain.roles/operator/skills"
 WHICH=""
 ENV=""
 MODE=""
+SLUG=""
 AUTH=""
 
 while [[ $# -gt 0 ]]; do
@@ -78,6 +84,21 @@ while [[ $# -gt 0 ]]; do
     --mode)
       MODE="$2"
       shift 2
+      ;;
+    --slug)
+      # crash-safe + flag-safe value read: consume the value only if one is
+      # present and is not itself a flag; else leave SLUG empty for the absent-arg
+      # check to report a clean exit 2. a test of "$2" before the assign guards
+      # both a bare `--slug` (set -u crash) and a flag token as value
+      # (`--slug --mode`), so a prod-write sync never reaches the network with a
+      # garbage key.
+      if [[ $# -gt 1 && "$2" != --* ]]; then
+        SLUG="$2"
+        shift 2
+      else
+        SLUG=""
+        shift
+      fi
       ;;
     --auth)
       AUTH="$2"
@@ -101,7 +122,8 @@ while [[ $# -gt 0 ]]; do
       echo "options:"
       echo "  --which  database target: livedb"
       echo "  --env    environment: prep or prod"
-      echo "  --mode   operation: plan or apply"
+      echo "  --mode   operation: plan, apply, or sync"
+      echo "  --slug   change slug (required for --mode sync; forbidden otherwise)"
       echo "  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)"
       exit 0
       ;;
@@ -158,16 +180,37 @@ if [[ -z "$MODE" ]]; then
   echo ""
   echo "⛵ provision.database"
   echo "   ├─ absent required arg: --mode"
-  echo "   └─ must be: plan or apply"
+  echo "   └─ must be: plan, apply, or sync"
   exit 2
 fi
 
-if [[ "$MODE" != "plan" && "$MODE" != "apply" ]]; then
+if [[ "$MODE" != "plan" && "$MODE" != "apply" && "$MODE" != "sync" ]]; then
   echo "🐈 belay that..."
   echo ""
   echo "⛵ provision.database"
   echo "   ├─ invalid mode: $MODE"
-  echo "   └─ must be: plan or apply"
+  echo "   └─ must be: plan, apply, or sync"
+  exit 2
+fi
+
+# --slug is the change's natural key, meaningful only to sync.
+# require it for sync; forbid it elsewhere — an illegal combo fails fast so a
+# caller never thinks a plan/apply was scoped to one change (it never is).
+if [[ "$MODE" == "sync" && -z "$SLUG" ]]; then
+  echo "🐈 belay that..."
+  echo ""
+  echo "⛵ provision.database"
+  echo "   ├─ absent required arg for sync: --slug"
+  echo "   └─ hint: rhx provision.database --which livedb --env $ENV --mode sync --slug <change-slug>"
+  exit 2
+fi
+
+if [[ "$MODE" != "sync" && -n "$SLUG" ]]; then
+  echo "🐈 belay that..."
+  echo ""
+  echo "⛵ provision.database"
+  echo "   ├─ --slug is only valid with --mode sync (got --mode $MODE)"
+  echo "   └─ hint: drop --slug, or use --mode sync"
   exit 2
 fi
 
@@ -183,11 +226,14 @@ if [[ -n "$AUTH" && "$AUTH" != "as-cicd" ]]; then
   exit 2
 fi
 
-# prod gate: only a prod APPLY is gated; plan stays open (it only reads).
-# placed before the rds wake so a blocked apply never touches prod.
-# --auth passes through to uses.check: --auth as-cicd defers the prod-apply gate to
+# prod gate: prod writes are gated; only plan stays open (it alone reads).
+# gate fail-closed — every mode but plan mutates prod (apply runs DDL, sync
+# writes the changelog), so gate all non-plan modes. a future write mode is
+# gated by default rather than a silent bypass of this safety control.
+# placed before the rds wake so a blocked write never touches prod.
+# --auth passes through to uses.check: --auth as-cicd defers the prod-write gate to
 # the ambient github-environment approval (CI) instead of the local human meter.
-if [[ "$ENV" == "prod" && "$MODE" == "apply" ]]; then
+if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
   DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   GATE_ARGS=(--meter provision.uses --env prod)
   [[ -n "$AUTH" ]] && GATE_ARGS+=(--auth "$AUTH")
@@ -197,10 +243,15 @@ fi
 # output header
 echo "🐈 chartin course..."
 echo ""
-echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE"
+if [[ "$MODE" == "sync" ]]; then
+  echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE --slug $SLUG"
+else
+  echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE"
+fi
 echo "   ├─ which: $WHICH"
 echo "   ├─ env: $ENV"
 echo "   ├─ mode: $MODE"
+[[ "$MODE" == "sync" ]] && echo "   ├─ change: $SLUG"
 
 # ensure database connectivity (handles keyrack, vpc tunnel, and pg_isready).
 # frame the sub-skill's full output in its own treestruct sub.bucket so it is
@@ -218,7 +269,7 @@ echo ""
 # tunnel and may have unlocked keyrack). skip entirely when aws creds are already set
 # (CI/OIDC static creds) — never touch keyrack in CI, to match use.vpc.tunnel, and
 # never override OIDC creds with a stale AWS_PROFILE. the guard is the ambient
-# AWS_ACCESS_KEY_ID (the same signal use.vpc.tunnel uses), so plan and apply both skip
+# AWS_ACCESS_KEY_ID (the same signal use.vpc.tunnel uses), so every mode skips
 # keyrack in CI regardless of --auth.
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
   AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$ENV" --key AWS_PROFILE --value)
@@ -235,8 +286,9 @@ export AWS_SDK_LOAD_CONFIG=1
 # scope the oidc grant getConfig hands to sql-schema-control:
 #   - plan reads only  → GRANT=plan  (reader grant; least privilege)
 #   - apply runs DDL   → GRANT=apply (writer grant; the default)
+#   - sync writes the changelog table → GRANT=apply (a write, needs writer)
 # set explicitly per mode so plan never borrows the writer grant, and a stale
-# GRANT=plan from the caller's shell never starves an apply of its DDL rights.
+# GRANT=plan from the caller's shell never starves a write of its rights.
 # run the schema command with inherited fds — sql-schema-control's stdout (incl. the
 # up-to-date and connect-timeout markers) propagates unmodified to the caller, so a
 # workflow can `| tee ./plan.log` and grep it to decide whether a gated apply runs.
@@ -246,10 +298,21 @@ if [[ "$MODE" == "plan" ]]; then
 elif [[ "$MODE" == "apply" ]]; then
   echo "   apply schema changes..."
   GRANT=apply npm run provision:schema:apply
+elif [[ "$MODE" == "sync" ]]; then
+  # reconcile the changelog for one change, no re-run of its sql. forward --slug
+  # to sql-schema-control via npm's `--` passthrough.
+  echo "   sync changelog for change: $SLUG ..."
+  GRANT=apply npm run provision:schema:sync -- --slug "$SLUG"
 fi
 
 echo ""
 echo "🐈 smooth sailin!"
 echo ""
-echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE"
-echo "   └─ provisioned"
+if [[ "$MODE" == "sync" ]]; then
+  echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE --slug $SLUG"
+  echo "   ├─ change: $SLUG"
+  echo "   └─ changelog reconciled (no sql executed)"
+else
+  echo "⛵ provision.database --which $WHICH --env $ENV --mode $MODE"
+  echo "   └─ provisioned"
+fi
