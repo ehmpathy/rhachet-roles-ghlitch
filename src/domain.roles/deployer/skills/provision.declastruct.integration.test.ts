@@ -480,7 +480,17 @@ describe('provision.declastruct (live plan forward-contract)', () => {
         new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*[A-Za-z]`, 'g'),
         '',
       )
-      .replace(/\[A\[K/g, '');
+      .replace(/\[A\[K/g, '')
+      // mask declastruct's own apply-hint invocation prefix. declastruct derives it
+      // (`pnpm dlx` / `npx` / `yarn dlx` / bare) from its resolved binary path, so the
+      // same run prints `pnpm dlx declastruct apply` under a local pnpm store but bare
+      // `declastruct apply` under CI's resolver. strip the prefix so the forwarded hint
+      // is deterministic across environments — the skill's own framing (all we own) is
+      // unchanged; only this pass-through line varies by host.
+      .replace(
+        /(?:pnpm dlx|npx|yarn dlx) declastruct apply/g,
+        'declastruct apply',
+      );
     return {
       dir,
       wish,

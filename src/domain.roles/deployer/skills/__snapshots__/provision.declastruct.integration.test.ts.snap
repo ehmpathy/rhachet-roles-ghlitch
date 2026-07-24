@@ -176,7 +176,7 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1] a pla
 
 🥥 did you know?
    ├─ to apply, run
-   └─ pnpm dlx declastruct apply --plan <WISH>.plan.json
+   └─ declastruct apply --plan <WISH>.plan.json
 
 🐈 smooth sailin!
 
