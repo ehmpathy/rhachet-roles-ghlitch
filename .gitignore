@@ -1,6 +1,7 @@
 *.bak.*
 *.local.json
 *.log
+*.plan.json
 *.tsbuildinfo
 .agent/.cache/
 .artifact
