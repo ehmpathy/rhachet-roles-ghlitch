@@ -15,6 +15,7 @@ used to orchestrate deployments across environments with safety checks, rollback
 | `aws.cloudformation.rollback` | continue a stuck cloudformation rollback |
 | `provision.database` | provision database schema via plan/apply, or reconcile a change's changelog via sync |
 | `provision.terraform` | run terraform with SSO credential export |
+| `provision.declastruct` | provision infra (aws, github) via declastruct plan/apply |
 
 ### examples
 
@@ -41,4 +42,8 @@ rhx provision.database --which livedb --env prep --mode sync --slug <change-slug
 rhx provision.terraform --env prep init
 rhx provision.terraform --env prep plan
 rhx provision.terraform --env prod apply
+
+# provision infra via declastruct
+rhx provision.declastruct --wish provision/aws.infra/account=demo/resources.ts --env test --mode plan
+rhx provision.declastruct --wish provision/aws.infra/account=demo/resources.ts --env test --mode apply
 ```

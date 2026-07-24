@@ -1,0 +1,186 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`provision.declastruct (argument boundary) given: [case1] help is requested when: [t0] help is passed then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+⛵ provision.declastruct
+
+usage:
+  rhx provision.declastruct --wish <path> --env <env> --mode <mode>
+
+options:
+  --wish   path to a declastruct resources.ts (required)
+  --env    environment: test, prep, or prod (required). drives keyrack unlock and
+           is exported as STAGE/ACCESS so a wish file may reuse it; a wish file
+           that sources its own env still wins (the wish file decides)
+  --mode   operation: plan or apply (required)
+  --plan   plan file path (optional; defaults to <wish>.plan.json). plan writes
+           it, apply reads it — declastruct's --wish/--plan backbone
+  --auth   prod-apply auth: as-cicd (optional; CI-only — omit on local runs. in CI
+           it defers the prod-write gate to the github-environment approval)
+  <extra>  any unconsumed arg forwarded verbatim to declastruct (optional)
+  --       hard stop: -- and every token after it go verbatim to declastruct,
+           so wish-file passthrough flags reach the wish file intact (optional)
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case2] required args are absent when: [t0] --wish is absent then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent required arg: --wish
+   └─ hint: rhx provision.declastruct --wish <path> --env <env> --mode plan
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case2] required args are absent when: [t1] --env is absent then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case2] required args are absent when: [t2] --mode is absent then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent required arg: --mode
+   └─ must be: plan or apply
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case3] the wish path does not exist when: [t0] --wish points at an absent file then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ wish not found: ./does-not-exist.ts
+   └─ hint: pass a path to a declastruct resources.ts
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t0] --env is not test/prep/prod then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ invalid env: qa
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t1] --mode is not plan/apply then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ invalid mode: sync
+   └─ must be: plan or apply
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t2] --auth is not as-cicd then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ invalid auth: as-human
+   └─ must be: as-cicd
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t0] --wish is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --wish
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t1] --auth is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --auth
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t2] --env is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --env
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t3] --mode is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --mode
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t4] --plan is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --plan
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case6] the -- hard stop drains subsequent tokens when: [t0] a --mode plan token sits after -- then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent required arg: --mode
+   └─ must be: plan or apply
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case7] apply is requested with no prior plan file when: [t0] --mode apply and no <wish>.plan.json exists then: the belay stdout matches snapshot — temp paths normalized (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ plan not found: <WISH>.plan.json
+   └─ hint: run --mode plan first
+"
+`;
+
+exports[`provision.declastruct (live plan forward-contract) given: [case1] a plan runs against a hermetic empty wish when: [t0] --mode plan is invoked then: the FULL plan-success stdout matches snapshot (temp paths masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: plan
+   └─ plan infra changes...
+
+🌊 declastruct plan
+   ├─ wish: <WISH>
+   ├─ plan: <WISH>.plan.json
+   └─ snap: (none)
+
+🔮 plan changes...
+
+
+🎉 everything is in sync!
+
+🌊 declastruct plan
+   ├─ resources: 0
+   ├─ plan: <WISH>.plan.json
+   └─ snap: (none)
+
+🥥 did you know?
+   ├─ to apply, run
+   └─ declastruct apply --plan <WISH>.plan.json
+
+🐈 smooth sailin!
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   └─ planned → <WISH>.plan.json
+"
+`;

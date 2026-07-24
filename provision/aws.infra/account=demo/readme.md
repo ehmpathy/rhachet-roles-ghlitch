@@ -25,22 +25,19 @@ zip handler.zip handler.js
 
 ## plan
 
-preview changes without apply:
+preview changes without apply. the skill unlocks keyrack and writes the plan to
+`<wish>.plan.json` beside the wish:
 
 ```sh
-# unlock keyrack session (credentials sourced automatically by resources.ts)
-rhx keyrack unlock --owner ehmpath --env test
-
-# plan
-npx declastruct plan --wish provision/aws.infra/account=demo/resources.ts --into provision/aws.infra/account=demo/.temp/plan.json
+rhx provision.declastruct --wish provision/aws.infra/account=demo/resources.ts --env test --mode plan
 ```
 
 ## apply
 
-apply the plan to create resources:
+apply the reviewed plan to create resources:
 
 ```sh
-npx declastruct apply --plan provision/aws.infra/account=demo/.temp/plan.json
+rhx provision.declastruct --wish provision/aws.infra/account=demo/resources.ts --env test --mode apply
 ```
 
 ## verify
