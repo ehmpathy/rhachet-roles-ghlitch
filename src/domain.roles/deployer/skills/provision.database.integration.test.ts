@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { maskRunnerBanner } from './.test/maskRunnerBanner';
 
 /**
  * .what = connectivity + stdout-forwarding proof for provision.database
@@ -231,25 +232,14 @@ describe('provision.database (connectivity + stdout forwarding)', () => {
     //     deterministic across npm versions, else the snapshot is npm-version-fragile.
     // all else is deterministic (turtle headers, connectivity, forwarded schema
     // output). mask the realpath first (npm resolves symlinks in the banner).
-    const stdoutMasked = result.stdout
-      .split(realpathSync(dir))
-      .join('<tmp>')
-      .split(dir)
-      .join('<tmp>')
-      .replace(/live-db-token-\d+/g, 'live-db-token-<ts>')
-      // drop the package manager's run banner entirely. it is the RUNNER's chrome, never
-      // the skill's output, and it is not stable across runners: npm prints
-      //   "> svc-test@0.0.0 provision:schema:plan / > node provision/schema/plan.js"
-      // while pnpm prints no banner at all — and which one `npm run` lands on depends on
-      // the host (a shell that redirects npm→pnpm when no package-lock.json is present is
-      // a common dotfile). the prior mask only normalized the banner's <tmp> suffix across
-      // npm VERSIONS, which left the snapshot host-dependent across package MANAGERS.
-      //
-      // this does NOT weaken the proof. the two asserts directly above already pin the
-      // forwarded content by value — the no-op marker the workflow greps and the unique
-      // per-run token that exists nowhere in the skill. the snapshot's job is the visual
-      // vibecheck of the skill's OWN frame around them, which is exactly what is left.
-      .replace(/\n> svc-test@[^\n]*\n> node [^\n]*\n/g, '\n');
+    const stdoutMasked = maskRunnerBanner(
+      result.stdout
+        .split(realpathSync(dir))
+        .join('<tmp>')
+        .split(dir)
+        .join('<tmp>')
+        .replace(/live-db-token-\d+/g, 'live-db-token-<ts>'),
+    );
     return { result, token, dir, stdoutMasked };
   });
 
