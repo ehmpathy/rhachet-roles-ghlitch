@@ -50,6 +50,39 @@ require_val() {
   fi
 }
 
+# .what = close this gate's output block, so the composer's own output cannot collide
+#         with it
+# .why  = this skill is composed by five deployer skills (provision.declastruct,
+#         provision.database, provision.terraform, aws.cloudformation.rollback, deploy)
+#         and, on the paths that PASS, it hands control back and the composer prints its
+#         own two-header block next. with no seam the two collide at column 0:
+#
+#           🦺 provision.uses --env prod --gate for-cicd
+#              └─ authorized via github-environment approval (CI)
+#           🐈 belay that...              ← a new skill starts mid-air
+#
+#         every other mascot header in the family is preceded by a blank line; this one
+#         was not, because it is the SECOND skill's header butting against the FIRST
+#         skill's last line (rule.require.nest-subskill-output-in-buckets, whose concern
+#         is exactly "two headers stacked with no delineation").
+#
+#         .why a seam and NOT a run_sub_bucket: a bucket expresses CONTAINMENT — a child
+#         doing work as part of a parent's in-progress tree, which is the
+#         provision.database → use.rds.capacity shape. this gate is not that. it is a
+#         PRECONDITION: it runs to completion before the composer's header exists, and it
+#         may terminate the run outright. there is no parent tree to indent beneath, and
+#         to invent one would force each composer to print a second ⛵ header purely to
+#         host the frame. sequence gets a seam; containment gets a bucket.
+#
+#         only the pass-paths call this. a belay exits 2, so the composer emits no further
+#         output and a trailing blank would just be noise before the shell prompt.
+#
+#         goes to stderr, matching the lines it closes — a caller that captures stdout to
+#         grep a forward contract must never see it.
+close_gate_block() {
+  echo "" >&2
+}
+
 METER=""
 ENV=""
 # --gate names which caller-kind's approval clears a prod write. it defaults to
@@ -166,6 +199,7 @@ if [[ "$GATE" == "for-cicd" ]]; then
   # caller that captures stdout (e.g. to grep schema output) is never polluted.
   print_tree_start "🦺 $METER --env prod --gate for-cicd" >&2
   echo "   └─ authorized via github-environment approval (CI)" >&2
+  close_gate_block
   exit 0
 fi
 
@@ -209,6 +243,7 @@ case "$DECISION" in
     else
       echo "🐈 $METER: prod use consumed ($LEFT → $NEW left)" >&2
     fi
+    close_gate_block
     exit 0
     ;;
   blocked:global)

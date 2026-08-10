@@ -33,6 +33,48 @@ composed skills each print their own two-header block (`🐈` mascot + `🦺`/`�
 
 undelineated stacked output erodes the pit-of-success ergonomics the treestruct convention exists to provide. a wall of five headers at column 0 is exactly the confusion the bucket frame prevents.
 
+## .the second shape — a PRECONDITION runs before the composer's header exists
+
+a bucket expresses **containment**: a child that does work as part of a parent's
+*in-progress* tree. that presumes the parent's tree is already open on screen, which holds for
+`provision.database → use.rds.capacity` — the header prints, then the child runs under a
+labeled branch.
+
+a **precondition** is a different shape. it runs to completion *before* the composer prints
+one line, and it may terminate the run outright. the canonical case is the prod gate: all five
+deployer composers (`provision.declastruct:421`, `provision.database:330`,
+`provision.terraform:155`, `aws.cloudformation.rollback:130`, `deploy:102`) call
+`uses._.check.sh` ahead of their own header, deliberately — a blocked prod write must never
+reach the credential work, and `provision.declastruct` cannot print its `identity` block until
+credentials are settled anyway.
+
+there is no parent tree to indent beneath. to force a bucket would make each composer print a
+**second** `⛵` header purely to host the frame — noise invented to satisfy a shape.
+
+so the requirement here is **delineation, not containment**: the sub-skill closes its own
+block with a blank line, on every path that hands control back. the two skills then read as
+what they are — sequential blocks, each with its own artifact header:
+
+```
+🦺 provision.uses --env prod --gate for-cicd
+   └─ authorized via github-environment approval (CI)
+                                    ← the seam
+🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ plan not found: <WISH>.plan.json
+   └─ hint: run --mode plan first
+```
+
+**sequence gets a seam; containment gets a bucket.**
+
+two details that matter:
+
+- **only the paths that hand control back** emit the seam. a belay `exit`s, so the composer
+  prints no more and a blank at the tail is just noise before the shell prompt
+- the seam goes to **stderr**, to match the lines it closes, so a caller that captures stdout
+  to grep a forward contract never sees it
+
 ## .the exemption — forward-contract payloads
 
 do **NOT** bucket a pass-through payload whose stdout is a **forward contract** — output a caller (or CI) reads verbatim. the canonical case: `provision.database --mode plan` forwards `sql-schema-control`'s stdout, and CI greps it (`| tee ./plan.log`, `grep "Everything is up to date"`) to decide whether a gated apply runs. an indent on that output would corrupt the contract.
@@ -128,6 +170,18 @@ child pairs with a sun/rise phrase, not a drop-anchor one).
 - two sub-skill invocations merged into one bucket = blocker
 - a forward-contract payload wrongly bucketed (breaks the caller's parse) = blocker
 - a gerund in the bucket item label = blocker (rule.forbid.gerunds)
+
+on the precondition shape:
+
+- a precondition sub-skill whose pass-path hands control back with no seam = blocker
+  (its last line and the composer's `🐈` collide at column 0 — the same undelineated wall
+  the bucket exists to prevent)
+- a precondition wrapped in a bucket, forcing the composer to print a second artifact
+  header to host the frame = blocker (containment invented where only sequence exists)
+- a seam on a path that `exit`s = nitpick (a blank line that closes no seam, printed
+  straight into the shell prompt)
+- a seam written to stdout = blocker (a caller that captures stdout to grep a forward
+  contract must never see it)
 
 ## .see also
 

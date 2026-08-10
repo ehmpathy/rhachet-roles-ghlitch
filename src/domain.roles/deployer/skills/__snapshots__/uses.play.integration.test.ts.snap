@@ -30,6 +30,12 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case2] set --quan
 "
 `;
 
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case2] set --quant 1 — one-shot, auto-revoke when: [t1] the first prod op consumes the grant then: the consumption output matches snapshot 1`] = `
+"🐈 deploy.uses: prod use consumed (1 → 0, re-locked)
+
+"
+`;
+
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case3] allow — unlimited grant does not revoke when: [t0] a human grants unlimited prod access then: the allow output matches snapshot 1`] = `
 "🐈 smooth sailin!
 
@@ -315,6 +321,7 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t0] --gate for-cicd is used inside CI (CI=true) then: the cicd-gate authorization line matches snapshot 1`] = `
 "🦺 provision.uses --env prod --gate for-cicd
    └─ authorized via github-environment approval (CI)
+
 "
 `;
 
@@ -534,6 +541,7 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case22] provision
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision.declastruct --gate for-cicd reaches the cicd gate when: [t0] a prod apply --gate for-cicd runs inside CI then: the gate-CLEARED output matches snapshot (temp paths masked) 1`] = `
 "🦺 provision.uses --env prod --gate for-cicd
    └─ authorized via github-environment approval (CI)
+
 🐈 belay that...
 
 ⛵ provision.declastruct

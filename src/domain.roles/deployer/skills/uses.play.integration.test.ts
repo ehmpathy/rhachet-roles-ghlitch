@@ -190,6 +190,30 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
       then('it passes (exit 0)', () => {
         expect(scene.first.exitCode).toBe(0);
       });
+
+      then('it reports the consumption, with the count transition', () => {
+        // the quota pass-path emitted no proven output at all before this: [t1] only
+        // ever checked exit 0. that left the line a CI log actually shows — WHY a prod
+        // write was permitted — unclamped, which is the same "positive path unproven"
+        // gap that blocked this suite three times on the prior route.
+        expect(scene.first.stderr).toContain(
+          'deploy.uses: prod use consumed (1 → 0, re-locked)',
+        );
+      });
+
+      then('the gate block is seamed off from whatever follows', () => {
+        // this is the SECOND pass-path where the composed gate hands control back to a
+        // composer that prints its own two-header block next. it needs the same seam as
+        // the cicd path ([case23][t0]) or the two collide at column 0.
+        expect(scene.first.stderr).toMatch(/re-locked\)\n\n$/);
+        // the negative control: the un-seamed shape, which is what reddens if
+        // close_gate_block is dropped from this path.
+        expect(scene.first.stderr).not.toMatch(/re-locked\)\n$/);
+      });
+
+      then('the consumption output matches snapshot', () => {
+        expect(scene.first.stderr).toMatchSnapshot();
+      });
     });
 
     when('[t2] a second prod op is attempted', () => {
@@ -1864,6 +1888,19 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
             expect(out).toMatchSnapshot();
           },
         );
+
+        then("the gate block is seamed off from the composer's own", () => {
+          // the composed gate hands control back here, and the composer prints its
+          // own two-header block next. with no seam the two collide at column 0 —
+          // the gate's last line, then a mascot header on the very next line — which
+          // is the "two headers stacked with no delineation" shape
+          // rule.require.nest-subskill-output-in-buckets exists to forbid.
+          const out = `${scene.applyInCi.stderr}${scene.applyInCi.stdout}`;
+          expect(out).toContain('approval (CI)\n\n🐈');
+          // the negative control: the exact collision the seam removes. this is what
+          // reddens if close_gate_block is ever dropped from the pass-path.
+          expect(out).not.toContain('approval (CI)\n🐈');
+        });
       });
 
       when('[t1] the same prod apply runs outside CI', () => {
