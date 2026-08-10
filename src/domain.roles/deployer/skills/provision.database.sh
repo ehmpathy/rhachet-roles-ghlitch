@@ -16,7 +16,7 @@
 #   rhx provision.database --which livedb --env prep --mode apply
 #   rhx provision.database --which livedb --env prod --mode plan
 #   rhx provision.database --which livedb --env prod --mode apply
-#   rhx provision.database --which livedb --env prod --mode apply --auth as-cicd
+#   rhx provision.database --which livedb --env prod --mode apply --gate for-cicd
 #   rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
 #   rhx provision.database help
 #
@@ -26,9 +26,12 @@
 #   --mode MODE     operation mode: plan, apply, or sync (required)
 #   --slug SLUG     change definition slug — the change's natural key in
 #                   control.yml (required for --mode sync; forbidden otherwise)
-#   --auth AUTH     prod-apply authorization source: as-cicd (optional). in CI, defers
-#                   the prod-apply gate to the github-environment approval instead of
-#                   the local human meter (requires CI=true). local runs omit it.
+#   --gate GATE     APPROVAL — which caller-kind's gate clears a prod write
+#                   (default: for-ehmpath)
+#                     for-ehmpath  the quota a human granted the agent (the local meter)
+#                     for-cicd     the github-environment approval (requires CI=true)
+#                   the same flag, values, and default as every kin ghlitch skill —
+#                   see rule.require.consistent-skill-contracts.
 #
 # note: the schema plan/apply stdout (from sql-schema-control) is propagated
 #       unmodified, so a caller can `| tee ./plan.log` and grep it (e.g. for the
@@ -42,8 +45,20 @@
 ######################################################################
 set -euo pipefail
 
-# help
-if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+# help — declared ONCE, invoked from the arg-parse loop below.
+#
+# it used to also exist as a pre-loop `if [[ "${1:-}" == "help" ]]` check, ABOVE the loop,
+# which held a verbatim second copy of this same text. that check is the antipattern
+# rule.require.skill-help names by name: rhachet prepends `--skill/--repo/--role`, so under
+# a real `rhx provision.database help` invocation `$1` is `--skill`, never `help` — the
+# pre-loop block could not fire, and the loop's copy was the one every real caller reached.
+#
+# two copies of one help text is a drift hazard, and it very nearly bit: this route's own
+# `--gate` documentation had to be hand-written into BOTH blocks to stay in sync. the next
+# editor who updates one and not the other would ship stale docs to every rhx caller with
+# no test to catch it, since the one committed help case drove the DEAD copy via a direct
+# `bash <skill> help`. one declaration, one call site, no drift.
+show_help() {
   echo "🐈 heres the deal..."
   echo ""
   echo "⛵ provision.database"
@@ -52,13 +67,55 @@ if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   echo "  rhx provision.database --which livedb --env <env> --mode <mode>"
   echo ""
   echo "options:"
-  echo "  --which  database target: livedb"
-  echo "  --env    environment: prep or prod"
-  echo "  --mode   operation: plan, apply, or sync"
+  echo "  --which  database target: livedb (required)"
+  echo "  --env    environment: prep or prod (required). narrower than the kin skills'"
+  echo "           test|prep|prod|camp on purpose — a live schema exists only in prep"
+  echo "           and prod, so the other envs name no database to reach"
+  echo "  --mode   operation: plan, apply, or sync (required)"
   echo "  --slug   change slug (required for --mode sync; forbidden otherwise)"
-  echo "  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)"
+  echo "  --gate   whose gate clears a PROD write (default: for-ehmpath)"
+  echo "             for-ehmpath  the quota a human granted the agent (local meter)"
+  echo "             for-cicd     the github-environment approval (requires CI=true)"
+  echo ""
+  echo "example:"
+  echo "  rhx provision.database --which livedb --env prep --mode plan"
   exit 0
-fi
+}
+
+# require a value for a flag — belay fast when the next token cannot serve as the value.
+# one helper, used by every valued flag, so the message never drifts between flags — the
+# same shape provision.declastruct.sh carries (rule.require.consistent-skill-contracts,
+# rule.require.failfast-on-omitted-input).
+#
+# it rejects TWO shapes, and the second is the subtle one:
+#   1. absent — the flag was the last arg. without this, set -u trips a cryptic
+#      unbound-variable crash instead of a helpful message
+#   2. a FLAG token — `--which --env prep` would otherwise set WHICH='--env' and eat the
+#      next flag whole. the run then belays about `--env` as absent, which points the
+#      caller at the wrong flag entirely: a wrong-but-specific hint, which costs more than
+#      a right-but-general one (rule.forbid.surprises). the test belongs on EVERY valued
+#      flag, never one at a time — which is why the hand-rolled copy `--gate` used to carry
+#      is gone, and every closed-set flag now routes through here.
+#
+# a flag with a CLOSED value set passes that set as $3, and the belay names it. an error
+# that rejects a value without a note of the valid ones is a blocker under
+# rule.require.errors-name-the-fix. it is optional rather than mandatory because `--slug`
+# takes a free-form change key, where no set exists to name and a fabricated one would
+# mislead. the identical helper and message shape live in the kin provision.declastruct, so
+# one flag reads one way across both (rule.require.consistent-skill-contracts).
+require_val() {
+  # $1 = flag name, $2 = the candidate value (pass "${2:-}" from the case),
+  # $3 = optional comma-joined valid set, for flags whose values are a closed enum
+  if [[ -z "$2" || "$2" == --* ]]; then
+    echo "🐈 belay that..."
+    echo ""
+    echo "⛵ provision.database"
+    echo "   ├─ absent value for $1"
+    [[ -n "${3:-}" ]] && echo "   ├─ fix: pass one of $3"
+    echo "   └─ hint: rhx provision.database help"
+    exit 2
+  fi
+}
 
 # get git root and skill dir
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
@@ -69,29 +126,42 @@ WHICH=""
 ENV=""
 MODE=""
 SLUG=""
-AUTH=""
+# --gate defaults to for-ehmpath (the quota a human granted the agent), which is what an
+# omitted flag has always meant — now named. same flag, values, and default as every kin
+# ghlitch skill (rule.require.consistent-skill-contracts).
+GATE="for-ehmpath"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    # every valued flag reads its value via require_val, so a flag passed as the last token
+    # belays loud rather than crashes raw on an unbound "$2" under set -u, and a flag token
+    # handed as a value is never eaten. `--gate` used to hand-roll that same test inline,
+    # which left one file with two copies of one rule and two message shapes; the helper is
+    # now the single copy. `--slug` is the one deliberate holdout — see its own note.
     --which)
+      require_val --which "${2:-}" "livedb"
       WHICH="$2"
       shift 2
       ;;
     --env)
+      require_val --env "${2:-}" "prep, prod"
       ENV="$2"
       shift 2
       ;;
     --mode)
+      require_val --mode "${2:-}" "plan, apply, sync"
       MODE="$2"
       shift 2
       ;;
     --slug)
-      # crash-safe + flag-safe value read: consume the value only if one is
-      # present and is not itself a flag; else leave SLUG empty for the absent-arg
-      # check to report a clean exit 2. a test of "$2" before the assign guards
-      # both a bare `--slug` (set -u crash) and a flag token as value
-      # (`--slug --mode`), so a prod-write sync never reaches the network with a
-      # garbage key.
+      # the ONE valued flag that does not route through require_val, and the exemption is
+      # deliberate rather than an oversight. `--slug` is required for `--mode sync` and
+      # FORBIDDEN otherwise, so an absent value must fall through to that mode-aware check
+      # — which can say "--slug is only for sync" — rather than belay here with a
+      # mode-blind "absent value for --slug". the guard shape is otherwise identical: it
+      # consumes the value only when one is present and is not itself a flag, so both a
+      # bare `--slug` (set -u crash) and a flag token as value (`--slug --mode`) are
+      # caught, and a prod-write sync never reaches the network with a garbage key.
       if [[ $# -gt 1 && "$2" != --* ]]; then
         SLUG="$2"
         shift 2
@@ -100,9 +170,36 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       ;;
-    --auth)
-      AUTH="$2"
+    --gate)
+      # GATE needs the guard MORE than its kin: it carries a DEFAULT (for-ehmpath), so an
+      # absent value cannot be caught by any later absent-arg check — it is
+      # indistinguishable from an omitted flag. so it belays at the READ, and names its
+      # valid set, which is a prod-write authorization decision worth the extra line
+      # (rule.require.failfast-on-omitted-input).
+      require_val --gate "${2:-}" "for-ehmpath, for-cicd"
+      GATE="$2"
       shift 2
+      ;;
+    --auth)
+      # --auth is RETIRED on this skill — the WHOLE flag, not one of its values: this skill
+      # never had a credential channel to declare (its aws sniff is out of scope), so
+      # as-cicd was the only value it ever took. caught by name rather than left to the
+      # generic "unknown option" below, since the migration is the one fact a legacy
+      # caller needs (rule.require.errors-name-the-fix).
+      #
+      # the message must hold for EVERY value, not just as-cicd. a caller who transposes
+      # `--auth via-ambient` from provision.declastruct is a named cost in the vision, and
+      # to answer them "replace it with --gate for-cicd" would hand them a fix for a
+      # different axis — a wrong fix, which is worse than a bare rejection
+      # (rule.forbid.surprises). so it states what is true of the flag, then notes the one
+      # value that has a direct replacement.
+      echo "🐈 belay that..."
+      echo ""
+      echo "⛵ provision.database"
+      echo "   ├─ retired flag: --auth (this skill declares no credential channel)"
+      echo "   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd"
+      echo "   └─ note: --auth as-cicd is now --gate for-cicd"
+      exit 2
       ;;
     --skill|--role|--repo)
       # rhachet propagates these; ignore
@@ -112,20 +209,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     help|--help|-h)
-      echo "🐈 heres the deal..."
-      echo ""
-      echo "⛵ provision.database"
-      echo ""
-      echo "usage:"
-      echo "  rhx provision.database --which livedb --env <env> --mode <mode>"
-      echo ""
-      echo "options:"
-      echo "  --which  database target: livedb"
-      echo "  --env    environment: prep or prod"
-      echo "  --mode   operation: plan, apply, or sync"
-      echo "  --slug   change slug (required for --mode sync; forbidden otherwise)"
-      echo "  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)"
-      exit 0
+      show_help
       ;;
     *)
       echo "🐈 belay that..."
@@ -214,15 +298,22 @@ if [[ "$MODE" != "sync" && -n "$SLUG" ]]; then
   exit 2
 fi
 
-# validate --auth if supplied — only "as-cicd" is a recognized auth source. fail loud
-# on a typo rather than silently ignore it (an ignored auth could look like it opted
-# into the cicd auth when it did not).
-if [[ -n "$AUTH" && "$AUTH" != "as-cicd" ]]; then
+# the retired word is caught at the FLAG, in the arg parse above (`--auth)`), which is
+# where a real migration lands: a caller who carries the old contract types --auth. a
+# `--gate as-cicd` (new flag, old value) falls to the enum guard below and reads
+# "invalid gate: as-cicd / must be: for-ehmpath or for-cicd" — which names the valid set
+# and is the same answer every kin skill gives for that input
+# (rule.require.consistent-skill-contracts).
+#
+# validate --gate — fail loud on a typo rather than silently ignore it. an ignored value
+# would fall back to the local meter, which could read as an opt into the cicd gate when
+# it was not — a prod-write authorization decision made by a typo.
+if [[ "$GATE" != "for-ehmpath" && "$GATE" != "for-cicd" ]]; then
   echo "🐈 belay that..."
   echo ""
   echo "⛵ provision.database"
-  echo "   ├─ invalid auth: $AUTH"
-  echo "   └─ must be: as-cicd"
+  echo "   ├─ invalid gate: $GATE"
+  echo "   └─ must be: for-ehmpath or for-cicd"
   exit 2
 fi
 
@@ -231,13 +322,13 @@ fi
 # writes the changelog), so gate all non-plan modes. a future write mode is
 # gated by default rather than a silent bypass of this safety control.
 # placed before the rds wake so a blocked write never touches prod.
-# --auth passes through to uses.check: --auth as-cicd defers the prod-write gate to
-# the ambient github-environment approval (CI) instead of the local human meter.
+# --gate forwards VERBATIM to uses.check — no translation, because the gate skill speaks
+# the same word. --gate for-cicd defers the prod-write gate to the ambient
+# github-environment approval (CI) instead of the local meter.
 if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
   DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  GATE_ARGS=(--meter provision.uses --env prod)
-  [[ -n "$AUTH" ]] && GATE_ARGS+=(--auth "$AUTH")
-  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" "${GATE_ARGS[@]}" || exit $?
+  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" \
+    --meter provision.uses --env prod --gate "$GATE" || exit $?
 fi
 
 # output header

@@ -312,27 +312,80 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case16] provision
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t0] --auth as-cicd is used inside CI (CI=true) then: the cicd-auth authorization line matches snapshot 1`] = `
-"🦺 provision.uses --env prod --auth as-cicd
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t0] --gate for-cicd is used inside CI (CI=true) then: the cicd-gate authorization line matches snapshot 1`] = `
+"🦺 provision.uses --env prod --gate for-cicd
    └─ authorized via github-environment approval (CI)
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t1] --auth as-cicd is used outside CI (CI absent) then: the cicd-auth belay output matches snapshot 1`] = `
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t1] --gate for-cicd is used outside CI (CI absent) then: the cicd-gate belay output matches snapshot 1`] = `
 "🐈 belay that...
 
-🦺 provision.uses --env prod --auth as-cicd
-   ├─ --auth as-cicd requires the CI environment (CI=true), which is absent
-   └─ cicd auth defers to the github-environment approval; run it in CI
+🦺 provision.uses --env prod --gate for-cicd
+   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   └─ the cicd gate defers to the github-environment approval; run it in CI
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --auth as-cicd defers the prod gate to CI (the CI-aware path) when: [t3] an invalid --auth value is passed then: the invalid-auth error output matches snapshot 1`] = `
-"error: uses.check --auth must be 'as-cicd' (got: bogus)
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t3] an invalid --gate value is passed then: the invalid-gate error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ invalid gate: bogus
+   └─ must be: for-ehmpath or for-cicd
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --auth as-cicd wires the cicd auth through when: [t0] prod apply --auth as-cicd runs inside CI then: the gate-cleared stdout head matches snapshot (volatile tail masked) 1`] = `
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t4] the retired --auth as-cicd is passed then: the retired-auth belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ retired flag: --auth (this skill takes no credential channel)
+   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd
+   └─ note: --auth as-cicd is now --gate for-cicd
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t5] a TRANSPOSED --auth value from a kin skill is passed then: the transposed-auth belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ retired flag: --auth (this skill takes no credential channel)
+   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd
+   └─ note: --auth as-cicd is now --gate for-cicd
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t6] a TYPO’d flag is passed (--grate for --gate) then: the unknown-flag belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ unknown flag: --grate
+   └─ valid: --meter, --env, --gate
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t7] --gate is passed with NO value (it is the last token) then: the absent-value belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case17] --gate for-cicd defers the prod gate to CI (the CI-aware path) when: [t8] --gate EATS the next flag as its value then: the swallowed-flag belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --gate for-cicd wires the cicd gate through when: [t0] prod apply --gate for-cicd runs inside CI then: the gate-cleared stdout head matches snapshot (volatile tail masked) 1`] = `
 "🐈 chartin course...
 
 ⛵ provision.database --which livedb --env prod --mode apply
@@ -342,25 +395,45 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision
    └─ lets get some sun..."
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --auth as-cicd wires the cicd auth through when: [t1] prod apply --auth as-cicd runs outside CI then: the passthrough belay output matches snapshot 1`] = `
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --gate for-cicd wires the cicd gate through when: [t1] prod apply --gate for-cicd runs outside CI then: the passthrough belay output matches snapshot 1`] = `
 "🐈 belay that...
 
-🦺 provision.uses --env prod --auth as-cicd
-   ├─ --auth as-cicd requires the CI environment (CI=true), which is absent
-   └─ cicd auth defers to the github-environment approval; run it in CI
+🦺 provision.uses --env prod --gate for-cicd
+   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   └─ the cicd gate defers to the github-environment approval; run it in CI
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --auth when: [t0] an invalid --auth value is passed then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --gate when: [t0] an invalid --gate value is passed then: it is a constraint error (exit 2) and matches snapshot 1`] = `
 "🐈 belay that...
 
 ⛵ provision.database
-   ├─ invalid auth: bogus
-   └─ must be: as-cicd
+   ├─ invalid gate: bogus
+   └─ must be: for-ehmpath or for-cicd
 "
 `;
 
-exports[`uses (deploy.uses + provision.uses prod gate) given: [case20] provision.database help documents --auth when: [t0] help is requested then: the help output matches snapshot 1`] = `
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --gate when: [t1] the retired --auth as-cicd is passed then: the retired-auth belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ retired flag: --auth (this skill declares no credential channel)
+   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd
+   └─ note: --auth as-cicd is now --gate for-cicd
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --gate when: [t2] a TRANSPOSED --auth value from a kin skill is passed then: the transposed-auth belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ retired flag: --auth (this skill declares no credential channel)
+   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd
+   └─ note: --auth as-cicd is now --gate for-cicd
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case20] provision.database help documents --gate when: [t0] help is requested then: the help output matches snapshot 1`] = `
 "🐈 heres the deal...
 
 ⛵ provision.database
@@ -369,11 +442,18 @@ usage:
   rhx provision.database --which livedb --env <env> --mode <mode>
 
 options:
-  --which  database target: livedb
-  --env    environment: prep or prod
-  --mode   operation: plan, apply, or sync
+  --which  database target: livedb (required)
+  --env    environment: prep or prod (required). narrower than the kin skills'
+           test|prep|prod|camp on purpose — a live schema exists only in prep
+           and prod, so the other envs name no database to reach
+  --mode   operation: plan, apply, or sync (required)
   --slug   change slug (required for --mode sync; forbidden otherwise)
-  --auth   prod-apply auth: as-cicd (defers to github-environment approval in CI)
+  --gate   whose gate clears a PROD write (default: for-ehmpath)
+             for-ehmpath  the quota a human granted the agent (local meter)
+             for-cicd     the github-environment approval (requires CI=true)
+
+example:
+  rhx provision.database --which livedb --env prep --mode plan
 "
 `;
 
@@ -428,5 +508,75 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case21] provision
 ⛵ provision.database
    ├─ absent required arg for sync: --slug
    └─ hint: rhx provision.database --which livedb --env prep --mode sync --slug <change-slug>
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case22] provision.database --gate guards its own value read when: [t0] --gate is the last token, with no value then: the belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: rhx provision.database help
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case22] provision.database --gate guards its own value read when: [t1] --gate is followed by a flag instead of a value then: the belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: rhx provision.database help
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision.declastruct --gate for-cicd reaches the cicd gate when: [t0] a prod apply --gate for-cicd runs inside CI then: the gate-CLEARED output matches snapshot (temp paths masked) 1`] = `
+"🦺 provision.uses --env prod --gate for-cicd
+   └─ authorized via github-environment approval (CI)
+🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ plan not found: <WISH>.plan.json
+   └─ hint: run --mode plan first
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision.declastruct --gate for-cicd reaches the cicd gate when: [t1] the same prod apply runs outside CI then: the gate belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses --env prod --gate for-cicd
+   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   └─ the cicd gate defers to the github-environment approval; run it in CI
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case24] provision.database guards --which/--env/--mode value reads when: [t0] --which is handed --env instead of a value then: the belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent value for --which
+   ├─ fix: pass one of livedb
+   └─ hint: rhx provision.database help
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case24] provision.database guards --which/--env/--mode value reads when: [t1] --env is handed --mode instead of a value then: the belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent value for --env
+   ├─ fix: pass one of prep, prod
+   └─ hint: rhx provision.database help
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case24] provision.database guards --which/--env/--mode value reads when: [t2] --mode is the last token, with no value then: the belay output matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ provision.database
+   ├─ absent value for --mode
+   ├─ fix: pass one of plan, apply, sync
+   └─ hint: rhx provision.database help
 "
 `;

@@ -10,17 +10,24 @@ usage:
 
 options:
   --wish   path to a declastruct resources.ts (required)
-  --env    environment: test, prep, or prod (required). drives keyrack unlock and
+  --env    environment: test, prep, prod, or camp (required). drives keyrack and
            is exported as STAGE/ACCESS so a wish file may reuse it; a wish file
            that sources its own env still wins (the wish file decides)
   --mode   operation: plan or apply (required)
   --plan   plan file path (optional; defaults to <wish>.plan.json). plan writes
            it, apply reads it — declastruct's --wish/--plan backbone
-  --auth   prod-apply auth: as-cicd (optional; CI-only — omit on local runs. in CI
-           it defers the prod-write gate to the github-environment approval)
+  --auth   where credentials come from (default: via-keyrack)
+             via-keyrack  unlock keyrack for --env, source it into this process
+             via-ambient  use the session already in this shell; skip keyrack
+  --gate   whose gate clears a PROD write (default: for-ehmpath)
+             for-ehmpath  the quota a human granted the agent (local meter)
+             for-cicd     the github-environment approval (requires CI=true)
   <extra>  any unconsumed arg forwarded verbatim to declastruct (optional)
   --       hard stop: -- and every token after it go verbatim to declastruct,
            so wish-file passthrough flags reach the wish file intact (optional)
+
+example:
+  rhx provision.declastruct --wish ./resources.ts --env camp --mode plan
 "
 `;
 
@@ -38,7 +45,7 @@ exports[`provision.declastruct (argument boundary) given: [case2] required args 
 
 ⛵ provision.declastruct
    ├─ absent required arg: --env
-   └─ must be: test, prep, or prod
+   └─ must be: test, prep, prod, or camp
 "
 `;
 
@@ -60,12 +67,12 @@ exports[`provision.declastruct (argument boundary) given: [case3] the wish path 
 "
 `;
 
-exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t0] --env is not test/prep/prod then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t0] --env is not test/prep/prod/camp then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
 "🐈 belay that...
 
 ⛵ provision.declastruct
    ├─ invalid env: qa
-   └─ must be: test, prep, or prod
+   └─ must be: test, prep, prod, or camp
 "
 `;
 
@@ -78,13 +85,40 @@ exports[`provision.declastruct (argument boundary) given: [case4] enum args carr
 "
 `;
 
-exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t2] --auth is not as-cicd then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t2] --auth is outside the value set then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
 "🐈 belay that...
 
 ⛵ provision.declastruct
    ├─ invalid auth: as-human
-   └─ must be: as-cicd
+   └─ must be: via-keyrack or via-ambient
 "
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t3] --auth is the retired as-cicd then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ retired flag value: --auth as-cicd
+   ├─ fix: replace it with --auth via-ambient --gate for-cicd
+   └─ why: identity and prod-write approval are separate axes
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t4] --gate is outside the value set then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ invalid gate: by-human
+   └─ must be: for-ehmpath or for-cicd
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t5] --env camp (the env from the reported incident) then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ plan not found: <WISH>.plan.json
+   └─ hint: run --mode plan first"
 `;
 
 exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t0] --wish is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
@@ -101,6 +135,7 @@ exports[`provision.declastruct (argument boundary) given: [case5] a valued flag 
 
 ⛵ provision.declastruct
    ├─ absent value for --auth
+   ├─ fix: pass one of via-keyrack, via-ambient
    └─ hint: rhx provision.declastruct help
 "
 `;
@@ -110,6 +145,7 @@ exports[`provision.declastruct (argument boundary) given: [case5] a valued flag 
 
 ⛵ provision.declastruct
    ├─ absent value for --env
+   ├─ fix: pass one of test, prep, prod, camp
    └─ hint: rhx provision.declastruct help
 "
 `;
@@ -119,11 +155,80 @@ exports[`provision.declastruct (argument boundary) given: [case5] a valued flag 
 
 ⛵ provision.declastruct
    ├─ absent value for --mode
+   ├─ fix: pass one of plan, apply
    └─ hint: rhx provision.declastruct help
 "
 `;
 
 exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t4] --plan is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --plan
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5] a valued flag is passed with no value when: [t5] --gate is the last token then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t0] --wish is handed --env then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --wish
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t1] --auth is handed --mode then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --auth
+   ├─ fix: pass one of via-keyrack, via-ambient
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t2] --env is handed --mode then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --env
+   ├─ fix: pass one of test, prep, prod, camp
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t3] --mode is handed --auth then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --mode
+   ├─ fix: pass one of plan, apply
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t4] --gate is handed --mode then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: rhx provision.declastruct help
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case5b] a valued flag is handed another flag as its value when: [t5] --plan is handed --mode then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
 "🐈 belay that...
 
 ⛵ provision.declastruct
@@ -150,6 +255,34 @@ exports[`provision.declastruct (argument boundary) given: [case7] apply is reque
 "
 `;
 
+exports[`provision.declastruct (argument boundary) given: [case8] via-ambient is declared but the shell holds no credentials when: [t0] the env is scrubbed of every credential variable then: the header block matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: plan
+   ├─ auth: via-ambient
+   ├─ identity
+   │  └─ (none detected)
+   └─ plan infra changes..."
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case9] the shell holds the standard aws static-credential triple when: [t0] via-ambient is declared with all three aws static keys then: the header block matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: plan
+   ├─ auth: via-ambient
+   ├─ identity
+   │  ├─ AWS_ACCESS_KEY_ID = (set)
+   │  ├─ AWS_SECRET_ACCESS_KEY = (set)
+   │  └─ AWS_SESSION_TOKEN = (set)
+   └─ plan infra changes..."
+`;
+
 exports[`provision.declastruct (live plan forward-contract) given: [case1] a plan runs against a hermetic empty wish when: [t0] --mode plan is invoked then: the FULL plan-success stdout matches snapshot (temp paths masked) 1`] = `
 "🐈 chartin course...
 
@@ -157,6 +290,9 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1] a pla
    ├─ wish: <WISH>
    ├─ env: test
    ├─ mode: plan
+   ├─ auth: via-ambient
+   ├─ identity
+   │  └─ AWS_PROFILE = test-stub-profile
    └─ plan infra changes...
 
 🌊 declastruct plan
@@ -182,5 +318,97 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1] a pla
 
 ⛵ provision.declastruct --wish <WISH> --env test --mode plan
    └─ planned → <WISH>.plan.json
+"
+`;
+
+exports[`provision.declastruct (live plan forward-contract) given: [case1b] the same plan runs with --env camp when: [t0] --mode plan is invoked with the widened env then: the FULL plan-success stdout matches snapshot (temp paths masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env camp --mode plan
+   ├─ wish: <WISH>
+   ├─ env: camp
+   ├─ mode: plan
+   ├─ auth: via-ambient
+   ├─ identity
+   │  └─ AWS_PROFILE = test-stub-profile
+   └─ plan infra changes...
+
+🌊 declastruct plan
+   ├─ wish: <WISH>
+   ├─ plan: <WISH>.plan.json
+   └─ snap: (none)
+
+🔮 plan changes...
+
+
+🎉 everything is in sync!
+
+🌊 declastruct plan
+   ├─ resources: 0
+   ├─ plan: <WISH>.plan.json
+   └─ snap: (none)
+
+🥥 did you know?
+   ├─ to apply, run
+   └─ declastruct apply --plan <WISH>.plan.json
+
+🐈 smooth sailin!
+
+⛵ provision.declastruct --wish <WISH> --env camp --mode plan
+   └─ planned → <WISH>.plan.json
+"
+`;
+
+exports[`provision.declastruct (live plan forward-contract) given: [case1c] the plan [case1] wrote is then applied when: [t0] --mode apply is invoked against the extant plan then: the FULL apply-success stdout matches snapshot (temp paths masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode apply
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: apply
+   ├─ auth: via-ambient
+   ├─ identity
+   │  └─ AWS_PROFILE = test-stub-profile
+   └─ apply reviewed plan...
+
+🌊 declastruct apply
+   ├─ plan: <WISH>.plan.json
+   └─ wish: <WISH>
+
+🔮 plan changes...
+
+
+🎉 everything is in sync!
+
+🌊 declastruct apply
+   └─ applied: 0
+
+🐈 smooth sailin!
+
+⛵ provision.declastruct --wish <WISH> --env test --mode apply
+   └─ provisioned
+"
+`;
+
+exports[`provision.declastruct (via-keyrack credential supply) given: [case1] keyrack holds keys for the env when: [t0] --auth is omitted, so via-keyrack is the default then: the header block matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: plan
+   ├─ auth: via-keyrack
+   ├─ identity
+   │  └─ AWS_PROFILE = keyrack-supplied-profile
+   └─ plan infra changes..."
+`;
+
+exports[`provision.declastruct (via-keyrack credential supply) given: [case2] keyrack holds no keys for the env when: [t0] the source block comes back empty then: the belay stderr matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ absent credentials: keyrack holds no keys for env=test
+   ├─ fix: fill them — rhx keyrack fill --owner ehmpath
+   └─ or: declare this shell's own session with --auth via-ambient
 "
 `;

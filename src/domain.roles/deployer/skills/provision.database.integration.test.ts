@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { maskRunnerBanner } from './.test/maskRunnerBanner';
 
 /**
  * .what = connectivity + stdout-forwarding proof for provision.database
@@ -158,6 +159,43 @@ const setupRepo = (input: { slug: string; token: string }): string => {
 `,
   );
 
+  // .npmrc — make the fixture hermetic against WHICH package manager `npm run` lands on.
+  //
+  // the skill runs `npm run provision:schema:plan`. on a host whose shell redirects `npm`
+  // to `pnpm` when no package-lock.json is present (a common dotfile), that becomes
+  // `pnpm run` — and pnpm's pre-run deps-status check decides this fixture's symlinked
+  // node_modules disagrees with its package.json, tries to PURGE it, and needs a tty to
+  // confirm. with no tty it aborts:
+  //
+  //   ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+  //
+  // so the suite passed in CI (which sets CI=true, and pnpm skips the confirm) and failed
+  // on a developer's machine — a host dependency the test never declared
+  // (rule.require.hermetic-tests, rule.forbid.bare-host-deps).
+  //
+  // fixed at the cause rather than worked around: the fixture states its own intent, so
+  // neither the host's npm-vs-pnpm choice nor the presence of CI can change the outcome.
+  // NOT fixed by an env CI=true — this skill READS CI to decide its prod-write gate, so
+  // that would silently rewrite the behavior under test (uses._.check.sh:78-85).
+  //   verify-deps-before-run  the check itself is wrong here: node_modules is a deliberate
+  //                           symlink to the repo root's, never a pnpm-managed install
+  //   confirm-modules-purge   belt and braces, and the exact key pnpm's own error names
+  // BOTH files, because pnpm moved these settings between majors: <=9 reads the kebab-case
+  // keys from .npmrc, 10+ reads the camelCase keys from pnpm-workspace.yaml. corepack picks
+  // the pnpm version from whatever `packageManager` it resolves, which for a temp dir under
+  // /tmp is its own default — so the fixture cannot know which major it will meet, and
+  // states its intent in both dialects rather than pin a version it does not control.
+  writeFileSync(
+    join(dir, '.npmrc'),
+    ['verify-deps-before-run=false', 'confirm-modules-purge=false', ''].join(
+      '\n',
+    ),
+  );
+  writeFileSync(
+    join(dir, 'pnpm-workspace.yaml'),
+    ['verifyDepsBeforeRun: false', 'confirmModulesPurge: false', ''].join('\n'),
+  );
+
   // package.json wires the schema command the skill invokes via npm run. a fixed
   // version keeps npm's run banner deterministic for the snapshot.
   writeFileSync(
@@ -194,13 +232,14 @@ describe('provision.database (connectivity + stdout forwarding)', () => {
     //     deterministic across npm versions, else the snapshot is npm-version-fragile.
     // all else is deterministic (turtle headers, connectivity, forwarded schema
     // output). mask the realpath first (npm resolves symlinks in the banner).
-    const stdoutMasked = result.stdout
-      .split(realpathSync(dir))
-      .join('<tmp>')
-      .split(dir)
-      .join('<tmp>')
-      .replace(/live-db-token-\d+/g, 'live-db-token-<ts>')
-      .replace(/(provision:schema:plan) <tmp>/g, '$1');
+    const stdoutMasked = maskRunnerBanner(
+      result.stdout
+        .split(realpathSync(dir))
+        .join('<tmp>')
+        .split(dir)
+        .join('<tmp>')
+        .replace(/live-db-token-\d+/g, 'live-db-token-<ts>'),
+    );
     return { result, token, dir, stdoutMasked };
   });
 
