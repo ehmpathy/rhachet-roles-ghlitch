@@ -100,11 +100,9 @@ exports[`aws.s3.list given: [case9] list buckets when: [t0] skill runs with only
 "🐈 chartin course...
 
 🔮 aws.s3.list --env test
-   ├─ found: 4 buckets
+   ├─ found: <N> buckets
    └─ buckets
-      ├─ declastruct-demo-cloudtrail-1777847711 (2026-05-03)
-      ├─ ehmpathy-sdk-aws-s3-test-bucket (2026-06-06)
-      ├─ ehmpathy-simple-on-disk-cache-test-bucket (2026-06-03)
+      ├─ <BUCKETS OF OTHERS WHO SHARE THIS ACCOUNT>
       └─ rhachet-roles-ghlitch-test (2026-06-21)
 
 🐈 smooth sailin!

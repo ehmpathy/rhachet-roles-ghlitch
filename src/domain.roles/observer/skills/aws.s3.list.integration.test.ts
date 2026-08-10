@@ -17,6 +17,42 @@ const maskDynamicOutput = (output: string): string => {
 };
 
 /**
+ * .what = masks the buckets THIS REPO DOES NOT OWN, and keeps the one it does
+ * .why  = [case9] lists every bucket in a SHARED aws account, so its snapshot went red the
+ *         day an unrelated repo created one there. two costs, both real: a contributor who
+ *         changed naught gets a red gate, and a resnap would commit a third party's bucket
+ *         name — aws account id and all — as a fixture of THIS repo.
+ *
+ * .note = the split is by OWNERSHIP, never by convenience. `rhachet-roles-ghlitch-test` is
+ *         this repo's own fixture: its name and creation date are facts we control, so they
+ *         stay in the snapshot verbatim and a change to either goes red. every other entry
+ *         belongs to whoever else shares the account, so an assertion this repo makes about
+ *         them can only ever be flaky.
+ *
+ *         so the snapshot still verifies: the treestruct frame, the `buckets` label, the two
+ *         branch chars, and the full owned entry. it gives up only the third-party names and
+ *         the account-wide count — and the count is still checked, on the RAW stdout, by the
+ *         kin `then` block `expect(result.stdout).toMatch(/found: \d+ buckets/)`.
+ *
+ * .note = when the owned bucket is ABSENT the block is left untouched, so the snapshot goes
+ *         red rather than render a placeholder over a real regression.
+ */
+const maskUnownedBuckets = (output: string): string =>
+  output
+    .replace(/found: \d+ buckets/, 'found: <N> buckets')
+    .replace(/ {3}└─ buckets\n(?: {6}[├└]─ .*\n)+/, (block): string => {
+      const entries = block.split('\n').slice(1).filter(Boolean);
+      const owned = entries.find((line) => line.includes(TEST_BUCKET));
+      if (!owned) return block; // let a vanished fixture bucket redden the snapshot
+      return [
+        '   └─ buckets',
+        '      ├─ <BUCKETS OF OTHERS WHO SHARE THIS ACCOUNT>',
+        `      └─ ${owned.replace(/^ *[├└]─ /, '')}`,
+        '',
+      ].join('\n');
+    });
+
+/**
  * test bucket prepared with known objects:
  * - 85412205.png (4806 bytes)
  * - demo/ (0 bytes, folder marker)
@@ -331,7 +367,10 @@ describe('aws.s3.list', () => {
       });
 
       then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+        // the buckets of OTHERS are masked; ours stays verbatim — see maskUnownedBuckets.
+        expect(
+          maskUnownedBuckets(maskDynamicOutput(result.stdout)),
+        ).toMatchSnapshot();
       });
     });
   });

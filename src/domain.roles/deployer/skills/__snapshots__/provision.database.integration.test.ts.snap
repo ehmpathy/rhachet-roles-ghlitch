@@ -47,10 +47,6 @@ exports[`provision.database (connectivity + stdout forwarding) given: [case1] a 
       └─
 
    plan schema changes...
-
-> svc-test@0.0.0 provision:schema:plan
-> node provision/schema/plan.js
-
 Everything is up to date
 verified-live-db-read: source=live token=live-db-token-<ts>
 

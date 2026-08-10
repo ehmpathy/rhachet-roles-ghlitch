@@ -1,0 +1,35 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`provision.declastruct (as a consumer receives it) given: [case1] the ghlitch deployer role is installed into a clean repo when: [t2] help is requested through rhx then: the DELIVERED help matches snapshot (visual vibecheck) 1`] = `
+"
+🪨 run solid skill repo=ghlitch/role=deployer/skill=provision.declastruct
+
+🐈 heres the deal...
+
+⛵ provision.declastruct
+
+usage:
+  rhx provision.declastruct --wish <path> --env <env> --mode <mode>
+
+options:
+  --wish   path to a declastruct resources.ts (required)
+  --env    environment: test, prep, prod, or camp (required). drives keyrack and
+           is exported as STAGE/ACCESS so a wish file may reuse it; a wish file
+           that sources its own env still wins (the wish file decides)
+  --mode   operation: plan or apply (required)
+  --plan   plan file path (optional; defaults to <wish>.plan.json). plan writes
+           it, apply reads it — declastruct's --wish/--plan backbone
+  --auth   where credentials come from (default: via-keyrack)
+             via-keyrack  unlock keyrack for --env, source it into this process
+             via-ambient  use the session already in this shell; skip keyrack
+  --gate   whose gate clears a PROD write (default: for-ehmpath)
+             for-ehmpath  the quota a human granted the agent (local meter)
+             for-cicd     the github-environment approval (requires CI=true)
+  <extra>  any unconsumed arg forwarded verbatim to declastruct (optional)
+  --       hard stop: -- and every token after it go verbatim to declastruct,
+           so wish-file passthrough flags reach the wish file intact (optional)
+
+example:
+  rhx provision.declastruct --wish ./resources.ts --env camp --mode plan
+"
+`;

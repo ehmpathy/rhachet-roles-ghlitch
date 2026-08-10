@@ -158,6 +158,43 @@ const setupRepo = (input: { slug: string; token: string }): string => {
 `,
   );
 
+  // .npmrc — make the fixture hermetic against WHICH package manager `npm run` lands on.
+  //
+  // the skill runs `npm run provision:schema:plan`. on a host whose shell redirects `npm`
+  // to `pnpm` when no package-lock.json is present (a common dotfile), that becomes
+  // `pnpm run` — and pnpm's pre-run deps-status check decides this fixture's symlinked
+  // node_modules disagrees with its package.json, tries to PURGE it, and needs a tty to
+  // confirm. with no tty it aborts:
+  //
+  //   ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+  //
+  // so the suite passed in CI (which sets CI=true, and pnpm skips the confirm) and failed
+  // on a developer's machine — a host dependency the test never declared
+  // (rule.require.hermetic-tests, rule.forbid.bare-host-deps).
+  //
+  // fixed at the cause rather than worked around: the fixture states its own intent, so
+  // neither the host's npm-vs-pnpm choice nor the presence of CI can change the outcome.
+  // NOT fixed by an env CI=true — this skill READS CI to decide its prod-write gate, so
+  // that would silently rewrite the behavior under test (uses._.check.sh:78-85).
+  //   verify-deps-before-run  the check itself is wrong here: node_modules is a deliberate
+  //                           symlink to the repo root's, never a pnpm-managed install
+  //   confirm-modules-purge   belt and braces, and the exact key pnpm's own error names
+  // BOTH files, because pnpm moved these settings between majors: <=9 reads the kebab-case
+  // keys from .npmrc, 10+ reads the camelCase keys from pnpm-workspace.yaml. corepack picks
+  // the pnpm version from whatever `packageManager` it resolves, which for a temp dir under
+  // /tmp is its own default — so the fixture cannot know which major it will meet, and
+  // states its intent in both dialects rather than pin a version it does not control.
+  writeFileSync(
+    join(dir, '.npmrc'),
+    ['verify-deps-before-run=false', 'confirm-modules-purge=false', ''].join(
+      '\n',
+    ),
+  );
+  writeFileSync(
+    join(dir, 'pnpm-workspace.yaml'),
+    ['verifyDepsBeforeRun: false', 'confirmModulesPurge: false', ''].join('\n'),
+  );
+
   // package.json wires the schema command the skill invokes via npm run. a fixed
   // version keeps npm's run banner deterministic for the snapshot.
   writeFileSync(
@@ -200,7 +237,19 @@ describe('provision.database (connectivity + stdout forwarding)', () => {
       .split(dir)
       .join('<tmp>')
       .replace(/live-db-token-\d+/g, 'live-db-token-<ts>')
-      .replace(/(provision:schema:plan) <tmp>/g, '$1');
+      // drop the package manager's run banner entirely. it is the RUNNER's chrome, never
+      // the skill's output, and it is not stable across runners: npm prints
+      //   "> svc-test@0.0.0 provision:schema:plan / > node provision/schema/plan.js"
+      // while pnpm prints no banner at all — and which one `npm run` lands on depends on
+      // the host (a shell that redirects npm→pnpm when no package-lock.json is present is
+      // a common dotfile). the prior mask only normalized the banner's <tmp> suffix across
+      // npm VERSIONS, which left the snapshot host-dependent across package MANAGERS.
+      //
+      // this does NOT weaken the proof. the two asserts directly above already pin the
+      // forwarded content by value — the no-op marker the workflow greps and the unique
+      // per-run token that exists nowhere in the skill. the snapshot's job is the visual
+      // vibecheck of the skill's OWN frame around them, which is exactly what is left.
+      .replace(/\n> svc-test@[^\n]*\n> node [^\n]*\n/g, '\n');
     return { result, token, dir, stdoutMasked };
   });
 
