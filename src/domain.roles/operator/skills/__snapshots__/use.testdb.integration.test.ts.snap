@@ -1,0 +1,116 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`use.testdb (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🦺 use.testdb
+
+usage:
+  rhx use.testdb
+
+prerequisites:
+  - docker daemon active
+
+provides:
+  - postgres at localhost:7821
+  - schema from provision/schema/sql applied
+"
+`;
+
+exports[`use.testdb (contract renders) given: [case2] the testdb is healthy on the first try when: [t0] the start succeeds then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🦺 use.testdb
+   ├─ start testdb...
+   │  ├─
+   │  │
+   │  │  docker compose: container ghlitch-testdb is healthy
+   │  │  npm-run: start:testdb
+   │  │
+   │  └─
+   └─ testdb up
+
+🐈 caught it!
+
+🦺 use.testdb
+   └─ testdb ready at localhost:7821
+"
+`;
+
+exports[`use.testdb (contract renders) given: [case3] the first start fails, and the self-heal recovers it when: [t0] the retry succeeds after the heal then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🦺 use.testdb
+   ├─ start testdb...
+   │  ├─
+   │  │
+   │  │  docker compose: container ghlitch-testdb is healthy
+   │  │  npm-run: start:testdb
+   │  │  npm-run: start:testdb exited nonzero
+   │  │
+   │  └─
+   ├─ start failed — self-heal...
+   │  ├─
+   │  │
+   │  │  Container ghlitch-testdb  Removed
+   │  │  Volume testdb_data  Removed
+   │  │
+   │  └─
+   ├─ retry testdb...
+   │  ├─
+   │  │
+   │  │  docker compose: container ghlitch-testdb is healthy
+   │  │  npm-run: start:testdb
+   │  │
+   │  └─
+   └─ testdb up
+
+🐈 caught it!
+
+🦺 use.testdb
+   └─ testdb ready at localhost:7821
+"
+`;
+
+exports[`use.testdb (contract renders) given: [case4] the testdb stays wedged even after the heal when: [t0] both the start and the retry fail then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🦺 use.testdb
+   ├─ start testdb...
+   │  ├─
+   │  │
+   │  │  docker compose: container ghlitch-testdb is healthy
+   │  │  npm-run: start:testdb
+   │  │  npm-run: start:testdb exited nonzero
+   │  │
+   │  └─
+   ├─ start failed — self-heal...
+   │  ├─
+   │  │
+   │  │  Container ghlitch-testdb  Removed
+   │  │  Volume testdb_data  Removed
+   │  │
+   │  └─
+   ├─ retry testdb...
+   │  ├─
+   │  │
+   │  │  docker compose: container ghlitch-testdb is healthy
+   │  │  npm-run: start:testdb
+   │  │  npm-run: start:testdb exited nonzero
+   │  │
+   │  └─
+   └─ halted: testdb did not start
+
+🐈 wet paws...
+
+🦺 use.testdb
+   ├─ testdb did not start (even after volume renewal)
+   └─ container logs...
+      ├─
+      │
+      │  PostgreSQL init process complete; ready for start up.
+      │  FATAL:  database files are incompatible with server
+      │
+      └─
+"
+`;

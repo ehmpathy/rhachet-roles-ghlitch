@@ -4,16 +4,21 @@ exports[`aws.s3.get given: [case1] --help flag when: [t0] --help is passed then:
 "🐈 heres the deal...
 
 🔮 aws.s3.get
-   usage:
-     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
-     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
 
-   options:
-     --env       environment: test, prep, prod (required)
-     --uri       s3://bucket/key format (preferred)
-     --bucket    s3 bucket name (alternative)
-     --key       object key (alternative)
-     --help      show this help
+usage:
+  rhx aws.s3.get --env <env> --uri s3://bucket/key
+  rhx aws.s3.get --env <env> --bucket <name> --key <path>
+
+options:
+  --env       environment: test, prep, or prod
+  --uri       s3://bucket/key format (preferred)
+  --bucket    s3 bucket name (alternative)
+  --key       object key (alternative)
+  --help      show this help
+
+examples:
+  rhx aws.s3.get --env prep --uri s3://ahbode-logs/2026-08-12.log.gz
+  rhx aws.s3.get --env prep --bucket ahbode-logs --key 2026-08-12.log
 "
 `;
 
@@ -21,16 +26,21 @@ exports[`aws.s3.get given: [case2] -h flag when: [t0] -h is passed then: help ou
 "🐈 heres the deal...
 
 🔮 aws.s3.get
-   usage:
-     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
-     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
 
-   options:
-     --env       environment: test, prep, prod (required)
-     --uri       s3://bucket/key format (preferred)
-     --bucket    s3 bucket name (alternative)
-     --key       object key (alternative)
-     --help      show this help
+usage:
+  rhx aws.s3.get --env <env> --uri s3://bucket/key
+  rhx aws.s3.get --env <env> --bucket <name> --key <path>
+
+options:
+  --env       environment: test, prep, or prod
+  --uri       s3://bucket/key format (preferred)
+  --bucket    s3 bucket name (alternative)
+  --key       object key (alternative)
+  --help      show this help
+
+examples:
+  rhx aws.s3.get --env prep --uri s3://ahbode-logs/2026-08-12.log.gz
+  rhx aws.s3.get --env prep --bucket ahbode-logs --key 2026-08-12.log
 "
 `;
 
@@ -38,16 +48,21 @@ exports[`aws.s3.get given: [case3] help as positional arg when: [t0] help is pas
 "🐈 heres the deal...
 
 🔮 aws.s3.get
-   usage:
-     rhx aws.s3.get --env <env> --uri s3://bucket/key              # fetch object
-     rhx aws.s3.get --env <env> --bucket <name> --key <path>       # fetch object
 
-   options:
-     --env       environment: test, prep, prod (required)
-     --uri       s3://bucket/key format (preferred)
-     --bucket    s3 bucket name (alternative)
-     --key       object key (alternative)
-     --help      show this help
+usage:
+  rhx aws.s3.get --env <env> --uri s3://bucket/key
+  rhx aws.s3.get --env <env> --bucket <name> --key <path>
+
+options:
+  --env       environment: test, prep, or prod
+  --uri       s3://bucket/key format (preferred)
+  --bucket    s3 bucket name (alternative)
+  --key       object key (alternative)
+  --help      show this help
+
+examples:
+  rhx aws.s3.get --env prep --uri s3://ahbode-logs/2026-08-12.log.gz
+  rhx aws.s3.get --env prep --bucket ahbode-logs --key 2026-08-12.log
 "
 `;
 
@@ -55,39 +70,59 @@ exports[`aws.s3.get given: [case4] credentials not unlocked when: [t0] skill run
 "🐈 wet paws...
 
 🔮 aws.s3.get
-   ├─ absent AWS_PROFILE from keyrack for env=nonexistent
-   └─ hint: rhx keyrack unlock --owner ehmpath --env nonexistent
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
 
 🔐 keyrack
-   └─ ehmpathy.nonexistent.AWS_PROFILE
-      ├─ status: absent 🫧
-      └─ tip: rhx keyrack set --key AWS_PROFILE --env nonexistent --vault aws.config
+   └─ ehmpathy.prep.AWS_PROFILE
+      ├─ status: locked 🔒
+      └─ tip: rhx keyrack unlock --owner ehmpath --env prep --key AWS_PROFILE
 
 "
 `;
 
 exports[`aws.s3.get given: [case5] absent --env when: [t0] skill runs without --env then: error output matches snapshot 1`] = `
-"🐈 belay that... --env required
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
 "
 `;
 
 exports[`aws.s3.get given: [case6] absent --bucket and --uri when: [t0] skill runs without bucket or uri then: error output matches snapshot 1`] = `
-"🐈 belay that... --uri or --bucket required
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ absent required arg: --uri or --bucket
+   └─ hint: rhx aws.s3.get help
 "
 `;
 
 exports[`aws.s3.get given: [case7] invalid --uri format (not s3://) when: [t0] skill runs with https:// uri then: error output matches snapshot 1`] = `
-"🐈 belay that... invalid --uri format, expected s3://bucket/key
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ invalid --uri: https://bucket/key
+   └─ must be: s3://bucket/key
 "
 `;
 
 exports[`aws.s3.get given: [case8] --uri without key (just bucket) when: [t0] skill runs with uri that has no key then: error output matches snapshot 1`] = `
-"🐈 belay that... invalid --uri format, expected s3://bucket/key
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ invalid --uri: s3://bucket/
+   └─ must be: s3://bucket/key
 "
 `;
 
 exports[`aws.s3.get given: [case9] unknown option when: [t0] skill runs with --unknown-flag then: error output matches snapshot 1`] = `
-"🐈 belay that... unknown option: --unknown-flag
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ unknown argument: --unknown-flag
+   └─ hint: rhx aws.s3.get help
 "
 `;
 
@@ -104,6 +139,9 @@ exports[`aws.s3.get given: [case10] fetch file that exists via --uri when: [t0] 
       └─
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/date=2026-06-21/hello.md
+   └─ fetched 2 bytes
 "
 `;
 
@@ -120,6 +158,9 @@ exports[`aws.s3.get given: [case11] fetch file via --bucket and --key when: [t0]
       └─
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --bucket rhachet-roles-ghlitch-test --key demo/date=2026-06-21/hello.md
+   └─ fetched 2 bytes
 "
 `;
 
@@ -131,6 +172,9 @@ exports[`aws.s3.get given: [case12] fetch binary file (png) when: [t0] skill fet
    └─ (binary file)
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/85412205.png
+   └─ fetched 4806 bytes
 "
 `;
 
@@ -138,7 +182,8 @@ exports[`aws.s3.get given: [case13] fetch file that does not exist when: [t0] sk
 "🐈 wet paws...
 
 🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/nonexistent-file-12345.txt
-   └─ failed to fetch
+   ├─ could not fetch
+   └─ aws said: fatal error: An error occurred (404) when calling the HeadObject operation: Key "nonexistent-file-12345.txt" does not exist
 "
 `;
 
@@ -146,7 +191,8 @@ exports[`aws.s3.get given: [case14] fetch from nonexistent bucket when: [t0] ski
 "🐈 wet paws...
 
 🔮 aws.s3.get --env test --uri s3://nonexistent-bucket-xyz-12345/some-file.txt
-   └─ failed to fetch
+   ├─ could not fetch
+   └─ aws said: fatal error: An error occurred (404) when calling the HeadObject operation: Key "some-file.txt" does not exist
 "
 `;
 
@@ -163,6 +209,9 @@ exports[`aws.s3.get given: [case15] fetch file with nested path when: [t0] skill
       └─
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/demo/date=2026-06-21/hello.md
+   └─ fetched 2 bytes
 "
 `;
 
@@ -179,11 +228,18 @@ exports[`aws.s3.get given: [case16] fetch and auto-gunzip .gz file when: [t0] sk
       └─
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/tmp-itest-get/test-compressed.txt.gz
+   └─ fetched 28 bytes
 "
 `;
 
 exports[`aws.s3.get given: [case17] --bucket provided without --key when: [t0] skill runs with --bucket but no --key then: error output matches snapshot 1`] = `
-"🐈 belay that... --uri or --key required
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ absent required arg: --uri or --key
+   └─ hint: rhx aws.s3.get help
 "
 `;
 
@@ -192,8 +248,30 @@ exports[`aws.s3.get given: [case18] fetch empty file (0 bytes) when: [t0] skill 
 
 🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/tmp-itest-get/empty-file-for-test.txt
    ├─ cached: .agent/.cache/repo=ghlitch/role=observer/skill=aws.s3.get/bucket=rhachet-roles-ghlitch-test/key=tmp-itest-get__empty-file-for-test.txt/asof=TIMESTAMP.txt
-   └─ (binary file)
+   └─ (empty file)
 
 🐈 smooth sailin!
+
+🔮 aws.s3.get --env test --uri s3://rhachet-roles-ghlitch-test/tmp-itest-get/empty-file-for-test.txt
+   └─ fetched 0 bytes
+"
+`;
+
+exports[`aws.s3.get given: [case19] --env names an env this skill does not serve when: [t0] skill runs with --env prd then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ invalid env: prd
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.s3.get given: [case20] a flag is passed with no value when: [t0] --env is the last token then: error output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.s3.get
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx aws.s3.get help
 "
 `;

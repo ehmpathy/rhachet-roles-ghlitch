@@ -101,6 +101,15 @@ export ACCESS="$ENV"
 export NODE_ENV="production"
 export AWS_SDK_LOAD_CONFIG=1
 
+# ── the tree ────────────────────────────────────────────────────────────────────────
+# ONE header, ONE tree, from here to the terminal mascot block.
+#
+# this skill used to reprint `🦺 use.rds.capacity --env $ENV` three times — once here,
+# once before the capacity items, once at the end — each block closed with its own `└─`.
+# that renders THREE trees for ONE run, so a reader cannot tell a continuation from a
+# fresh invocation, and every bucket looked like a tree-close `└─` child.
+#
+# a header is printed once per MASCOT PHASE, never per paragraph.
 echo "🐈 rise and shine..."
 echo ""
 echo "🦺 use.rds.capacity --env $ENV"
@@ -116,11 +125,13 @@ echo "   ├─ env: $ENV"
 # clearly delineated under its own header; run_sub_bucket preserves the exit code,
 # so an absent-config failfast still propagates via set -e.
 source "$SCRIPT_DIR/_.nest.sh"
-echo "   └─ lets open the channel..."
+# a `├─` item, so its frame sits at `   │  ` — the gutter continues past it, because the
+# tree stays open for the capacity items and the pg_isready poll below.
+echo "   ├─ lets open the channel..."
 # explicit `|| exit $?` — run_sub_bucket runs the child in a process substitution,
 # so a bare call would not reliably trip set -e; forward the child exit code so an
 # absent-config failfast propagates exactly like a direct call would.
-run_sub_bucket "      " "$SCRIPT_DIR/use.vpc.tunnel.sh" --env "$ENV" || exit $?
+run_sub_bucket "   │  " "$SCRIPT_DIR/use.vpc.tunnel.sh" --env "$ENV" || exit $?
 
 # read the local endpoint from config to poll for capacity
 CONFIG_JSON=$(npx tsx -e "
@@ -137,13 +148,21 @@ DB_HOST=$(echo "$CONFIG_JSON" | jq -r '.host')
 DB_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
 
 # await for the database to have capacity (awakens serverless rds if paused)
-echo ""
-echo "🦺 use.rds.capacity --env $ENV"
-echo "   ├─ await capacity..."
 echo "   ├─ host: $DB_HOST"
-echo "   └─ port: $DB_PORT"
+echo "   ├─ port: $DB_PORT"
 
-timeout 180 bash -c "until pg_isready -h $DB_HOST -p $DB_PORT; do sleep 5; done"
+# framed: pg_isready RENDERS — it prints `<host>:<port> - accepting connections` (or
+# `- no response`) once per poll, so the loop emits a line every 5s until the cluster
+# wakes. un-framed those landed at column 0, right after this tree had already closed,
+# which is the exact orphan-line shape rule.require.nest-subskill-output-in-buckets
+# exists to retire. it is a render, not a payload: no caller parses it, and its whole
+# job is to tell a human the wake is in progress.
+#
+# the `timeout ... bash -c` wrapper is why an earlier sweep missed this site — a sweep
+# that greps for a command allowlist (npm/npx/terraform/rhx) cannot see a child behind
+# a wrapper. enumerate every streaming child, never a list of expected command names.
+echo "   └─ await capacity..."
+run_sub_bucket "      " timeout 180 bash -c "until pg_isready -h $DB_HOST -p $DB_PORT; do sleep 5; done" || exit $?
 
 echo ""
 echo "🐈 caught it!"

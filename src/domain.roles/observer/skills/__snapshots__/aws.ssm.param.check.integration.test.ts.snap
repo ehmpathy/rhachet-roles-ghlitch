@@ -1,0 +1,205 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.ssm.param.check (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.ssm.param.check
+
+usage:
+  rhx aws.ssm.param.check --env <env> --name <param>
+  rhx aws.ssm.param.check --env <env> --pattern <search>
+  rhx aws.ssm.param.check --env <env> --from <config.json>
+
+options:
+  --env      environment: test, prep, or prod
+  --name     exact parameter name
+  --pattern  text a parameter name must contain (never a glob)
+  --from     extract aws::param refs from a config file
+
+examples:
+  rhx aws.ssm.param.check --env prep --name ahbode.svc-jobs.prep.livedb.uri
+  rhx aws.ssm.param.check --env prep --pattern ahbode.svc-jobs
+  rhx aws.ssm.param.check --env prep --from config/prep.json
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] --env is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ invalid env: camp
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] an unknown flag is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ unknown argument: --nam
+   └─ hint: rhx aws.ssm.param.check help
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case3] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx aws.ssm.param.check help
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case3] a flag is passed with no value when: [t1] a free-form flag is the last token then: --name belays with no fabricated value set 1`] = `
+"🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ absent value for --name
+   └─ hint: rhx aws.ssm.param.check help
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case4] the credential read finds no profile when: [t0] the keyrack answers empty then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.ssm.param.check
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case5] a single --name is checked when: [t0] the parameter is present then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   └─ check parameter
+      └─ ✅ ahbode.svc-jobs.prep.livedb.uri
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 1 found, 0 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case5] a single --name is checked when: [t1] the parameter is absent then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   └─ check parameter
+      └─ ❌ ahbode.svc-jobs.prep.absent.key (absent)
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 0 found, 1 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case6] a --pattern search is run when: [t0] the search matches two params then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   ├─ pattern: ahbode.svc-jobs
+   └─ params that contain it
+      ├─ ✅ ahbode.svc-jobs.prep.livedb.uri
+      └─ ✅ ahbode.svc-jobs.prep.livedb.password
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 2 found, 0 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case6] a --pattern search is run when: [t1] the search matches no param then: the empty list is a nested item, never a glyph-less line 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   ├─ pattern: ahbode.svc-absent
+   └─ params that contain it
+      └─ (none)
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 0 found, 0 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case7] params are extracted --from a config file when: [t0] the config holds refs, one present and one absent then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   ├─ from: config.json
+   └─ params referenced
+      ├─ ❌ ahbode.svc-jobs.prep.absent.key (absent)
+      └─ ✅ ahbode.svc-jobs.prep.livedb.uri
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 1 found, 1 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case7] params are extracted --from a config file when: [t1] the config holds no aws::param refs then: the empty list is a nested item and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   ├─ from: config.json
+   └─ params referenced
+      └─ (none)
+
+🐈 caught it!
+
+🔮 aws.ssm.param.check --env prep
+   └─ 0 found, 0 absent
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case7] params are extracted --from a config file when: [t2] the config file is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   └─ blocked: absent file
+
+🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ no file at: absent.json
+   └─ hint: pass a path relative to the cwd you invoked from
+"
+`;
+
+exports[`aws.ssm.param.check (contract renders) given: [case8] no mode is named when: [t0] neither --name, --pattern nor --from is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.ssm.param.check --env prep
+   ├─ env: prep
+   └─ blocked: no mode named
+
+🐈 belay that...
+
+🔮 aws.ssm.param.check
+   ├─ one of --name, --pattern or --from is required
+   └─ hint: rhx aws.ssm.param.check help
+"
+`;

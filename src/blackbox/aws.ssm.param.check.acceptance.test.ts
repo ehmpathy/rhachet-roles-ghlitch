@@ -146,8 +146,20 @@ describe('aws.ssm.param.check', () => {
 
       then('error message indicates mode required', () => {
         expect(errorResult.stdout).toContain(
-          'must specify --name, --pattern, or --from',
+          'one of --name, --pattern or --from is required',
         );
+      });
+
+      then('the render closes the tree it opened, then belays', () => {
+        // the skill used to exit mid-tree here: it printed its header and items, then
+        // took a non-zero exit with no `└─` close, so the caller was left with items
+        // under no close beneath a mascot that had claimed the run was underway.
+        //
+        // the close-line names the OUTCOME in the shared vocabulary — `blocked:` for a
+        // constraint (exit 2), never `halted:` (exit 1)
+        // (rule.require.consistent-skill-contracts, `.the close-line vocabulary`).
+        expect(errorResult.stdout).toContain('   └─ blocked: no mode named');
+        expect(errorResult.stdout).toContain('🐈 belay that...');
       });
     });
   });

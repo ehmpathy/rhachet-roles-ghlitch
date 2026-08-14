@@ -50,38 +50,10 @@ require_val() {
   fi
 }
 
-# .what = close this gate's output block, so the composer's own output cannot collide
-#         with it
-# .why  = this skill is composed by five deployer skills (provision.declastruct,
-#         provision.database, provision.terraform, aws.cloudformation.rollback, deploy)
-#         and, on the paths that PASS, it hands control back and the composer prints its
-#         own two-header block next. with no seam the two collide at column 0:
-#
-#           🦺 provision.uses --env prod --gate for-cicd
-#              └─ authorized via github-environment approval (CI)
-#           🐈 belay that...              ← a new skill starts mid-air
-#
-#         every other mascot header in the family is preceded by a blank line; this one
-#         was not, because it is the SECOND skill's header butting against the FIRST
-#         skill's last line (rule.require.nest-subskill-output-in-buckets, whose concern
-#         is exactly "two headers stacked with no delineation").
-#
-#         .why a seam and NOT a run_sub_bucket: a bucket expresses CONTAINMENT — a child
-#         doing work as part of a parent's in-progress tree, which is the
-#         provision.database → use.rds.capacity shape. this gate is not that. it is a
-#         PRECONDITION: it runs to completion before the composer's header exists, and it
-#         may terminate the run outright. there is no parent tree to indent beneath, and
-#         to invent one would force each composer to print a second ⛵ header purely to
-#         host the frame. sequence gets a seam; containment gets a bucket.
-#
-#         only the pass-paths call this. a belay exits 2, so the composer emits no further
-#         output and a trailing blank would just be noise before the shell prompt.
-#
-#         goes to stderr, matching the lines it closes — a caller that captures stdout to
-#         grep a forward contract must never see it.
-close_gate_block() {
-  echo "" >&2
-}
+# .note = this gate emits NO seam of its own. its composers wrap the call in a
+#         treestruct sub.bucket (run_sub_bucket), which supplies the frame and the
+#         blank spacers — a seam here would render as a second, doubled gutter line
+#         inside that frame. see rule.require.nest-subskill-output-in-buckets.
 
 METER=""
 ENV=""
@@ -199,7 +171,6 @@ if [[ "$GATE" == "for-cicd" ]]; then
   # caller that captures stdout (e.g. to grep schema output) is never polluted.
   print_tree_start "🦺 $METER --env prod --gate for-cicd" >&2
   echo "   └─ authorized via github-environment approval (CI)" >&2
-  close_gate_block
   exit 0
 fi
 
@@ -231,19 +202,38 @@ case "$DECISION" in
     # local unlimited grant — no decrement
     # note: there is no "allowed:org" — an org allow never grants on its own;
     # only a local grant reaches an "allowed:*" outcome.
+    #
+    # it REPORTS, like its two sibling authorization paths (the cicd gate and the quota
+    # grant) do. a silent exit 0 was the odd one out: a prod write got authorized and
+    # said not one word, so a log gave the operator no way to tell WHY it was permitted
+    # (rule.require.status-feedback). the silence also rendered as an empty sub.bucket
+    # in every composer that frames this gate — a labeled item wrapped around no output.
+    print_tree_start "🦺 $METER --env prod" >&2
+    echo "   └─ authorized via local unlimited grant" >&2
     exit 0
     ;;
   allowed:local:*)
     # quota grant — decrement, auto-revoke at zero
+    #
+    # it renders an ARTIFACT BLOCK, exactly as its three kin authorization paths do (the
+    # unlimited grant above, the cicd gate, and every blocked path below). this arm alone
+    # used to emit a bare `🐈 <meter>: prod use consumed (2 → 1 left)` one-liner: a mascot
+    # with no tree under it, and no `🦺` header to say which skill spoke.
+    #
+    # two costs. the caller could not tell WHICH meter authorized the write without a
+    # re-read of the sentence, where every kin path states it in the header. and inside
+    # the prod-gate sub.bucket that five composers frame this gate with, the child's
+    # render broke shape mid-frame — one bucket held a tree, the next held a sentence
+    # (rule.require.consistent-skill-contracts, at the render layer).
     LEFT="${DECISION##*:}"
     NEW=$((LEFT - 1))
     write_local_uses "$METER" "$ENV" "$NEW"
+    print_tree_start "🦺 $METER --env prod" >&2
     if [[ "$NEW" -le 0 ]]; then
-      echo "🐈 $METER: prod use consumed ($LEFT → 0, re-locked)" >&2
+      echo "   └─ authorized via quota grant ($LEFT → 0 left, re-locked)" >&2
     else
-      echo "🐈 $METER: prod use consumed ($LEFT → $NEW left)" >&2
+      echo "   └─ authorized via quota grant ($LEFT → $NEW left)" >&2
     fi
-    close_gate_block
     exit 0
     ;;
   blocked:global)

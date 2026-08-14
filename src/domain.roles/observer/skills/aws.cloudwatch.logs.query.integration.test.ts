@@ -1,6 +1,7 @@
 import { genTempDir, given, then, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
+import { expectNoStrayLines } from '../../.test/expectNoStrayLines';
 
 /**
  * helper to mask dynamic parts of output for stable snapshots
@@ -30,6 +31,56 @@ const maskDynamicOutput = (output: string): string => {
 };
 
 /**
+ * .what = collapse a log-group INVENTORY into one placeholder, and leave the tree
+ *         around it verbatim
+ *
+ * .why  = a prep-env snapshot that pins the inventory pins a SHARED aws account's
+ *         live deploy state. this repo owns the name convention
+ *         (`rhachet-roles-ghlitch-prep-*`) but NOT whether prep happens to be
+ *         deployed right now — a lambda is torn down, a retention window lapses, and
+ *         a suite this wish never touched goes red. that is the same defect the s3
+ *         bucket-inventory mask was cut for, one service over
+ *         (rule.require.hermetic-tests).
+ *
+ *         cut along the OWNERSHIP line, exactly as the s3 fix was:
+ *         - `--env test` inventory stays VERBATIM. this repo provisions those groups
+ *           itself (`rhx aws.lambda.invoke` exists for precisely that), so their
+ *           presence is a fact it controls and must continue to assert.
+ *         - `--env prep` inventory is masked. no fixture in this repo guarantees it,
+ *           so its contents are not ours to pin.
+ *
+ * .note = a resnap is the WRONG fix here twice over: it would pin `(none)` as the
+ *         expected bytes, and redden again the moment anyone deploys prep.
+ *
+ * .note = if the header is absent the output falls through UNMASKED, so a render that
+ *         lost its inventory section reddens rather than passes behind a placeholder.
+ *         a mask may narrow what is asserted, never fabricate what is absent.
+ */
+const maskUnownedLogGroupInventory = (output: string): string => {
+  const lines = output.split('\n');
+  const headerAt = lines.findIndex(
+    (line) =>
+      line.includes('log groups for') || line.includes('available log groups'),
+  );
+  if (headerAt === -1) return output;
+
+  // the inventory is the run of entry lines directly under the header, drawn one
+  // tree level deeper (6 spaces vs the header's 3)
+  const isEntry = (line: string): boolean => /^ {6}[├└]─ /.test(line);
+  const firstEntry = headerAt + 1;
+  let afterEntries = firstEntry;
+  while (afterEntries < lines.length && isEntry(lines[afterEntries] as string))
+    afterEntries += 1;
+  if (afterEntries === firstEntry) return output;
+
+  return [
+    ...lines.slice(0, firstEntry),
+    '      └─ <LOG GROUPS OF THIS SHARED ACCOUNT, AS DEPLOYED>',
+    ...lines.slice(afterEntries),
+  ].join('\n');
+};
+
+/**
  * .what = type guard for Node.js execSync error shape
  * .why = execSync throws errors with stdout/stderr/status properties;
  *        TypeScript lacks types for this error shape
@@ -51,7 +102,11 @@ const isExecSyncError = (
  */
 const runSkill = (
   args: string,
-  options?: { withoutAwsCredentials?: boolean; isolatedHome?: string },
+  options?: {
+    withoutAwsCredentials?: boolean;
+    withRejectedAwsCredentials?: boolean;
+    isolatedHome?: string;
+  },
 ): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/aws.cloudwatch.logs.query.sh`;
 
@@ -63,12 +118,36 @@ const runSkill = (
     delete env.AWS_SESSION_TOKEN;
     delete env.AWS_PROFILE;
   }
+  // .what = hand the skill a well-formed key that aws will REJECT
+  //
+  // .why  = this is the only way to reach the branch where a `describe-log-groups`
+  //         call fails MID-TREE. absent credentials belay at the keyrack gate long
+  //         before any aws call (case7); valid credentials always succeed. a
+  //         syntactically valid key that the service refuses walks past the gate
+  //         (the skill skips keyrack whenever AWS_ACCESS_KEY_ID is set) and then
+  //         fails at the api — exactly the shape the repaired branch handles.
+  //
+  // .note = the key below is aws's own published documentation example. it grants
+  //         no access to any account and is not a secret.
+  if (options?.withRejectedAwsCredentials) {
+    delete env.AWS_PROFILE;
+    env.AWS_ACCESS_KEY_ID = 'AKIAIOSFODNN7EXAMPLE';
+    env.AWS_SECRET_ACCESS_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
+    delete env.AWS_SESSION_TOKEN;
+    env.AWS_REGION = 'us-east-1';
+    env.AWS_DEFAULT_REGION = 'us-east-1';
+  }
   if (options?.isolatedHome) {
     env.HOME = options.isolatedHome;
   }
 
+  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
+  // PATH outright, so it cannot be shadowed by a stub. BASH_ENV is the vector that carries
+  // one into a NON-interactive bash, and this host has it set (rule.require.hermetic-tests).
+  delete env.BASH_ENV;
+
   try {
-    const stdout = execSync(`bash "${skillPath}" ${args}`, {
+    const stdout = execSync(`bash --noprofile --norc "${skillPath}" ${args}`, {
       // .note = 'encoding' is Node.js execSync API parameter name (external boundary)
       encoding: 'utf-8',
       env,
@@ -364,8 +443,19 @@ describe('aws.cloudwatch.logs.query', () => {
         expect(result.stdout).toContain('log groups for');
       });
 
+      then('it renders an inventory line under the header', () => {
+        // the fact the mask drops, kept pinned on the RAW stdout: whatever the shared
+        // prep account currently holds, the render must draw a leaf for it — either a
+        // real group or the `(none)` marker. this is what keeps the mask honest.
+        expect(result.stdout).toMatch(/ {6}[├└]─ \S/);
+      });
+
       then('output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+        // the inventory is masked — see maskUnownedLogGroupInventory for why prep is
+        // masked while test stays verbatim.
+        expect(
+          maskUnownedLogGroupInventory(maskDynamicOutput(result.stdout)),
+        ).toMatchSnapshot();
       });
     });
   });
@@ -479,15 +569,28 @@ describe('aws.cloudwatch.logs.query', () => {
       });
 
       then('it mentions log group not found', () => {
+        // the lambda the CALLER asked for — ours, so it stays pinned verbatim
         expect(result.stdout).toContain('log group not found');
+        expect(result.stdout).toContain('nonexistent-lambda-name-xyz');
       });
 
       then('it shows available log groups', () => {
         expect(result.stdout).toContain('available log groups');
       });
 
+      then('it renders an inventory line under that header', () => {
+        // the fact the mask drops, kept pinned on the RAW stdout
+        expect(result.stdout).toMatch(/ {6}[├└]─ \S/);
+      });
+
       then('error output matches snapshot', () => {
-        expect(maskDynamicOutput(result.stdout)).toMatchSnapshot();
+        // the inventory under `available log groups:` is the same shared prep state
+        // as [case10]; mask it for the same reason. note [case13] is the SAME render
+        // against --env test and is deliberately left unmasked — this repo provisions
+        // the test groups itself, so there they are a fact it owns.
+        expect(
+          maskUnownedLogGroupInventory(maskDynamicOutput(result.stdout)),
+        ).toMatchSnapshot();
       });
     });
   });
@@ -559,6 +662,36 @@ describe('aws.cloudwatch.logs.query', () => {
         expect(result.stdout).toContain('caught it');
       });
 
+      // the header count IS the tree count. this skill used to print the discovery block
+      // under its own header, close that tree with `└─`, then reprint the header for the
+      // query block — two trees for one mascot phase, which made every later depth a claim
+      // about a tree that had already ended
+      // (rule.require.nest-subskill-output-in-buckets, `.one header per MASCOT PHASE`).
+      // a snapshot shows the reprint but a reader nods past it, so clamp it directly.
+      then('it prints one artifact header per mascot phase', () => {
+        const headers = result.stdout
+          .split('\n')
+          .filter((line) => line.startsWith('🔮 aws.cloudwatch.logs.query'));
+        expect(headers).toEqual([
+          '🔮 aws.cloudwatch.logs.query --env test',
+          '🔮 aws.cloudwatch.logs.query',
+        ]);
+      });
+
+      // the discovery item is a `├─` continuation of the one tree, never a `└─` close. the
+      // negative control has the teeth: the close-form is exactly what the defect emitted.
+      then(
+        'the discovery item continues the tree rather than closes it',
+        () => {
+          expect(result.stdout).toContain(
+            '   ├─ found 1 log group with prefix /aws/lambda/rhachet-roles-ghlitch-test',
+          );
+          expect(result.stdout).not.toContain(
+            '   └─ found 1 log group with prefix /aws/lambda/rhachet-roles-ghlitch-test',
+          );
+        },
+      );
+
       then('output structure matches snapshot', () => {
         // mask dynamic content (timestamps, file paths, query dots)
         const masked = maskDynamicOutput(result.stdout)
@@ -606,6 +739,71 @@ describe('aws.cloudwatch.logs.query', () => {
             /\.agent\/\.cache\/[^\n]+/g,
             '.agent/.cache/MASKED_CACHE_PATH',
           );
+        expect(masked).toMatchSnapshot();
+      });
+    });
+  });
+
+  // ============================================================
+  // a mid-tree aws failure
+  // ============================================================
+
+  given('[case18] the log-group inventory call is refused by aws', () => {
+    // .note = this clamps the ONE branch where an aws call fails while a tree is
+    //         already open. it used to render as
+    //           `      (error: could not list -test log groups: ...)`
+    //         straight to STDERR: a glyph-less line at 6 spaces, on the other
+    //         stream than the tree it sat inside. a caller who captured stdout saw
+    //         a silent gap; one who watched the terminal saw a bare line wedged
+    //         among the children.
+    when('[t0] skill searches for a lambda it cannot look up', () => {
+      const result = useThen('skill runs', () =>
+        runSkill('--env test --lambda echo', {
+          withRejectedAwsCredentials: true,
+        }),
+      );
+
+      then('it exits 2 (the group was not found)', () => {
+        expect(result.exitCode).toBe(2);
+      });
+
+      then('the failure is reported on stdout, with the tree', () => {
+        expect(result.stdout).toContain('could not list -test groups');
+      });
+
+      then('the failure is NOT split onto stderr', () => {
+        expect(result.stderr).not.toContain('could not list');
+      });
+
+      then('the failure line wears a branch glyph', () => {
+        const reported = result.stdout
+          .split('\n')
+          .filter((line) => line.includes('could not list'));
+        expect(reported).toHaveLength(1);
+        expect(reported[0]).toMatch(/^ {6}├─ could not list -test groups: /);
+      });
+
+      then('every line of the aws message wears one too', () => {
+        // .note = an aws error is multi-line. the first repair glyphed only its
+        //         first line and dropped the rest at column 0 — this is the clamp
+        //         that caught it, and the one that keeps it caught.
+        expectNoStrayLines({ out: result.stdout, artifact: '🔮' });
+      });
+
+      then('the tree still closes on the inventory, not on the failure', () => {
+        const items = result.stdout
+          .split('\n')
+          .filter((line) => /^ {6}[├└]─ /.test(line));
+        expect(items.at(-1)).toEqual('      └─ (none)');
+      });
+
+      then('output matches snapshot', () => {
+        // the aws error text is the service's own wording and carries a request
+        // id; pin the frame around it, not the message body
+        const masked = maskDynamicOutput(result.stdout).replace(
+          /(├─ could not list -\w+ groups: ).*$/gm,
+          '$1<AWS SAID SO, VERBATIM>',
+        );
         expect(masked).toMatchSnapshot();
       });
     });

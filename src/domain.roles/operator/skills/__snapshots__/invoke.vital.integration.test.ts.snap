@@ -1,0 +1,159 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`invoke.vital (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.vital
+
+usage:
+  rhx invoke.vital --name <vital> --env <env> [args...]
+  rhx invoke.vital --list
+
+options:
+  --name   vital name (without path or .ts extension)
+  --env    environment: test, prep, or prod
+  --list   list available vitals
+
+examples:
+  rhx invoke.vital --list
+  rhx invoke.vital --name checkCoverage --env prep --alert
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case2] the available vitals are listed when: [t0] the directory holds three vitals then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.vital --list
+   └─ vitals available
+      ├─ checkCoverage
+      ├─ checkFreshness
+      └─ checkLatency
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case2] the available vitals are listed when: [t1] the directory holds no vital then: the empty list is a nested item, never a header with no body 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.vital --list
+   └─ vitals available
+      └─ (none)
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case3] the repo holds no vital directory when: [t0] --list is asked of it then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ no vital directory at: src/contract/vitals
+   └─ hint: run this from a repo that holds vitals
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case4] argument constraints belay before any work is done when: [t0] --name is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ absent required arg: --name
+   └─ hint: rhx invoke.vital --list
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case4] argument constraints belay before any work is done when: [t1] --env is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case4] argument constraints belay before any work is done when: [t2] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ invalid env: camp
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case4] argument constraints belay before any work is done when: [t3] --name names a vital that does not exist then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ vital not found: absentVital
+   └─ hint: rhx invoke.vital --list
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case5] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx invoke.vital help
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case5] a flag is passed with no value when: [t1] a free-form flag is the last token then: --name belays with no fabricated value set 1`] = `
+"🐈 belay that...
+
+🦺 invoke.vital
+   ├─ absent value for --name
+   └─ hint: rhx invoke.vital help
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case6] the credential read finds no profile when: [t0] the keyrack answers empty then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 invoke.vital
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case7] the vital is invoked when: [t0] the vital succeeds then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🦺 invoke.vital --name checkCoverage --env prep
+   ├─ name: checkCoverage
+   ├─ env: prep
+   ├─ tunnel absent — the vital may not reach the database
+   └─ invoke the vital...
+      ├─
+      │
+      │  the child ran
+      │  the child saw: --env prep --alert
+      │
+      └─
+
+🐈 smooth sailin!
+
+🦺 invoke.vital --name checkCoverage --env prep
+   └─ vital completed
+"
+`;
+
+exports[`invoke.vital (contract renders) given: [case7] the vital is invoked when: [t1] the vital exits non-zero then: the run forwards the child code and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 invoke.vital --name checkCoverage --env prep
+   ├─ name: checkCoverage
+   ├─ env: prep
+   ├─ tunnel absent — the vital may not reach the database
+   └─ invoke the vital...
+      ├─
+      │
+      │  the child started
+      │  the child could not finish
+      │
+      └─
+
+🐈 wet paws...
+
+🦺 invoke.vital
+   ├─ the vital exited 3
+   └─ hint: read the bucket above for what it said
+"
+`;

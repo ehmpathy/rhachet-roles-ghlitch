@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 // fixture dir (relative to repo root) symlinked into each temp repo, so the
 // skills find .agent/keyrack.yml#org and a package.json name — no adhoc mkdir.
-const FIXTURE = 'src/domain.roles/deployer/skills/__test_assets__';
+const FIXTURE = 'src/domain.roles/deployer/skills/.test/assets';
 
 /**
  * .what = integration tests for the *.uses prod-gate engine
@@ -54,9 +54,19 @@ const runSkill = (
   };
   if (options?.asHuman ?? true) env.__I_AM_HUMAN = 'true';
 
+  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
+  // PATH outright, and BASH_ENV is the vector that carries one into a NON-interactive
+  // bash. both levels are hardened (rule.require.hermetic-tests).
+  delete env.BASH_ENV;
+
   const result = spawnSync(
     'bash',
-    ['-c', `bash "${skillPath}" ${input.args}`],
+    [
+      '--noprofile',
+      '--norc',
+      '-c',
+      `bash --noprofile --norc "${skillPath}" ${input.args}`,
+    ],
     { encoding: 'utf-8', cwd: input.cwd, env },
   );
 
@@ -197,18 +207,28 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
         // write was permitted — unclamped, which is the same "positive path unproven"
         // gap that blocked this suite three times on the prior route.
         expect(scene.first.stderr).toContain(
-          'deploy.uses: prod use consumed (1 → 0, re-locked)',
+          '   └─ authorized via quota grant (1 → 0 left, re-locked)',
         );
       });
 
-      then('the gate block is seamed off from whatever follows', () => {
-        // this is the SECOND pass-path where the composed gate hands control back to a
-        // composer that prints its own two-header block next. it needs the same seam as
-        // the cicd path ([case23][t0]) or the two collide at column 0.
-        expect(scene.first.stderr).toMatch(/re-locked\)\n\n$/);
-        // the negative control: the un-seamed shape, which is what reddens if
-        // close_gate_block is dropped from this path.
-        expect(scene.first.stderr).not.toMatch(/re-locked\)\n$/);
+      then('it reports it as an artifact block, like its kin arms', () => {
+        // this arm used to answer with a bare `🐈 deploy.uses: prod use consumed ...`
+        // one-liner while every kin authorization path rendered a header plus an item.
+        // inside the prod-gate sub.bucket the composers frame this gate with, that
+        // meant one bucket held a tree and the next held a sentence.
+        expect(scene.first.stderr).toMatch(/^🦺 deploy\.uses --env prod\n/);
+        expect(scene.first.stderr).not.toContain('🐈');
+      });
+
+      then('the gate emits no seam of its own', () => {
+        // the gate never pads its own output: its composers frame the call in a
+        // sub.bucket, which supplies the frame and the blank spacers, so a seam here
+        // would render as a doubled gutter line inside that frame.
+        expect(scene.first.stderr).toMatch(/re-locked\)\n$/);
+        expect(scene.first.stderr).not.toMatch(/re-locked\)\n\n$/);
+        // and no seam at the TOP either: the header is the first byte, so the frame's
+        // own spacer is never doubled
+        expect(scene.first.stderr).not.toMatch(/^\n/);
       });
 
       then('the consumption output matches snapshot', () => {
@@ -631,10 +651,23 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
       // network work, so this is testable without credentials.
       const scene = useBeforeAll(async () => {
         const dir = setupRepo({ slug: 'uses-consumer-gate' });
+        // declastruct takes a --wish, so its header echoes a per-run temp path; mask
+        // it (wish before dir, so `<WISH>` wins over `<DIR>/resources.ts`) or the
+        // snapshot pins one host's filesystem (rule.require.hermetic-tests).
+        const wish = join(dir, 'resources.ts');
+        writeFileSync(wish, 'export const resources = [];\n');
+        const mask = (out: string): string =>
+          out.split(wish).join('<WISH>').split(dir).join('<DIR>');
         return {
+          mask,
           deploy: runSkill({
             skill: 'deploy.sh',
             args: '--env prod',
+            cwd: dir,
+          }),
+          provisionDeclastruct: runSkill({
+            skill: 'provision.declastruct.sh',
+            args: `--wish ${wish} --env prod --mode apply`,
             cwd: dir,
           }),
           rollback: runSkill({
@@ -680,6 +713,15 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
             'prod is locked',
           );
         });
+
+        then('the gate output matches snapshot', () => {
+          // this render had NO snapshot while its [t0] and [t2b] siblings did — the
+          // same "positive path unproven" asymmetry, one axis over. every composer
+          // frames the gate in a bucket, so every composer's frame gets a clamp.
+          expect(
+            scene.rollback.stdout + scene.rollback.stderr,
+          ).toMatchSnapshot();
+        });
       });
 
       when('[t2] provision.database apply runs against prod', () => {
@@ -688,6 +730,12 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           expect(scene.provisionDb.stdout + scene.provisionDb.stderr).toContain(
             'provision.uses',
           );
+        });
+
+        then('the gate output matches snapshot', () => {
+          expect(
+            scene.provisionDb.stdout + scene.provisionDb.stderr,
+          ).toMatchSnapshot();
         });
       });
 
@@ -715,6 +763,38 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           expect(scene.provisionTf.stdout + scene.provisionTf.stderr).toContain(
             'provision.uses',
           );
+        });
+
+        then('the gate output matches snapshot', () => {
+          // terraform's header splits: `env` and `cmd` render above the gate, `dir`
+          // waits on the directory lookup below it. so a blocked run shows the first
+          // half of the tree and never reaches a filesystem path — which is also why
+          // this snapshot needs no mask.
+          expect(
+            scene.provisionTf.stdout + scene.provisionTf.stderr,
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t4] provision.declastruct apply runs against prod', () => {
+        then('it is blocked by the gate (exit 2)', () => {
+          expect(scene.provisionDeclastruct.exitCode).toBe(2);
+          expect(
+            scene.provisionDeclastruct.stdout +
+              scene.provisionDeclastruct.stderr,
+          ).toContain('provision.uses');
+        });
+
+        then('the gate output matches snapshot', () => {
+          // the fifth composer, absent from this case entirely until now — so the
+          // local-meter block of the one skill this route rewrote had no render
+          // clamped anywhere.
+          expect(
+            scene.mask(
+              scene.provisionDeclastruct.stdout +
+                scene.provisionDeclastruct.stderr,
+            ),
+          ).toMatchSnapshot();
         });
       });
     },
@@ -1393,12 +1473,17 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
         });
 
         then('it emits the cicd authorization line then proceeds', () => {
-          // the auth line (stderr) proves the gate deferred to CI; "chartin course"
-          // (stdout, only printed AFTER the gate) proves it proceeded past it.
-          expect(scene.applyInCi.stderr).toContain(
+          // the auth line proves the gate deferred to CI. it arrives on STDOUT, not
+          // stderr: the gate is framed by run_sub_bucket, which reads the child as
+          // `2>&1` — a gutter cannot interleave two streams and hold their order.
+          expect(scene.applyInCi.stdout).toContain(
             'authorized via github-environment approval',
           );
-          expect(scene.applyInCi.stdout).toContain('chartin course');
+          // and the connectivity item proves it proceeded PAST the gate. `chartin
+          // course` can no longer serve as that proof: the header now renders ahead
+          // of the gate (so the gate can nest under it), so it shows on a blocked run
+          // too. this item is printed only after the gate clears.
+          expect(scene.applyInCi.stdout).toContain('lets get some sun...');
         });
 
         then(
@@ -1406,29 +1491,189 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           () => {
             // past the gate the skill prints its header + the "lets get some sun..."
             // connectivity branch, then opens the sub.bucket and reaches db connectivity
-            // — which fails on this config-less temp repo with volatile temp-dir paths.
-            // slice at the sub.bucket open (the 6-space "├─" frame line, distinct from the
-            // 3-space header branches) so the snapshot is the deterministic, cleanly
-            // terminated head down to the "└─ lets get some sun..." branch. (the stderr
-            // auth line is snapshotted by case17 t0 — identical — so it is not re-snapped.)
-            const stdoutHead = scene.applyInCi.stdout.split('\n      ├─')[0];
+            // — which fails on this config-less temp repo with volatile temp-dir paths
+            // (tsx internals, stack traces, a per-run temp path).
+            //
+            // cut just past the connectivity BRANCH LABEL, by its literal text. the child
+            // output that follows it is volatile.
+            //
+            // the marker is the label, NOT a frame shape. it used to be the shape
+            // `\n      ├─`, which worked only while the connectivity item was the tree's
+            // `└─` close and thus the sole 6-space frame. once the schema run took over as
+            // the close, that item became a `├─` and its frame moved to `   │  ` — the
+            // same depth the GATE's frame already sits at. a shape marker then cuts at
+            // whichever bucket comes first (the gate's), which silently truncates away the
+            // one property this case exists to show: that the run proceeded PAST the gate.
+            //
+            // a literal label cannot collide that way. it is also self-checked below: an
+            // absent marker throws rather than snapshot the whole volatile tail
+            // (rule.forbid.failhide — a slice that silently no-ops is a failhide).
+            const marker = '   ├─ lets get some sun...';
+            const at = scene.applyInCi.stdout.indexOf(marker);
+            if (at === -1)
+              throw new Error(
+                `slice marker absent from stdout: ${JSON.stringify(marker)}`,
+              );
+            const stdoutHead = scene.applyInCi.stdout.slice(
+              0,
+              at + marker.length,
+            );
             expect(stdoutHead).toMatchSnapshot();
           },
         );
       });
 
       when('[t1] prod apply --gate for-cicd runs outside CI', () => {
-        then('it belays before the gate (exit 2), never past it', () => {
+        then('it belays at the gate (exit 2), never past it', () => {
           expect(scene.applyOutsideCi.exitCode).toBe(2);
           const out = scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr;
           expect(out).toContain('CI environment');
-          expect(out).not.toContain('chartin course');
+          // `chartin course` no longer proves the run stopped: the header renders
+          // ahead of the gate now, so it shows on a blocked run too. the connectivity
+          // item is the marker that only a CLEARED gate can reach.
+          expect(out).not.toContain('lets get some sun...');
         });
 
         then('the passthrough belay output matches snapshot', () => {
           expect(
             scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr,
           ).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  given(
+    '[case18b] every composer renders the gate-CLEARED frame the same way',
+    () => {
+      // the coverage this suite lacked. the gate-cleared render — the one that decides
+      // a prod mutation is authorized — was snapped for provision.database ([case18])
+      // and provision.declastruct ([case23]) only. deploy, aws.cloudformation.rollback
+      // and provision.terraform had NO cleared render clamped anywhere, so their frame
+      // could break unseen. one grant, all five, one shape.
+      //
+      // each composer's tail is volatile past the gate (keyrack, aws, a temp-dir path),
+      // so each snapshot is sliced at the bucket close — the last deterministic line,
+      // and the exact span this rule governs.
+      const sliceThroughGate = (out: string): string => {
+        const close = '   │  └─';
+        const at = out.indexOf(close);
+        return at === -1 ? out : out.slice(0, at + close.length);
+      };
+
+      const scene = useBeforeAll(async () => {
+        const dir = setupRepo({ slug: 'uses-consumer-gate-cleared' });
+        // one unlimited local grant clears the gate for every composer below
+        runSkill({
+          skill: 'deploy.uses.sh',
+          args: 'allow --env prod',
+          cwd: dir,
+        });
+        runSkill({
+          skill: 'provision.uses.sh',
+          args: 'allow --env prod',
+          cwd: dir,
+        });
+        const wish = join(dir, 'resources.ts');
+        writeFileSync(wish, 'export const resources = [];\n');
+        const mask = (out: string): string =>
+          out.split(wish).join('<WISH>').split(dir).join('<DIR>');
+        return {
+          mask,
+          deploy: runSkill({
+            skill: 'deploy.sh',
+            args: '--env prod',
+            cwd: dir,
+          }),
+          rollback: runSkill({
+            skill: 'aws.cloudformation.rollback.sh',
+            args: '--env prod',
+            cwd: dir,
+          }),
+          provisionTf: runSkill({
+            skill: 'provision.terraform.sh',
+            args: 'apply --env prod',
+            cwd: dir,
+          }),
+          provisionDeclastruct: runSkill({
+            skill: 'provision.declastruct.sh',
+            args: `--wish ${wish} --env prod --mode apply`,
+            cwd: dir,
+          }),
+          // the fifth composer. its only cleared render was the for-cicd path
+          // ([case18]), which authorizes through GITHUB and prints a different line.
+          // the local-grant path — the one a human on a laptop takes — was unclamped
+          // here, so provision.database was the one composer whose everyday cleared
+          // frame no cross-composer assertion ever compared.
+          provisionDatabase: runSkill({
+            skill: 'provision.database.sh',
+            args: '--which livedb --env prod --mode apply',
+            cwd: dir,
+          }),
+        };
+      });
+
+      when('[t0] deploy clears the gate', () => {
+        then('the cleared frame matches snapshot', () => {
+          expect(sliceThroughGate(scene.deploy.stdout)).toMatchSnapshot();
+        });
+      });
+
+      when('[t1] aws.cloudformation.rollback clears the gate', () => {
+        then('the cleared frame matches snapshot', () => {
+          expect(sliceThroughGate(scene.rollback.stdout)).toMatchSnapshot();
+        });
+      });
+
+      when('[t2] provision.terraform clears the gate', () => {
+        then('the cleared frame matches snapshot', () => {
+          expect(sliceThroughGate(scene.provisionTf.stdout)).toMatchSnapshot();
+        });
+      });
+
+      when('[t3] provision.declastruct clears the gate', () => {
+        then('the cleared frame matches snapshot', () => {
+          expect(
+            scene.mask(sliceThroughGate(scene.provisionDeclastruct.stdout)),
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t3b] provision.database clears the gate', () => {
+        then('the cleared frame matches snapshot', () => {
+          expect(
+            sliceThroughGate(scene.provisionDatabase.stdout),
+          ).toMatchSnapshot();
+        });
+      });
+
+      when('[t4] the five frames are compared to each other', () => {
+        then('every composer emits the identical bucket shape', () => {
+          // rule.require.consistent-skill-contracts, at the render layer: the item
+          // label, the frame, and the gutter must read the same on every composer.
+          // a per-skill variant is exactly the dialect that rule forbids.
+          // the meter differs by composer — deploy/rollback gate on `deploy.uses`,
+          // the provisioners on `provision.uses` — but the FRAME must not.
+          for (const { out, meter } of [
+            { out: scene.deploy.stdout, meter: 'deploy.uses' },
+            { out: scene.rollback.stdout, meter: 'deploy.uses' },
+            { out: scene.provisionTf.stdout, meter: 'provision.uses' },
+            { out: scene.provisionDeclastruct.stdout, meter: 'provision.uses' },
+            { out: scene.provisionDatabase.stdout, meter: 'provision.uses' },
+          ]) {
+            expect(out).toContain('   ├─ check the gate...');
+            expect(out).toContain('   │  ├─');
+            expect(out).toContain(`   │  │  🦺 ${meter} --env prod`);
+            expect(out).toContain(
+              '   │  │     └─ authorized via local unlimited grant',
+            );
+            expect(out).toContain('   │  └─');
+            // the negative control: never at column 0
+            expect(out).not.toMatch(/^🦺 /m);
+            // and the bucket is never EMPTY — a labeled item that frames no output is
+            // the defect these snapshots caught on their first run.
+            expect(out).not.toContain('   │  ├─\n   │  │\n   │  │\n   │  └─');
+          }
         });
       });
     },
@@ -1856,11 +2101,23 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           expect(out).not.toContain('set --quant');
         });
 
-        then('it emits the cicd authorization line', () => {
-          expect(scene.applyInCi.stderr).toContain(
-            'authorized via github-environment approval',
-          );
-        });
+        then(
+          'it emits the cicd authorization line, on the bucket stream',
+          () => {
+            // the gate speaks on STDERR when invoked directly ([case17]), but under a
+            // composer it is framed by run_sub_bucket, which reads the child as `2>&1` —
+            // a gutter cannot interleave two streams and preserve their order. so the
+            // line arrives on the COMPOSER's stdout, carried at the bucket gutter.
+            expect(scene.applyInCi.stdout).toContain(
+              'authorized via github-environment approval',
+            );
+            // pin the stream itself: were the child ever streamed raw again, this line
+            // would revert to stderr and the frame would be gone with it.
+            expect(scene.applyInCi.stderr).not.toContain(
+              'authorized via github-environment approval',
+            );
+          },
+        );
 
         then('it advances PAST the gate to the next belay in line', () => {
           // `plan not found` sits immediately after the gate, so its presence is the
@@ -1889,17 +2146,28 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
           },
         );
 
-        then("the gate block is seamed off from the composer's own", () => {
-          // the composed gate hands control back here, and the composer prints its
-          // own two-header block next. with no seam the two collide at column 0 —
-          // the gate's last line, then a mascot header on the very next line — which
-          // is the "two headers stacked with no delineation" shape
-          // rule.require.nest-subskill-output-in-buckets exists to forbid.
-          const out = `${scene.applyInCi.stderr}${scene.applyInCi.stdout}`;
-          expect(out).toContain('approval (CI)\n\n🐈');
-          // the negative control: the exact collision the seam removes. this is what
-          // reddens if close_gate_block is ever dropped from the pass-path.
-          expect(out).not.toContain('approval (CI)\n🐈');
+        then("the gate is framed in the composer's own sub.bucket", () => {
+          // rule.require.nest-subskill-output-in-buckets: a composed ghlitch sub-skill
+          // whose output reaches the terminal must be framed in the composer's
+          // treestruct sub.bucket, under a labeled item — never streamed raw at column
+          // 0 beside the composer's own header.
+          const out = scene.mask(
+            `${scene.applyInCi.stdout}${scene.applyInCi.stderr}`,
+          );
+
+          // the labeled branch item that hosts the bucket
+          expect(out).toContain('   ├─ check the gate...');
+          // the child's own header, carried at the bucket's gutter rather than column 0
+          expect(out).toContain('   │  │  🦺 provision.uses --env prod');
+          expect(out).toContain(
+            '   │  │     └─ authorized via github-environment approval (CI)',
+          );
+          // the frame closes
+          expect(out).toContain('   │  └─');
+
+          // the negative control: the un-bucketed shape this replaces — the gate's
+          // header at column 0. this is what reddens if run_sub_bucket is ever dropped.
+          expect(out).not.toMatch(/^🦺 provision\.uses/m);
         });
       });
 
@@ -1913,8 +2181,15 @@ describe('uses (deploy.uses + provision.uses prod gate)', () => {
         });
 
         then('the gate belay output matches snapshot', () => {
+          // masked, exactly as [t0] masks. the composer now prints its header ahead of
+          // the gate (so the gate can nest under it), and that header echoes the wish
+          // path — an absolute temp path that differs on every machine. an unmasked
+          // snapshot here would pin one host's path as the expected bytes
+          // (rule.require.hermetic-tests).
           expect(
-            scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr,
+            scene.mask(
+              scene.applyOutsideCi.stdout + scene.applyOutsideCi.stderr,
+            ),
           ).toMatchSnapshot();
         });
       });

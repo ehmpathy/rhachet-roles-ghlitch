@@ -13,7 +13,6 @@ import { execSync } from 'node:child_process';
  */
 const TEST_BUCKET = 'rhachet-roles-ghlitch-test';
 const TEST_FILE_KEY = 'demo/date=2026-06-21/hello.md';
-const TEST_FILE_CONTENT = 'hi';
 const TEST_PNG_KEY = '85412205.png';
 // .note = temp files live under a dedicated prefix (NOT demo/, NOT bucket fixtures)
 //         so concurrent aws.s3.list shards never count them in demo/ or fixture assertions
@@ -56,8 +55,13 @@ const runSkill = (
     delete env.AWS_PROFILE;
   }
 
+  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
+  // PATH outright, so it cannot be shadowed by a stub. BASH_ENV is the vector that carries
+  // one into a NON-interactive bash, and this host has it set (rule.require.hermetic-tests).
+  delete env.BASH_ENV;
+
   try {
-    const stdout = execSync(`bash "${skillPath}" ${args}`, {
+    const stdout = execSync(`bash --noprofile --norc "${skillPath}" ${args}`, {
       encoding: 'utf-8',
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -172,15 +176,18 @@ describe('aws.s3.get', () => {
   // ============================================================
 
   given('[case4] credentials not unlocked', () => {
-    // .note = clears AWS env vars and uses nonexistent env to test keyrack failure path
+    // .note = clears AWS env vars so the keyrack read answers empty.
+    //
+    //         this case used to pass `--env nonexistent` to force that empty answer, which
+    //         worked only because the closed env set was NEVER checked. now that it is, an
+    //         invented env belays at exit 2 long before the credential read — so the case
+    //         must name a REAL env and let the cleared credentials do the work. the old
+    //         shape would have quietly clamped the wrong path.
     when('[t0] skill runs without prior unlock', () => {
       const result = useThen('skill runs', () =>
-        runSkill(
-          `--env nonexistent --bucket ${TEST_BUCKET} --key ${TEST_FILE_KEY}`,
-          {
-            withoutAwsCredentials: true,
-          },
-        ),
+        runSkill(`--env prep --bucket ${TEST_BUCKET} --key ${TEST_FILE_KEY}`, {
+          withoutAwsCredentials: true,
+        }),
       );
 
       then('it exits 1 (malfunction)', () => {
@@ -208,6 +215,20 @@ describe('aws.s3.get', () => {
   // constraint errors (exit 2)
   // ============================================================
 
+  /**
+   * every belay below now renders on STDOUT, and each `then` asserts that stream
+   * explicitly.
+   *
+   * .why = it used to render on stderr as a ONE-LINER, and both halves were a dialect: all
+   *        seventeen kin skills belay on stdout, in a four-line block (mascot, blank,
+   *        artifact header, tree). a human who learned that block on any other skill could
+   *        not scan this one, and a caller who captured stdout saw an empty run
+   *        (rule.require.consistent-skill-contracts).
+   *
+   * .note = the stream change is clamped deliberately, with a negative control on stderr —
+   *         without it a belay written to BOTH streams would satisfy the positive and still
+   *         be wrong.
+   */
   given('[case5] absent --env', () => {
     when('[t0] skill runs without --env', () => {
       const result = useThen('skill runs', () =>
@@ -218,16 +239,19 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
+      then('it belays on stdout, in the kin four-line block', () => {
+        expect(result.stdout).toContain('🐈 belay that...');
+        expect(result.stdout).toContain('🔮 aws.s3.get');
+        expect(result.stderr).not.toContain('belay that');
       });
 
-      then('it mentions --env required', () => {
-        expect(result.stderr).toContain('--env required');
+      then('it names the absent arg and its valid set', () => {
+        expect(result.stdout).toContain('   ├─ absent required arg: --env');
+        expect(result.stdout).toContain('   └─ must be: test, prep, or prod');
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
       });
     });
   });
@@ -240,16 +264,14 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
-      });
-
       then('it mentions bucket or uri required', () => {
-        expect(result.stderr).toContain('--uri or --bucket required');
+        expect(result.stdout).toContain(
+          'absent required arg: --uri or --bucket',
+        );
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
       });
     });
   });
@@ -264,16 +286,15 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
-      });
-
-      then('it mentions invalid uri format', () => {
-        expect(result.stderr).toContain('invalid --uri format');
+      then('it names the value it rejected AND the shape it wanted', () => {
+        expect(result.stdout).toContain(
+          '   ├─ invalid --uri: https://bucket/key',
+        );
+        expect(result.stdout).toContain('   └─ must be: s3://bucket/key');
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
       });
     });
   });
@@ -288,16 +309,12 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
-      });
-
-      then('it mentions key required', () => {
-        expect(result.stderr).toContain('invalid --uri format');
+      then('it mentions the uri is not a whole key path', () => {
+        expect(result.stdout).toContain('invalid --uri: s3://bucket/');
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
       });
     });
   });
@@ -312,16 +329,12 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
-      });
-
-      then('it mentions unknown option', () => {
-        expect(result.stderr).toContain('unknown option');
+      then('it names the argument it did not know', () => {
+        expect(result.stdout).toContain('unknown argument: --unknown-flag');
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
       });
     });
   });
@@ -336,16 +349,76 @@ describe('aws.s3.get', () => {
         expect(result.exitCode).toBe(2);
       });
 
-      then('it shows belay that', () => {
-        expect(result.stderr).toContain('belay that');
-      });
-
       then('it mentions key required', () => {
-        expect(result.stderr).toContain('--uri or --key required');
+        expect(result.stdout).toContain('absent required arg: --uri or --key');
       });
 
       then('error output matches snapshot', () => {
-        expect(result.stderr).toMatchSnapshot();
+        expect(result.stdout).toMatchSnapshot();
+      });
+    });
+  });
+
+  given('[case19] --env names an env this skill does not serve', () => {
+    when('[t0] skill runs with --env prd', () => {
+      const result = useThen('skill runs', () =>
+        runSkill('--env prd --bucket test --key test.txt'),
+      );
+
+      then('it exits 2 (constraint)', () => {
+        expect(result.exitCode).toBe(2);
+      });
+
+      /**
+       * the closed set was never checked here, so a typo used to reach the keyrack and
+       * report an absent CREDENTIAL for an env that does not exist — sending the human to
+       * unlock a vault when the real gap was one letter in the flag.
+       */
+      then('it names the typo, never an absent credential', () => {
+        expect(result.stdout).toContain('   ├─ invalid env: prd');
+        expect(result.stdout).not.toContain('AWS_PROFILE');
+      });
+
+      then('error output matches snapshot', () => {
+        expect(result.stdout).toMatchSnapshot();
+      });
+    });
+  });
+
+  given('[case20] a flag is passed with no value', () => {
+    when('[t0] --env is the last token', () => {
+      const result = useThen('skill runs', () => runSkill('--env'));
+
+      /**
+       * `shift 2` with a single arg left is an ERROR in bash, so under `set -e` this used
+       * to die on the spot — exit 1, and NOT ONE line on either stream. a human saw a
+       * skill that did not answer at all.
+       */
+      then('it belays rather than die silently', () => {
+        expect(result.exitCode).toBe(2);
+        expect(result.stdout).toContain('   ├─ absent value for --env');
+        expect(result.stdout).toContain(
+          '   ├─ fix: pass one of test,prep,prod',
+        );
+      });
+
+      then('error output matches snapshot', () => {
+        expect(result.stdout).toMatchSnapshot();
+      });
+    });
+
+    when('[t1] a flag is followed by ANOTHER flag', () => {
+      const result = useThen('skill runs', () =>
+        runSkill('--env test --bucket --key x'),
+      );
+
+      /**
+       * absent this guard `--bucket` would take `--key` as its value and eat the flag
+       * whole, so the run would belay about an absent `--key` — the WRONG flag.
+       */
+      then('the belay names the flag that was actually starved', () => {
+        expect(result.exitCode).toBe(2);
+        expect(result.stdout).toContain('absent value for --bucket');
       });
     });
   });
