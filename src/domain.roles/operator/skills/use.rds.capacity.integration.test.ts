@@ -3,7 +3,7 @@ import { genTempDir, given, then, useBeforeAll, useThen, when } from 'test-fns';
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { genStubBinPath } from '../../.test/runRoleSkill';
+import { asEnvHermetic, genStubBinPath } from '../../.test/runRoleSkill';
 
 /**
  * .what = integration test for use.rds.capacity failfast on absent config
@@ -38,9 +38,12 @@ const runSkill = (input: {
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/use.rds.capacity.sh`;
 
-  // set static aws creds so the skill skips keyrack unlock + sso export
-  const env: Record<string, string> = {
-    ...process.env,
+  // the base withholds every ambient credential and closes the rc, so the static creds
+  // below are a DECLARATION rather than a top-up of whatever the host happened to hold —
+  // which is what keeps the keyrack-skip arm the same on a laptop and a runner
+  // (rule.require.hermetic-tests).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
     AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
     ...(input.path
@@ -52,12 +55,6 @@ const runSkill = (input: {
         }
       : {}),
   };
-
-  // the host's shell rc must not load into a run. an rc-defined FUNCTION or ALIAS beats
-  // PATH outright, so a stub placed first on PATH still loses to one. BASH_ENV is the
-  // vector that carries it into a NON-interactive bash, and this host has it set
-  // (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
 
   try {
     const stdout = execSync(

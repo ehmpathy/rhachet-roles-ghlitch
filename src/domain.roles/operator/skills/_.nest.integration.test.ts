@@ -2,6 +2,7 @@ import { given, then, useBeforeAll, when } from 'test-fns';
 
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
+import { asEnvHermetic } from '../../.test/runRoleSkill';
 
 /**
  * .what = contract clamps for the `_.nest.sh` bucket operations, in isolation
@@ -31,8 +32,7 @@ const runNest = (body: string): { stdout: string; exitCode: number } => {
   // PATH outright, and these cases assert on the exact bytes a child emits, so any rc that
   // redefines `echo` or a child command would rewrite the frame under test. BASH_ENV is the
   // vector that carries one into a NON-interactive bash (rule.require.hermetic-tests).
-  const env = { ...process.env };
-  delete env.BASH_ENV;
+  const env = asEnvHermetic();
 
   const result = spawnSync(
     'bash',

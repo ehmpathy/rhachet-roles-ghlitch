@@ -75,6 +75,63 @@ export const ENV_VARS_HOST_SHAPED = [
 ] as const;
 
 /**
+ * .what = the ambient environment, with every host-shaped variable removed
+ *
+ * .why  = it is the ONE sanctioned way a test builds an env, because a per-runner
+ *         convention is exactly what drifted last time. the BASH_ENV delete lived in this
+ *         harness and in two bespoke runners, and eight others went without — invisible
+ *         until a host defined one of the shadowed names.
+ *
+ *         so both vectors live here together: a caller cannot pick up the credential
+ *         scrub and forget the rc delete, because there is one call and it carries both.
+ *         `hermetic.contract` grades every runner for this call by name.
+ *
+ * .note = BASH_ENV names a file a NON-interactive bash sources at startup, and this host
+ *         has it set. proven by isolation — with the delete removed and `--norc` left in
+ *         place, 7 cases redden; with the delete in place and `--norc` removed, all pass.
+ *         `--noprofile --norc` closes the rc vectors left over, and is applied at the
+ *         `spawnSync` itself, since it is an argument rather than an env.
+ */
+export const asEnvHermetic = (): Record<string, string | undefined> => {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const name of ENV_VARS_HOST_SHAPED) delete env[name];
+  delete env.BASH_ENV;
+  return env;
+};
+
+/**
+ * .what = an env with EVERY credential source closed — the ambient variables above, and
+ *         the keyrack that lives under HOME
+ *
+ * .why  = a suite that also makes LIVE aws calls cannot take `asEnvHermetic` wholesale:
+ *         its live cases need the very credentials that scrub removes. what it needs is
+ *         this, on its absent-credential cases alone.
+ *
+ *         those cases used to drop the aws variables and leave HOME ambient, which closes
+ *         only half the door. the skill then falls through to `rhx keyrack get`, which
+ *         reads `$HOME/.rhachet` — a keyrack that is FILLED-BUT-LOCKED on a developer
+ *         host and wholly ABSENT on a runner. so `aws.s3.list [case4]` recorded
+ *         `status: locked 🔒` on a laptop and met `status: absent 🫧` in cicd.
+ *
+ * .how  = HOME is pointed at a temp dir, so the keyrack is deterministically absent and
+ *         the case renders the same on either host. it also stops a suite reading the
+ *         human's real home at all, which is the reason `runRoleSkill` has always pinned
+ *         it (rule.require.hermetic-tests).
+ *
+ * .note = `absent`, not `locked`, is what this pins. `locked` would need a keyrack
+ *         fixture staged under the temp HOME — worth doing when a case wants to grade the
+ *         locked arm specifically, but these cases are named "credentials not unlocked"
+ *         and absent satisfies that. the point is that ONE of the two is chosen and
+ *         written down, rather than left to whichever host runs the suite.
+ */
+export const asEnvWithoutCredentials = (input: {
+  home: string;
+}): Record<string, string | undefined> => ({
+  ...asEnvHermetic(),
+  HOME: input.home,
+});
+
+/**
  * .what = the checked-in stub executables, and where they are staged from
  */
 const STUB_BIN_SOURCE = join(__dirname, 'stub.bin');
@@ -143,19 +200,12 @@ export const runRoleSkill = (
     env?: Record<string, string>;
   },
 ): { stdout: string; stderr: string; exitCode: number } => {
-  // the ambient set is scrubbed of every host-shaped variable BEFORE the caller's
-  // overrides land, so `options.env` remains the one way a case declares a credential or
-  // cicd state — and the default is the same on a laptop and a runner.
-  // .note = `string | undefined`, never `Record<string, string>`: process.env values are
-  //         optional, so the stricter annotation fails to typecheck (TS2322).
-  const envAmbient: Record<string, string | undefined> = {
-    ...process.env,
-    HOME: input.cwd,
-  };
-  for (const name of ENV_VARS_HOST_SHAPED) delete envAmbient[name];
-
+  // the ambient set is scrubbed BEFORE the caller's overrides land, so `options.env`
+  // remains the one way a case declares a credential or cicd state — and the default is
+  // the same on a laptop and a runner.
   const env: Record<string, string | undefined> = {
-    ...envAmbient,
+    ...asEnvHermetic(),
+    HOME: input.cwd,
     ...(options?.env ?? {}),
   };
   if (options?.asHuman ?? true) env.__I_AM_HUMAN = 'true';
@@ -171,12 +221,10 @@ export const runRoleSkill = (
   // rc the same case would have passed — a host-shaped fork of exactly the kind
   // PATH_WITHOUT_RHX exists to prevent.
   //
-  // BASH_ENV is the vector that actually carried it: it names a file a NON-interactive
-  // bash sources at startup, and this host has it set. proven by isolation — with the
-  // delete removed and --norc left in place, 7 cases redden; with the delete in place and
-  // --norc removed, all pass.
-  delete env.BASH_ENV;
-  // --noprofile --norc closes the REMAINING rc vectors on both levels. unlike the
+  // the BASH_ENV vector that actually carried it is closed by `asEnvHermetic` above,
+  // beside the credential scrub, so no caller can take one and skip the other.
+  //
+  // --noprofile --norc closes the rc vectors left over, on both levels. unlike the
   // BASH_ENV delete above, these are not proven to carry weight on this host — they are
   // the canonical way to make a bash invocation hermetic, kept because the hazard is a
   // class (any rc-defined function or alias) rather than the one variable that happened

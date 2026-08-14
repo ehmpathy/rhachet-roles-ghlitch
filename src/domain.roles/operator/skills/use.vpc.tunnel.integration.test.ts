@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 // live under the deployer suite, where the first caller was; this comment is what made the
 // cross-role reach look intentional rather than like the lift it was owed
 // (rule.prefer.most-common-denominator).
-import { genStubBinPath } from '../../.test/runRoleSkill';
+import { asEnvHermetic, genStubBinPath } from '../../.test/runRoleSkill';
 
 /**
  * .what = integration test for use.vpc.tunnel env-awareness
@@ -45,9 +45,17 @@ const runSkill = (input: {
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/use.vpc.tunnel.sh`;
 
-  // set static aws creds so the skill skips keyrack unlock + sso export
-  const env: Record<string, string> = {
-    ...process.env,
+  // the base withholds every ambient credential and closes the rc, so each branch below
+  // DECLARES the credential state it wants rather than inherit the host's.
+  //
+  // the stub branch used to say the creds were "withheld" while a bare `...process.env`
+  // spread handed the run whatever the host held. that read true on an sso laptop, which
+  // sets AWS_PROFILE and no AWS_ACCESS_KEY_ID — and false on a runner, which sets the
+  // key. so the skill skipped its keyrack branch in cicd and the whole 7-line keyrack
+  // bucket went absent from the render, while the comment still claimed otherwise
+  // (rule.require.trust-but-verify).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     ...(input.path
       ? {
           PATH: input.path,
@@ -58,16 +66,11 @@ const runSkill = (input: {
           STUB_REAL_NPX: execSync('which npx', { encoding: 'utf-8' }).trim(),
         }
       : {
+          // declared, so the skill skips keyrack unlock + sso export on every host
           AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
           AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
         }),
   };
-
-  // the host's shell rc must not load into a run: an rc-defined function or alias beats
-  // PATH outright, so a stub placed first on PATH still loses to one. BASH_ENV is the
-  // vector a NON-interactive bash reads, and this developer's host sets it
-  // (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
 
   try {
     const stdout = execSync(

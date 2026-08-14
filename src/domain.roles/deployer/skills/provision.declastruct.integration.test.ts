@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { asEnvHermetic } from '../../.test/runRoleSkill';
 
 /**
  * .what = argument-boundary proof for provision.declastruct
@@ -135,7 +136,7 @@ const run = (
   },
 ): { stdout: string; stderr: string; exitCode: number } => {
   const envScrubbed = Object.fromEntries(
-    Object.entries(process.env).filter(
+    Object.entries(asEnvHermetic()).filter(
       ([name]) => !CRED_VAR_PATTERN.test(name),
     ),
   ) as Record<string, string>;
@@ -1110,7 +1111,7 @@ describe('provision.declastruct (live plan forward-contract)', () => {
     // below declares this shell as the source, so keyrack is never touched (no sso
     // prompt); the empty wish declares no providers, so no credential is exercised.
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;
@@ -1159,7 +1160,7 @@ describe('provision.declastruct (live plan forward-contract)', () => {
   }> => {
     const { dir, wish } = input.scene;
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;
@@ -1396,7 +1397,7 @@ describe('provision.declastruct (live plan forward-contract)', () => {
       // environment-coupled shape this suite was rebuilt to retire, alive in the one case
       // the rewrite missed.
       const envScrubbed = Object.fromEntries(
-        Object.entries(process.env).filter(
+        Object.entries(asEnvHermetic()).filter(
           ([name]) => !CRED_VAR_PATTERN.test(name),
         ),
       ) as Record<string, string>;
@@ -1520,7 +1521,7 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
     // scrub every credential variable, then supply exactly the ambient set this case
     // declares — so a developer's own AWS_PROFILE can never satisfy (or pollute) the run.
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;

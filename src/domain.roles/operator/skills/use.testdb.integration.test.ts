@@ -2,7 +2,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { genStubBinPath } from '../../.test/runRoleSkill';
+import { asEnvHermetic, genStubBinPath } from '../../.test/runRoleSkill';
 
 /**
  * .what = render clamps for every critipath of the `use.testdb` contract
@@ -36,13 +36,12 @@ const runTestdb = (input: {
   args: string;
   env?: Record<string, string>;
 }): { stdout: string; stderr: string; exitCode: number } => {
-  const env: Record<string, string> = {
-    ...process.env,
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     HOME: input.cwd,
     PATH: genStubBinPath({ cwd: input.cwd }),
     ...(input.env ?? {}),
   };
-  delete env.BASH_ENV;
 
   const result = spawnSync(
     'bash',

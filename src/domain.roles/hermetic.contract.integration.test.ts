@@ -251,14 +251,25 @@ describe('hermetic contract (every test that runs bash)', () => {
 
   given('[case3] a runner hands bash an explicit env', () => {
     when('[t0] every runner is graded', () => {
-      then('each deletes BASH_ENV', () => {
+      then('each closes the rc AND the credential vector, in one call', () => {
         // BASH_ENV is the vector that carries an rc into a NON-interactive bash, and it
         // is the one PROVEN to carry weight on this host — `--norc` alone does not close
         // it, because a non-interactive bash never reads an rc file by that name. so a
         // runner that passes `--noprofile --norc` and keeps BASH_ENV is still open.
+        //
+        // .why ONE call = this assertion used to accept a bare `delete env.BASH_ENV`, and
+        //      that is exactly how the NEXT vector drifted. every runner dutifully
+        //      deleted BASH_ENV and ten of them still built their env from a bare
+        //      `{ ...process.env }`, so the ambient AWS_ACCESS_KEY_ID and CI walked
+        //      straight in — eight suites green on a laptop, red on the runner. a
+        //      per-runner convention drifts once per vector, forever.
+        //
+        //      so the contract is now a NAMED call rather than a set of remembered
+        //      deletes: `asEnvHermetic` (or `asEnvWithoutCredentials`, which wraps it)
+        //      carries both vectors, and a runner cannot take one and forget the other.
         const leaky = runners.filter((at) => {
           const content = readFileSync(join(repoRoot, at), 'utf-8');
-          return !content.includes('delete env.BASH_ENV');
+          return !/asEnv(Hermetic|WithoutCredentials)\(/.test(content);
         });
         expect(leaky).toEqual([]);
       });

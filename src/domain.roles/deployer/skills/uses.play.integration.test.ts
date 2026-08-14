@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { asEnvHermetic } from '../../.test/runRoleSkill';
 
 // fixture dir (relative to repo root) symlinked into each temp repo, so the
 // skills find .agent/keyrack.yml#org and a package.json name — no adhoc mkdir.
@@ -46,18 +47,16 @@ const runSkill = (
 ): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/${input.skill}`;
 
-  // HOME=cwd routes ~/.rhachet/... global+org state into the temp repo.
-  const env: Record<string, string> = {
-    ...process.env,
+  // HOME=cwd routes ~/.rhachet/... global+org state into the temp repo. the hermetic base
+  // additionally withholds the ambient CI marker, so the cicd-gate arm is decided by the
+  // `options.env` DECLARATION below and never by whether a runner happens to set it
+  // (rule.require.hermetic-tests).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     HOME: input.cwd,
     ...(options?.env ?? {}),
   };
   if (options?.asHuman ?? true) env.__I_AM_HUMAN = 'true';
-
-  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
-  // PATH outright, and BASH_ENV is the vector that carries one into a NON-interactive
-  // bash. both levels are hardened (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
 
   const result = spawnSync(
     'bash',

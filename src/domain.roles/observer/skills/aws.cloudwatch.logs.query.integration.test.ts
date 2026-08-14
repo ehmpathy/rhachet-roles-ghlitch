@@ -2,6 +2,7 @@ import { genTempDir, given, then, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
 import { expectNoStrayLines } from '../../.test/expectNoStrayLines';
+import { asEnvWithoutCredentials } from '../../.test/runRoleSkill';
 
 /**
  * helper to mask dynamic parts of output for stable snapshots
@@ -110,14 +111,15 @@ const runSkill = (
 ): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/aws.cloudwatch.logs.query.sh`;
 
-  // build env, optionally remove AWS credentials to test keyrack failure
-  const env = { ...process.env };
-  if (options?.withoutAwsCredentials) {
-    delete env.AWS_ACCESS_KEY_ID;
-    delete env.AWS_SECRET_ACCESS_KEY;
-    delete env.AWS_SESSION_TOKEN;
-    delete env.AWS_PROFILE;
-  }
+  // the absent-credential cases close EVERY credential source — the ambient variables AND
+  // the keyrack under HOME, which is locked on a laptop and absent on a runner. the live
+  // cases keep the ambient env, because those credentials are what they exercise
+  // (rule.require.hermetic-tests).
+  const env: Record<string, string | undefined> = options?.withoutAwsCredentials
+    ? asEnvWithoutCredentials({
+        home: genTempDir({ slug: 'aws-logs-query-nocreds' }),
+      })
+    : { ...process.env, BASH_ENV: undefined };
   // .what = hand the skill a well-formed key that aws will REJECT
   //
   // .why  = this is the only way to reach the branch where a `describe-log-groups`
@@ -140,11 +142,6 @@ const runSkill = (
   if (options?.isolatedHome) {
     env.HOME = options.isolatedHome;
   }
-
-  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
-  // PATH outright, so it cannot be shadowed by a stub. BASH_ENV is the vector that carries
-  // one into a NON-interactive bash, and this host has it set (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
 
   try {
     const stdout = execSync(`bash --noprofile --norc "${skillPath}" ${args}`, {

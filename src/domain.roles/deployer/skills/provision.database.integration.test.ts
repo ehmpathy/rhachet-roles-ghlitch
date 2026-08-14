@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { asEnvHermetic } from '../../.test/runRoleSkill';
 import { maskRunnerBanner } from './.test/maskRunnerBanner';
 
 /**
@@ -46,8 +47,7 @@ const ensureTestdb = (): void => {
   // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
   // PATH outright (this developer's maps `npm` to `pnpm`), and BASH_ENV is the vector that
   // carries one into a NON-interactive bash (rule.require.hermetic-tests).
-  const env = { ...process.env };
-  delete env.BASH_ENV;
+  const env = asEnvHermetic();
 
   const result = spawnSync('bash', ['--noprofile', '--norc', USE_TESTDB], {
     cwd: REPO_ROOT,
@@ -63,22 +63,24 @@ const ensureTestdb = (): void => {
 /**
  * .what = run provision.database.sh from a temp repo against the testdb
  * .why = exercises the real skill end-to-end: connectivity gate + schema run
- * .note = AWS_ACCESS_KEY_ID is set so the skill takes the CI/OIDC path and skips
- *         keyrack (no sso prompt); CI is unset so this is not the cicd-auth gate.
+ * .note = AWS_ACCESS_KEY_ID is DECLARED, so the skill takes the static-credential path
+ *         and skips keyrack (no sso prompt). CI is DECLARED absent by the hermetic base,
+ *         so this is not the cicd-auth gate — it used to say so while a bare
+ *         `...process.env` let a runner's own CI=true through, which would have swung the
+ *         gate arm on cicd alone (rule.require.trust-but-verify).
  */
 const runProvisionDatabase = (input: {
   args: string;
   cwd: string;
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/provision.database.sh`;
-  const env: Record<string, string> = {
-    ...process.env,
+  // see ensureTestdb above — the rc must not load into either bash level
+  // (rule.require.hermetic-tests).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
     AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
   };
-  // see ensureTestdb above — the rc must not load into either bash level
-  // (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
 
   const result = spawnSync(
     'bash',

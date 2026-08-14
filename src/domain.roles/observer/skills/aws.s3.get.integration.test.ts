@@ -1,6 +1,7 @@
-import { given, then, useThen, when } from 'test-fns';
+import { genTempDir, given, then, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
+import { asEnvWithoutCredentials } from '../../.test/runRoleSkill';
 
 /**
  * test bucket prepared with known objects:
@@ -46,19 +47,19 @@ const runSkill = (
 ): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/aws.s3.get.sh`;
 
-  // build env, optionally remove AWS credentials to test keyrack failure
-  const env = { ...process.env };
-  if (options?.withoutAwsCredentials) {
-    delete env.AWS_ACCESS_KEY_ID;
-    delete env.AWS_SECRET_ACCESS_KEY;
-    delete env.AWS_SESSION_TOKEN;
-    delete env.AWS_PROFILE;
-  }
-
-  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
-  // PATH outright, so it cannot be shadowed by a stub. BASH_ENV is the vector that carries
-  // one into a NON-interactive bash, and this host has it set (rule.require.hermetic-tests).
-  delete env.BASH_ENV;
+  // the absent-credential cases must close EVERY credential source, not only the ambient
+  // variables: with HOME left ambient the skill falls through to `rhx keyrack get` and
+  // reads the host's real keyrack, which is locked on a laptop and absent on a runner
+  // (rule.require.hermetic-tests). the live cases below keep the ambient env, because the
+  // credentials are exactly what they need.
+  //
+  // the rc is closed on both paths — an rc-defined FUNCTION or ALIAS beats PATH outright,
+  // and BASH_ENV is the vector that carries one into a NON-interactive bash.
+  const env = options?.withoutAwsCredentials
+    ? asEnvWithoutCredentials({
+        home: genTempDir({ slug: 'aws-s3-get-nocreds' }),
+      })
+    : { ...process.env, BASH_ENV: undefined };
 
   try {
     const stdout = execSync(`bash --noprofile --norc "${skillPath}" ${args}`, {
