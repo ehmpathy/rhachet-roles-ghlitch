@@ -36,6 +36,45 @@ import { join } from 'node:path';
 export const PATH_WITHOUT_RHX = '/usr/bin:/bin:/usr/sbin:/sbin';
 
 /**
+ * .what = the ambient variables a skill BRANCHES on, which therefore fork its render by host
+ *
+ * .why  = PATH and the shell rc were only two of the three vectors. the third is the
+ *         environment itself: ten skills gate their credential work on
+ *         `[[ -z "${AWS_ACCESS_KEY_ID:-}" ]]`, and the prod gate in `uses._.check.sh`
+ *         reads `[[ "${CI:-}" != "true" ]]`. a runner sets both; an sso laptop sets
+ *         neither. so a snapshot recorded on a laptop pinned the absent-credential arm,
+ *         and the same case took the OTHER arm in cicd and reddened
+ *         (rule.require.hermetic-tests).
+ *
+ *         that is exactly what happened: eight suites passed locally and failed on the
+ *         runner, and every one of the eight wraps a skill in the list this scrub covers.
+ *
+ * .how  = they are removed BEFORE `options.env` is applied, so the default is the
+ *         deterministic absent-credential baseline and a case that WANTS a credential
+ *         state declares it — which is the same shape `--auth` uses at the cli
+ *         (rule.forbid.fallbacks: a declaration, never a sniff of the host).
+ *
+ * .note = the absent-credential arm is a real critipath, not a degraded one — it is what
+ *         a human meets when their keyrack is locked — so this buys determinism at no
+ *         cost in coverage, exactly as `PATH_WITHOUT_RHX` does.
+ *
+ * .note = the whole aws credential family goes, not only the one variable the skills
+ *         branch on today. a scrub that lists only the proven-guilty leaves the next
+ *         `AWS_SESSION_TOKEN` read to rediscover this the hard way — grade the class,
+ *         never the instances.
+ */
+export const ENV_VARS_HOST_SHAPED = [
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'AWS_PROFILE',
+  'AWS_REGION',
+  'AWS_DEFAULT_REGION',
+  'CI',
+  'GITHUB_ACTIONS',
+] as const;
+
+/**
  * .what = the checked-in stub executables, and where they are staged from
  */
 const STUB_BIN_SOURCE = join(__dirname, 'stub.bin');
@@ -104,9 +143,19 @@ export const runRoleSkill = (
     env?: Record<string, string>;
   },
 ): { stdout: string; stderr: string; exitCode: number } => {
-  const env: Record<string, string> = {
+  // the ambient set is scrubbed of every host-shaped variable BEFORE the caller's
+  // overrides land, so `options.env` remains the one way a case declares a credential or
+  // cicd state — and the default is the same on a laptop and a runner.
+  // .note = `string | undefined`, never `Record<string, string>`: process.env values are
+  //         optional, so the stricter annotation fails to typecheck (TS2322).
+  const envAmbient: Record<string, string | undefined> = {
     ...process.env,
     HOME: input.cwd,
+  };
+  for (const name of ENV_VARS_HOST_SHAPED) delete envAmbient[name];
+
+  const env: Record<string, string | undefined> = {
+    ...envAmbient,
     ...(options?.env ?? {}),
   };
   if (options?.asHuman ?? true) env.__I_AM_HUMAN = 'true';

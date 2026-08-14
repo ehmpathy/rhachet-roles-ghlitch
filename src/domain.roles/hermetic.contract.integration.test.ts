@@ -1,7 +1,12 @@
-import { given, then, when } from 'test-fns';
+import { genTempDir, given, then, when } from 'test-fns';
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import {
+  ENV_VARS_HOST_SHAPED,
+  PATH_WITHOUT_RHX,
+  runRoleSkill,
+} from './.test/runRoleSkill';
 
 /**
  * .what = a repo-wide audit that every bash invocation in a test is hermetic
@@ -47,6 +52,20 @@ const getAllTestFilesUnder = (input: { dir: string }): string[] =>
     const at = join(input.dir, entry.name);
     if (entry.isDirectory()) return getAllTestFilesUnder({ dir: at });
     return entry.name.endsWith('.test.ts') ? [at] : [];
+  });
+
+/**
+ * .what = every `*.sh` skill under a directory
+ *
+ * .why  = the scrub list is checked AGAINST the skills, so the set of skills must be
+ *         enumerated rather than listed. a list would go stale the moment a skill is
+ *         added, which is the same allowlist failure the test-file walk above avoids.
+ */
+const getAllSkillFilesUnder = (input: { dir: string }): string[] =>
+  readdirSync(input.dir, { withFileTypes: true }).flatMap((entry) => {
+    const at = join(input.dir, entry.name);
+    if (entry.isDirectory()) return getAllSkillFilesUnder({ dir: at });
+    return entry.name.endsWith('.sh') ? [at] : [];
   });
 
 /**
@@ -135,6 +154,97 @@ describe('hermetic contract (every test that runs bash)', () => {
           (at) => !at.text.includes('--noprofile'),
         );
         expect(bare.map((at) => `${at.file} — ${at.text}`)).toEqual([]);
+      });
+    });
+  });
+
+  given('[case4] the HOST itself holds credentials, as a runner does', () => {
+    // the third vector, and the one the flags above cannot close. PATH and the rc are
+    // shut, yet ten skills still fork on `[[ -z "${AWS_ACCESS_KEY_ID:-}" ]]` and the prod
+    // gate forks on `[[ "${CI:-}" != "true" ]]`. an sso laptop sets neither and a runner
+    // sets both, so a render recorded on one host pinned an arm the other never takes.
+    //
+    // this is graded by RUN rather than by read, because the defect was never visible in
+    // the harness source — every assertion in cases 1-3 passed while eight suites failed
+    // on the runner.
+    const skill = join(
+      __dirname,
+      'observer',
+      'skills',
+      'aws.ssm.param.check.sh',
+    );
+
+    /**
+     * .what = run one skill with a set of variables forced into the AMBIENT environment
+     * .why  = `options.env` cannot reproduce the defect: it lands AFTER the scrub, so it
+     *         models a case that DECLARES a credential, never a host that happens to hold
+     *         one. only a mutation of `process.env` stands in for the runner.
+     */
+    const runWithAmbient = (input: {
+      ambient: Record<string, string>;
+    }): string => {
+      const restore = new Map<string, string | undefined>();
+      for (const [name, value] of Object.entries(input.ambient)) {
+        restore.set(name, process.env[name]);
+        process.env[name] = value;
+      }
+      try {
+        return runRoleSkill(
+          {
+            skillPath: skill,
+            args: '--env prep --pattern "svc.*"',
+            cwd: genTempDir({ slug: 'hermetic-ambient', git: true }),
+          },
+          { env: { PATH: PATH_WITHOUT_RHX } },
+        ).stdout;
+      } finally {
+        for (const [name, value] of restore.entries()) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+      }
+    };
+
+    when('[t0] a run on a bare host is compared to one on a runner', () => {
+      then('the render is byte-identical', () => {
+        // the clamp that carries the weight. with the scrub removed this goes red, because
+        // the skill takes its ambient-credential arm on the second run and skips the whole
+        // keyrack bucket — which is precisely how eight suites failed in cicd while green
+        // on a laptop.
+        expect(
+          runWithAmbient({
+            ambient: {
+              AWS_ACCESS_KEY_ID: 'AKIAHOSTSHAPED',
+              AWS_SECRET_ACCESS_KEY: 'host-shaped-secret',
+              CI: 'true',
+              GITHUB_ACTIONS: 'true',
+            },
+          }),
+        ).toEqual(runWithAmbient({ ambient: {} }));
+      });
+    });
+
+    when('[t1] the scrub list is read', () => {
+      then('it names every ambient variable a skill forks on', () => {
+        // a scrub list is an allowlist inverted, and it rots the same way: a skill added
+        // later reads a variable nobody added here, and the fork reopens in silence. so
+        // the list is derived-checked against the skills themselves rather than trusted
+        // (rule.require.trust-but-verify).
+        const forked = new Set<string>();
+        for (const file of getAllSkillFilesUnder({
+          dir: join(repoRoot, 'src', 'domain.roles'),
+        })) {
+          const source = readFileSync(file, 'utf-8');
+          for (const match of source.matchAll(
+            /\[\[ (?:-z )?"\$\{([A-Z_]+):-\}"/g,
+          ))
+            forked.add(match[1] ?? '');
+        }
+
+        const uncovered = [...forked]
+          .filter((name) => !ENV_VARS_HOST_SHAPED.includes(name as never))
+          .sort();
+        expect(uncovered).toEqual([]);
       });
     });
   });
