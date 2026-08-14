@@ -13,15 +13,12 @@ import { execSync } from 'node:child_process';
 import path from 'node:path';
 
 const main = async (): Promise<void> => {
-  // dynamic import from git root (allows use in any repo with getDatabaseConnection)
-  const gitRoot = execSync('git rev-parse --show-toplevel', {
-    encoding: 'utf-8',
-  }).trim();
-  const { getDatabaseConnection } = await import(
-    path.join(gitRoot, 'src/utils/database/getDatabaseConnection')
-  );
-
-  // parse args (shell already sets STAGE env var)
+  // parse args FIRST, ahead of the database import below.
+  //
+  // the order used to be reversed, and it mattered: an absent `--sql` in a repo that holds
+  // no `getDatabaseConnection` reported the ABSENT MODULE, never the absent arg — so the
+  // caller was sent to fix an import when the real gap was a flag they had omitted
+  // (rule.require.failfast-on-omitted-input: validate at the boundary, before the work).
   const args = process.argv.slice(2);
   let sql = '';
   let format = 'table';
@@ -54,9 +51,18 @@ const main = async (): Promise<void> => {
     console.error('🐈 belay that...');
     console.error('');
     console.error('🔮 aws.postgres.query');
-    console.error('   └─ absent required arg: --sql');
+    console.error('   ├─ absent required arg: --sql');
+    console.error('   └─ hint: rhx aws.postgres.query help');
     process.exit(2);
   }
+
+  // dynamic import from git root (allows use in any repo with getDatabaseConnection)
+  const gitRoot = execSync('git rev-parse --show-toplevel', {
+    encoding: 'utf-8',
+  }).trim();
+  const { getDatabaseConnection } = await import(
+    path.join(gitRoot, 'src/utils/database/getDatabaseConnection')
+  );
 
   // connect to database in readonly mode
   const dbConnection = await getDatabaseConnection({ mode: 'readonly' });
@@ -101,10 +107,15 @@ main().catch((error) => {
   console.error('');
   console.error('🔮 aws.postgres.query');
   // handle AggregateError (e.g., connection refused)
+  //
+  // TWO items here, so the first takes `├─` and only the hint takes `└─`. this arm used to
+  // draw `└─` on both, which closes the tree twice in one block — a reader cannot tell
+  // where the tree ends, and every kin skill draws exactly one close
+  // (rule.require.nest-subskill-output-in-buckets).
   if (error?.errors?.length) {
     const firstError = error.errors[0];
     console.error(
-      `   └─ ${firstError.message || firstError.code || 'connection error'}`,
+      `   ├─ ${firstError.message || firstError.code || 'connection error'}`,
     );
     const hint =
       process.env.ACCESS === 'test' ? 'rhx use.testdb' : 'rhx use.rds.capacity';

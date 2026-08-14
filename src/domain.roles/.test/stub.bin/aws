@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `aws` that answers every call the role skills make of it
+#
+# .why  = nearly every skill runs
+#         `aws configure export-credentials --profile <p> --format env` and `eval`s the
+#         result. a real call needs a live sso session, which is exactly the host-shaped
+#         fork the suites exist to close (rule.require.hermetic-tests). the per-service
+#         branches below then make each skill's TAIL reachable — the part past the
+#         credential read, where the real work and most of the render live.
+#
+# .note = the emitted values are obvious placeholders. no downstream step authenticates
+#         with them — the tool that follows is itself a stub — so a reader who greps a
+#         snapshot for a credential finds a self-evident fake, never a shape that could be
+#         mistaken for a leaked one.
+######################################################################
+set -euo pipefail
+
+if [[ "${1:-}" == "configure" && "${2:-}" == "export-credentials" ]]; then
+  echo "export AWS_ACCESS_KEY_ID=stub-access-key-id"
+  echo "export AWS_SECRET_ACCESS_KEY=stub-secret-access-key"
+  echo "export AWS_SESSION_TOKEN=stub-session-token"
+  exit 0
+fi
+
+# ── cloudformation, for aws.cloudformation.rollback ─────────────────────────────────
+# these three make the rollback happy path reachable. before them, every case in that
+# suite belayed at the credential read, so the whole tail past `eyes on target...` —
+# the rollback call and the event stream — had never been rendered by a test.
+
+# SILENT on success, exactly as the real tool is: `continue-update-rollback` answers
+# with no output at all. that silence carries weight, it is not laziness — it is
+# precisely why the skill does NOT bucket this child. a chatty stub here would frame an
+# empty bucket in the real run while the test saw a full one, and the clamp would be a
+# lie (rule.require.nest-subskill-output-in-buckets, `.a bucket must never frame an
+# empty child`). a stub louder than the tool it stands in for hides the defect just as
+# surely as one quieter than it.
+if [[ "${1:-}" == "cloudformation" && "${2:-}" == "continue-update-rollback" ]]; then
+  exit 0
+fi
+
+# the stack lands terminal on the FIRST poll, so the skill's `while true` turns once and
+# the case needs no `sleep 3`. the loop is not what this clamps; the tree the events
+# render into is.
+#
+# STUB_CFN_STATUS overrides the status, so a case can drive the *FAILED* branch — the one
+# whose close-line and belay a test must observe, not merely assume.
+if [[ "${1:-}" == "cloudformation" && "${2:-}" == "describe-stacks" ]]; then
+  # TWO shapes, because the two callers ask two different questions of one api:
+  #   - aws.cloudformation.rollback narrows with `--query 'Stacks[0].StackStatus'
+  #     --output text`, so it wants the bare status word
+  #   - aws.cloudformation.status takes the whole `--output json` and reads the status AND
+  #     the reason out of it with jq
+  # a stub that answered only the narrowed form would hand status a bare word where it
+  # expects json, and jq would yield an empty status the skill then renders as truth.
+  # `-` not `:-` on the reason: a caller that sets STUB_CFN_REASON='' means "this stack
+  # carries NO reason", and `:-` would treat that empty value as unset and hand back the
+  # default anyway. that is not a stub nicety — it decides whether the `reason: (none)`
+  # arm is ever reached, or whether the populated arm stands for both.
+  if [[ "$*" == *"--query"* ]]; then
+    echo "${STUB_CFN_STATUS:-UPDATE_ROLLBACK_COMPLETE}"
+    exit 0
+  fi
+  cat <<JSON
+{
+  "Stacks": [
+    {
+      "StackName": "svc-test-dev",
+      "StackStatus": "${STUB_CFN_STATUS:-UPDATE_ROLLBACK_FAILED}",
+      "StackStatusReason": "${STUB_CFN_REASON-update failed on [ApiHandlerLambdaFunction]}"
+    }
+  ]
+}
+JSON
+  exit 0
+fi
+
+if [[ "${1:-}" == "cloudformation" && "${2:-}" == "describe-stack-events" ]]; then
+  # STUB_CFN_EVENTS=failed drives aws.cloudformation.status down its event-LIST branch.
+  # the default set below holds no FAILED status, so status counts zero and renders
+  # `(none)` — which means the jq that draws the nested event tree would never run under
+  # a test. two events, so the case observes BOTH the `├─` and the `└─` arm of that jq.
+  if [[ "${STUB_CFN_EVENTS:-}" == "failed" ]]; then
+    cat <<'EVENTS'
+{
+  "StackEvents": [
+    {
+      "Timestamp": "2026-08-12T05:00:02.000Z",
+      "LogicalResourceId": "TheStackItself",
+      "ResourceStatus": "UPDATE_ROLLBACK_FAILED",
+      "ResourceStatusReason": "resource did not stabilize"
+    },
+    {
+      "Timestamp": "2026-08-12T05:00:01.000Z",
+      "LogicalResourceId": "ApiHandlerLambdaFunction",
+      "ResourceStatus": "UPDATE_FAILED",
+      "ResourceStatusReason": "handler.zip absent from the deployment bucket"
+    }
+  ]
+}
+EVENTS
+    exit 0
+  fi
+  # newest first, as the real api answers — the skill reverses them for display. the
+  # timestamps are fixed, so the render is deterministic across hosts and runs
+  # (rule.require.hermetic-tests).
+  cat <<'EVENTS'
+{
+  "StackEvents": [
+    {
+      "Timestamp": "2026-08-12T05:00:02.000Z",
+      "LogicalResourceId": "svc-test-dev",
+      "ResourceStatus": "UPDATE_ROLLBACK_COMPLETE"
+    },
+    {
+      "Timestamp": "2026-08-12T05:00:01.000Z",
+      "LogicalResourceId": "ApiHandlerLambdaFunction",
+      "ResourceStatus": "UPDATE_ROLLBACK_IN_PROGRESS"
+    }
+  ]
+}
+EVENTS
+  exit 0
+fi
+
+# ── ssm, for aws.ssm.param.check ────────────────────────────────────────────────────
+# STUB_SSM_PRESENT is a comma-joined allowlist of parameter names this account "holds".
+# a name on it answers 0; every other name answers 2, exactly as the real api does for an
+# absent parameter. that split is the whole subject of the skill, so the stub has to model
+# BOTH sides — a stub that always answered 0 would make the ❌ arm unreachable.
+if [[ "${1:-}" == "ssm" && "${2:-}" == "get-parameter" ]]; then
+  # find the value that follows --name
+  want=""
+  for ((i = 1; i <= $#; i++)); do
+    if [[ "${!i}" == "--name" ]]; then
+      next=$((i + 1))
+      want="${!next}"
+      break
+    fi
+  done
+  if [[ ",${STUB_SSM_PRESENT:-}," == *",$want,"* ]]; then
+    echo "$want"
+    exit 0
+  fi
+  # the real api speaks on STDERR and exits 2 here. the stub matches that volume: the skill
+  # silences both streams precisely because this message used to land at column 0 mid-tree,
+  # and a quieter stub would have hidden that (rule.require.nest-subskill-output-in-buckets,
+  # `.a STUB louder or quieter than the tool it stands in for`).
+  echo "An error occurred (ParameterNotFound) when calling the GetParameter operation:" >&2
+  exit 2
+fi
+
+# STUB_SSM_MATCHES is the tab-separated line `--output text` answers with; set it empty for
+# a search that matched no parameter at all.
+if [[ "${1:-}" == "ssm" && "${2:-}" == "describe-parameters" ]]; then
+  printf '%s\n' "${STUB_SSM_MATCHES-}"
+  exit 0
+fi
+
+# ── sqs / lambda / cloudwatch, for aws.cloudwatch.metrics.query ─────────────────────
+# each var is the tab-separated line `--output text` answers with; set one empty to drive
+# the skill's "no queues / no lambdas found" belay, which is a real critipath of its own.
+if [[ "${1:-}" == "sqs" && "${2:-}" == "list-queues" ]]; then
+  printf '%s\n' "${STUB_SQS_QUEUES-}"
+  exit 0
+fi
+
+if [[ "${1:-}" == "lambda" && "${2:-}" == "list-functions" ]]; then
+  printf '%s\n' "${STUB_LAMBDA_FUNCTIONS-}"
+  exit 0
+fi
+
+# the single-lambda path probes with get-function and reads only the exit code.
+# STUB_LAMBDA_PRESENT is a comma-joined allowlist of full function names that exist.
+if [[ "${1:-}" == "lambda" && "${2:-}" == "get-function" ]]; then
+  want=""
+  for ((i = 1; i <= $#; i++)); do
+    if [[ "${!i}" == "--function-name" ]]; then
+      next=$((i + 1))
+      want="${!next}"
+      break
+    fi
+  done
+  if [[ ",${STUB_LAMBDA_PRESENT:-}," == *",$want,"* ]]; then
+    echo "$want"
+    exit 0
+  fi
+  echo "An error occurred (ResourceNotFoundException): Function not found" >&2
+  exit 254
+fi
+
+# one datapoint per resource. STUB_CW_DATAPOINTS holds `name=value` pairs, comma-joined, so
+# a case can give each resource a DIFFERENT count — which is what makes the sort order and
+# the TOTAL observable rather than merely present.
+if [[ "${1:-}" == "cloudwatch" && "${2:-}" == "get-metric-statistics" ]]; then
+  want=""
+  for ((i = 1; i <= $#; i++)); do
+    if [[ "${!i}" == "--dimensions" ]]; then
+      next=$((i + 1))
+      # `Name=FunctionName,Value=svc-x` -> `svc-x`
+      want="${!next##*Value=}"
+      break
+    fi
+  done
+  found=""
+  IFS=',' read -ra pairs <<< "${STUB_CW_DATAPOINTS:-}"
+  for pair in "${pairs[@]}"; do
+    if [[ "${pair%%=*}" == "$want" ]]; then
+      found="${pair#*=}"
+      break
+    fi
+  done
+  # the real api answers the literal `None` when the window holds no datapoint, and the
+  # skill turns that into 0. a stub that answered `0` here would skip that branch entirely.
+  printf '%s\n' "${found:-None}"
+  exit 0
+fi
+
+echo "stub aws: unhandled call: $*" >&2
+exit 1

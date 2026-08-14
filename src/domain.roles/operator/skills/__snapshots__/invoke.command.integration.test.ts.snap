@@ -1,0 +1,159 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`invoke.command (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.command
+
+usage:
+  rhx invoke.command --name <command> --env <env> [args...]
+  rhx invoke.command --list
+
+options:
+  --name   command name (without path or .ts extension)
+  --env    environment: test, prep, or prod
+  --list   list available commands
+
+examples:
+  rhx invoke.command --list
+  rhx invoke.command --name getJob --env prep --jobUuid abc-123
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case2] the available commands are listed when: [t0] the directory holds three commands then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.command --list
+   └─ commands available
+      ├─ getJob
+      ├─ repairTrails
+      └─ requeueTask
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case2] the available commands are listed when: [t1] the directory holds no command then: the empty list is a nested item, never a header with no body 1`] = `
+"🐈 heres the deal...
+
+🦺 invoke.command --list
+   └─ commands available
+      └─ (none)
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case3] the repo holds no command directory when: [t0] --list is asked of it then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ no command directory at: src/contract/commands
+   └─ hint: run this from a repo that holds commands
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case4] argument constraints belay before any work is done when: [t0] --name is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ absent required arg: --name
+   └─ hint: rhx invoke.command --list
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case4] argument constraints belay before any work is done when: [t1] --env is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case4] argument constraints belay before any work is done when: [t2] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ invalid env: camp
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case4] argument constraints belay before any work is done when: [t3] --name names a command that does not exist then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ command not found: absentJob
+   └─ hint: rhx invoke.command --list
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case5] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx invoke.command help
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case5] a flag is passed with no value when: [t1] a free-form flag is the last token then: --name belays with no fabricated value set 1`] = `
+"🐈 belay that...
+
+🦺 invoke.command
+   ├─ absent value for --name
+   └─ hint: rhx invoke.command help
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case6] the credential read finds no profile when: [t0] the keyrack answers empty then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 invoke.command
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case7] the command is invoked when: [t0] the command succeeds then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🦺 invoke.command --name getJob --env prep
+   ├─ name: getJob
+   ├─ env: prep
+   ├─ tunnel absent — the command may not reach the database
+   └─ invoke the command...
+      ├─
+      │
+      │  the child ran
+      │  the child saw: --env prep --jobUuid abc-123
+      │
+      └─
+
+🐈 smooth sailin!
+
+🦺 invoke.command --name getJob --env prep
+   └─ command completed
+"
+`;
+
+exports[`invoke.command (contract renders) given: [case7] the command is invoked when: [t1] the command exits non-zero then: the run forwards the child code and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🦺 invoke.command --name getJob --env prep
+   ├─ name: getJob
+   ├─ env: prep
+   ├─ tunnel absent — the command may not reach the database
+   └─ invoke the command...
+      ├─
+      │
+      │  the child started
+      │  the child could not finish
+      │
+      └─
+
+🐈 wet paws...
+
+🦺 invoke.command
+   ├─ the command exited 3
+   └─ hint: read the bucket above for what it said
+"
+`;

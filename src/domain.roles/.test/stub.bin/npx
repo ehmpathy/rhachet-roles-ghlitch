@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `npx` that stands in for the declastruct invocations the skills wrap
+#
+# .why  = `use.vpc.tunnel` opens its tunnel with `npx declastruct apply`, and
+#         `provision.declastruct` runs `npx declastruct plan|apply`. both draw their own
+#         tree, so both are framed — and a frame is a claim about a render, which needs a
+#         render to check (rule.require.nest-subskill-output-in-buckets, `.clamp the
+#         exemption, do not assert it`).
+#
+#         a real run would need aws, an ssm session, and a live account. this stub makes
+#         the branch reachable with none of them, so the frame can be clamped hermetically
+#         (rule.require.hermetic-tests).
+#
+# .note = it RENDERS, deliberately. the real declastruct emits 🌊/🔮/🥥 headers and tree
+#         items; a silent stub would frame an empty bucket and the controls would pass
+#         over a hollow shape — the defect the rule names under `.a bucket must never
+#         frame an empty child`.
+#
+# .note = it echoes its argv. that is what lets a case prove WHICH invocation ran (plan vs
+#         apply, and against which wish) rather than merely that a run occurred at all.
+#
+# .note = deliberately dumb. it answers the one subcommand shape the skills use and belays
+#         loudly on every other, so a skill that grows a NEW npx call cannot silently take
+#         a success path while a test claims it reached the tool (rule.forbid.failhide).
+######################################################################
+set -euo pipefail
+
+if [[ "${1:-}" == "declastruct" ]]; then
+  shift
+  echo "🌊 declastruct"
+  echo "   └─ stub: reconciled the declared state"
+  echo "declastruct-argv: $*"
+  exit 0
+fi
+
+# `npx tsx` is how a skill reads its repo config, and that read is REAL work the case
+# depends on — the tunnel target comes out of it. so it is delegated to the genuine npx
+# rather than faked: a stubbed config read would test the stub's idea of the config
+# instead of the skill's.
+#
+# the real path arrives by env var from the harness, never by a PATH lookup — a lookup
+# would find this stub again and spin. absent the var, belay loudly rather than fall
+# through to a fake (rule.forbid.failhide).
+if [[ "${1:-}" == "tsx" ]]; then
+  if [[ -z "${STUB_REAL_NPX:-}" ]]; then
+    echo "stub npx: tsx delegation needs STUB_REAL_NPX to be set" >&2
+    exit 1
+  fi
+  exec "$STUB_REAL_NPX" "$@"
+fi
+
+echo "stub npx: unhandled call: $*" >&2
+exit 1

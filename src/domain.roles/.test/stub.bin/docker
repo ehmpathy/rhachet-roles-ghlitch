@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `docker` that stands in for the container work `use.testdb` wraps
+#
+# .why  = `use.testdb` probes the daemon, reads the compose ports, clears whatever holds
+#         them, renews the anon volume, and dumps container logs on the wedged path. every
+#         one of those RENDERS, so each is framed — and a frame is a claim about a render,
+#         which needs a render to check (rule.require.nest-subskill-output-in-buckets).
+#
+#         a real run needs a docker daemon, which is exactly the host-shaped fork the
+#         suite exists to close (rule.require.hermetic-tests). this skill had NO test at
+#         all before, so four un-framed children lived here unobserved.
+#
+# .note = it RENDERS on every call that changes state, as the real tool does. a silent
+#         stub would frame an empty bucket and the controls would pass over a hollow
+#         shape — the defect the rule names under `.a bucket must never frame an empty
+#         child`.
+#
+# .note = deliberately dumb. it answers the exact call shapes the skill uses and belays
+#         loudly on every other, so a skill that grows a NEW docker call cannot silently
+#         take a success path while a test claims it reached the tool
+#         (rule.forbid.failhide).
+######################################################################
+set -euo pipefail
+
+# `docker info` is the daemon probe. the skill sends it to /dev/null and reads only the
+# exit code, so this answers with the code alone.
+if [[ "${1:-}" == "info" ]]; then
+  exit 0
+fi
+
+# `docker ps -a -f publish=<port> -q` asks which containers hold a published port.
+# STUB_DOCKER_HELD names the ids to answer with (newline separated); absent, none are
+# held — which is itself a real case, since a first-time wedge often has no leftover.
+if [[ "${1:-}" == "ps" ]]; then
+  [[ -n "${STUB_DOCKER_HELD:-}" ]] && printf '%s\n' "$STUB_DOCKER_HELD"
+  exit 0
+fi
+
+if [[ "${1:-}" == "rm" ]]; then
+  shift
+  # the real tool echoes each id it removed
+  for arg in "$@"; do
+    [[ "$arg" == "-f" ]] && continue
+    echo "$arg"
+  done
+  exit 0
+fi
+
+if [[ "${1:-}" == "logs" ]]; then
+  echo "PostgreSQL init process complete; ready for start up."
+  echo "FATAL:  database files are incompatible with server"
+  exit 0
+fi
+
+if [[ "${1:-}" == "compose" ]]; then
+  # `compose -f <file> config --format json` — the skill reads published ports out of it
+  if [[ "$*" == *" config "* || "$*" == *" config" ]]; then
+    cat <<'CONFIG'
+{ "services": { "testdb": { "ports": [ { "published": 7821 } ] } } }
+CONFIG
+    exit 0
+  fi
+
+  # `compose -f <file> down -v` — renew the anon volume
+  if [[ "$*" == *" down"* ]]; then
+    echo "Container ghlitch-testdb  Removed"
+    echo "Volume testdb_data  Removed"
+    exit 0
+  fi
+
+  echo "stub docker: unhandled compose call: $*" >&2
+  exit 1
+fi
+
+echo "stub docker: unhandled call: $*" >&2
+exit 1

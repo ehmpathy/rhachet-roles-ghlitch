@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `rhx` that answers the one call the deployer skills make of it
+#
+# .why  = every composer reads its aws profile through
+#         `rhx keyrack get --key AWS_PROFILE ... --value || echo ""`. the default suite
+#         PATH omits rhx entirely, so that read comes back empty and each skill belays on
+#         absent credentials — which is a real critipath, and the one the other cases
+#         cover.
+#
+#         but it means NO case ever reaches the tool the skill wraps, so the
+#         forward-contract exemption those skills claim
+#         (rule.require.nest-subskill-output-in-buckets) was asserted and never observed.
+#         this stub answers the credential read so the passthrough becomes reachable and
+#         the exemption becomes clampable.
+#
+# .note = deliberately dumb. it recognizes the one subcommand shape the skills use and
+#         belays loudly on every other, so a skill that grows a NEW rhx call cannot
+#         silently get an empty answer and take a belay path while a test claims it
+#         reached the tool (rule.forbid.failhide).
+######################################################################
+set -euo pipefail
+
+if [[ "${1:-}" == "keyrack" && "${2:-}" == "get" ]]; then
+  echo "stub-aws-profile"
+  exit 0
+fi
+
+# unlock RENDERS, because the real `rhx keyrack unlock` always does — it draws a 🔓 tree
+# that names the credential it opened. a SILENT stub would frame an empty bucket and the
+# frame controls would pass over a hollow shape, which is the exact defect
+# rule.require.nest-subskill-output-in-buckets calls out under `.a bucket must never
+# frame an empty child`. a stub quieter than the tool it stands in for hides the very
+# property the clamp exists to observe.
+if [[ "${1:-}" == "keyrack" && "${2:-}" == "unlock" ]]; then
+  echo "🔓 keyrack unlock"
+  echo "   └─ stub: opened for the requested env"
+  exit 0
+fi
+
+echo "stub rhx: unhandled call: $*" >&2
+exit 1

@@ -43,16 +43,42 @@ fi
 # clear extant AWS_PROFILE to avoid interference
 unset AWS_PROFILE 2>/dev/null || true
 
+# require a value for a flag — belay fast when the next token cannot serve as the value.
+# the same helper, message and value-set hint as every kin deployer skill
+# (rule.require.consistent-skill-contracts).
+#
+# it rejects TWO shapes, and the second is the subtle one:
+#   1. absent — the flag was the last arg. without this, set -u trips a cryptic
+#      unbound-variable crash instead of a helpful message
+#   2. a FLAG token — `--env --stack x` would otherwise set ENV='--stack' and eat the next
+#      flag whole, so the run belays about the WRONG flag
+require_val() {
+  # $1 = flag name, $2 = the candidate value (pass "${2:-}" from the case),
+  # $3 = optional comma-joined valid set, for flags whose values are a closed enum
+  if [[ -z "$2" || "$2" == --* ]]; then
+    echo "🐈 belay that..."
+    echo ""
+    echo "⛵ aws.cloudformation.rollback"
+    echo "   ├─ absent value for $1"
+    [[ -n "${3:-}" ]] && echo "   ├─ fix: pass one of $3"
+    echo "   └─ hint: rhx aws.cloudformation.rollback help"
+    exit 2
+  fi
+}
+
 # parse arguments
 ENV=""
 STACK=""
 while [[ $# -gt 0 ]]; do
   case $1 in
     --env)
+      require_val --env "${2:-}" "prep,prod"
       ENV="$2"
       shift 2
       ;;
     --stack)
+      # no value set named: a stack name is free-form, and a fabricated set would mislead
+      require_val --stack "${2:-}"
       STACK="$2"
       shift 2
       ;;
@@ -124,21 +150,38 @@ else
   exit 2
 fi
 
-# prod gate: prod rollbacks mutate prod and require a deploy.uses grant
-if [[ "$ENV" == "prod" ]]; then
-  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter deploy.uses --env prod || exit $?
-fi
-
 echo "🐈 chartin course..."
 echo ""
 echo "⛵ aws.cloudformation.rollback --stack $STACK_NAME"
-echo "   └─ stack: $STACK_NAME"
-echo ""
+echo "   ├─ stack: $STACK_NAME"
+
+# prod gate: prod rollbacks mutate prod and require a deploy.uses grant. framed in this
+# skill's own treestruct sub.bucket, under a labeled item
+# (rule.require.nest-subskill-output-in-buckets).
+if [[ "$ENV" == "prod" ]]; then
+  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # reach the nest helper PACKAGE-relatively, via BASH_SOURCE — never through
+  # `git rev-parse --show-toplevel`, which resolves to the CONSUMER's repo root.
+  OPERATOR_SKILL_DIR="$(cd "$DEPLOYER_SKILL_DIR/../../operator/skills" && pwd)"
+  source "$OPERATOR_SKILL_DIR/_.nest.sh"
+  echo "   ├─ check the gate..."
+  # _or_belay, not `|| exit $?`: a blocked gate must close THIS tree and state the
+  # verdict at column 0, never exit mid-frame and leave the ⛵ tree half-drawn.
+  run_sub_bucket_or_belay "   │  " "⛵ aws.cloudformation.rollback" "blocked at the gate" \
+    bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" --meter deploy.uses --env prod
+fi
+
+# a `├─` continuation, never a `└─`: the credential step, the rollback call, and the
+# event stream all still follow. this line used to close the tree, after which four more
+# blocks were printed under a tree that had already ended — two of them (`   continue
+# rollback...`, `   events`) with no branch glyph at all.
+echo "   ├─ eyes on target..."
 
 # source aws credentials from keyrack
 AWS_PROFILE=$(rhx keyrack get --owner ehmpath --env "$KEYRACK_ENV" --key AWS_PROFILE --value || echo "")
 if [[ -z "$AWS_PROFILE" ]]; then
+  echo "   └─ halted: absent credentials"
+  echo ""
   echo "🐈 wet paws..."
   echo ""
   echo "⛵ aws.cloudformation.rollback"
@@ -149,6 +192,8 @@ fi
 
 # export credentials
 if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format env)"; then
+  echo "   └─ halted: absent credentials"
+  echo ""
   echo "🐈 wet paws..."
   echo ""
   echo "⛵ aws.cloudformation.rollback"
@@ -158,11 +203,32 @@ if ! eval "$(aws configure export-credentials --profile "$AWS_PROFILE" --format 
 fi
 unset AWS_PROFILE AWS_DEFAULT_PROFILE
 
-echo "   continue rollback..."
-aws cloudformation continue-update-rollback --stack-name "$STACK_NAME"
+# `continue-update-rollback` answers with NO output on success — it is a silent command,
+# not a render, so a bucket around it would frame an empty child, which is the defect
+# rule.require.nest-subskill-output-in-buckets names under `.a bucket must never frame an
+# empty child`. the honest treatment for a silent child is to capture it and speak for it:
+# a tree item on success, a closed tree plus the captured error on failure.
+#
+# on failure aws DOES speak, on stderr — so capture both streams. an un-captured error
+# here landed at column 0 in the middle of this tree, beside a `set -e` exit that left
+# the ⛵ tree open with no close at all.
+echo "   ├─ anchors away!"
+if ! ROLLBACK_SAID="$(aws cloudformation continue-update-rollback --stack-name "$STACK_NAME" 2>&1)"; then
+  echo "   └─ halted: aws rejected the rollback"
+  echo ""
+  echo "🐈 wet paws..."
+  echo ""
+  echo "⛵ aws.cloudformation.rollback"
+  echo "   ├─ stack: $STACK_NAME"
+  while IFS= read -r said; do
+    [[ -n "$said" ]] && echo "   ├─ $said"
+  done <<< "$ROLLBACK_SAID"
+  echo "   └─ hint: rhx aws.cloudformation.status --stack $STACK_NAME"
+  exit 1
+fi
+echo "   ├─ rollback continued"
 
-echo ""
-echo "   events"
+echo "   ├─ events"
 
 # track last seen event to avoid duplicates
 LAST_SEEN=""
@@ -202,12 +268,20 @@ while true; do
       break
       ;;
     *FAILED*)
-      echo "   └─ $STACK_STATUS"
+      # `halted:`, per the close-line vocabulary — a non-zero exit that closes an open tree
+      # names its OUTCOME with the word that matches its exit code
+      # (rule.require.consistent-skill-contracts). this used to close with the bare status,
+      # which reads as one more event item rather than as the end of the run.
+      echo "   └─ halted: $STACK_STATUS"
       echo ""
       echo "🐈 wet paws..."
       echo ""
       echo "⛵ aws.cloudformation.rollback"
-      echo "   └─ rollback failed"
+      echo "   ├─ stack: $STACK_NAME"
+      echo "   ├─ final status: $STACK_STATUS"
+      # the old belay closed on a bare `rollback failed` and named no fix at all — a symptom
+      # with no next move (rule.require.errors-name-the-fix).
+      echo "   └─ hint: rhx aws.cloudformation.status --stack $STACK_NAME"
       exit 1
       ;;
   esac

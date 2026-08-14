@@ -325,13 +325,18 @@ fi
 # --gate forwards VERBATIM to uses.check — no translation, because the gate skill speaks
 # the same word. --gate for-cicd defers the prod-write gate to the ambient
 # github-environment approval (CI) instead of the local meter.
-if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
-  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" \
-    --meter provision.uses --env prod --gate "$GATE" || exit $?
-fi
+# output header — printed BEFORE the gate, so the gate's output has a parent tree to
+# nest under as a treestruct sub.bucket, exactly as the connectivity sub-skill below
+# does (rule.require.nest-subskill-output-in-buckets). every field here is known from
+# parsed args alone, so the gate places no constraint on when it may render.
+# ── nest ────────────────────────────────────────────────────────────────────────────
+# sourced ONCE, unconditionally, because this skill frames THREE children: the prod gate,
+# the connectivity sub-skill, and the schema run. it used to be sourced twice — once
+# inside the gate branch and once before the connectivity call — so the two copies could
+# drift on which directory they reached through.
+DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SKILL_DIR/_.nest.sh"
 
-# output header
 echo "🐈 chartin course..."
 echo ""
 if [[ "$MODE" == "sync" ]]; then
@@ -344,17 +349,29 @@ echo "   ├─ env: $ENV"
 echo "   ├─ mode: $MODE"
 [[ "$MODE" == "sync" ]] && echo "   ├─ change: $SLUG"
 
+# frame the gate in its own sub.bucket, under a labeled item — one bucket per
+# sub-skill invocation, so this and the connectivity call below stay delineated.
+if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
+  echo "   ├─ check the gate..."
+  # _or_belay, not `|| exit $?`: a blocked gate must close THIS tree and state the
+  # verdict at column 0, never exit mid-frame and leave the ⛵ tree half-drawn.
+  run_sub_bucket_or_belay "   │  " "⛵ provision.database" "blocked at the gate" \
+    bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" \
+    --meter provision.uses --env prod --gate "$GATE"
+fi
+
 # ensure database connectivity (handles keyrack, vpc tunnel, and pg_isready).
 # frame the sub-skill's full output in its own treestruct sub.bucket so it is
 # clearly delineated under its own header, not a wall at column 0. run_sub_bucket
 # preserves the exit code, so a connectivity failure still fail-fasts via set -e.
-source "$SKILL_DIR/_.nest.sh"
-echo "   └─ lets get some sun..."
+#
+# a `├─`, NOT the tree's close: the credential read and the schema bucket are real
+# steps that follow, and they used to render past a closed tree.
+echo "   ├─ lets get some sun..."
 # explicit `|| exit $?` — run_sub_bucket runs the child in a process substitution,
 # so a bare call would not reliably trip set -e; forward the child exit code so a
 # connectivity failure fail-fasts exactly like a direct call.
-run_sub_bucket "      " "$SKILL_DIR/use.rds.capacity.sh" --env "$ENV" || exit $?
-echo ""
+run_sub_bucket "   │  " "$SKILL_DIR/use.rds.capacity.sh" --env "$ENV" || exit $?
 
 # source aws credentials from keyrack for the schema run (use.rds.capacity opened the
 # tunnel and may have unlocked keyrack). skip entirely when aws creds are already set
@@ -380,20 +397,46 @@ export AWS_SDK_LOAD_CONFIG=1
 #   - sync writes the changelog table → GRANT=apply (a write, needs writer)
 # set explicitly per mode so plan never borrows the writer grant, and a stale
 # GRANT=plan from the caller's shell never starves a write of its rights.
-# run the schema command with inherited fds — sql-schema-control's stdout (incl. the
-# up-to-date and connect-timeout markers) propagates unmodified to the caller, so a
-# workflow can `| tee ./plan.log` and grep it to decide whether a gated apply runs.
+# the schema run, framed in this skill's own sub.bucket under the tree's final item.
+#
+# it carried a forward-contract exemption: "stdout propagates unmodified, so a workflow can
+# `| tee ./plan.log` and grep it". that claim was inherited and never checked, and the check
+# found it false on BOTH halves:
+#
+#   - no live caller. the org-wide search for `rhx provision.database` returns only docs,
+#     dreams, and this repo's own tests — not one workflow invokes it
+#   - no PLANNED caller either. the consolidation dream
+#     (declapract-typescript-ehmpathy `.dream/2026_07_19.consolidate-ci-schema-provision-via-ghlitch`)
+#     names this exact gap as its blocker 3, and what it asks for is an EXPLICIT contract —
+#     a `--tee <path>`, a stdout marker, or a dedicated exit code. an accidental column-0
+#     passthrough is what it wants REPLACED, not preserved
+#
+# so the exemption protects a contract that neither exists nor is wanted, and it costs the
+# delineation the frame exists to give (rule.require.nest-subskill-output-in-buckets,
+# `.verify the contract`). when that explicit signal is built, it rides on a flag or an exit
+# code, and the frame stays.
+#
+# GRANT is exported on its own line rather than prefixed onto the call. a `VAR=x cmd` prefix
+# in front of a SHELL FUNCTION does not reliably scope to the call — bash keeps such an
+# assignment after the function returns in posix mode — so the prefix form would be a
+# shell-mode-dependent contract. one export per branch, and exactly one branch ever runs.
+#
+# `|| exit $?` is mandatory: the child runs in a pipe, so a bare call would not trip set -e
+# and a failed apply would read as a success.
 if [[ "$MODE" == "plan" ]]; then
-  echo "   plan schema changes..."
-  GRANT=plan npm run provision:schema:plan
+  echo "   └─ plan schema changes..."
+  export GRANT=plan
+  run_sub_bucket "      " npm run provision:schema:plan || exit $?
 elif [[ "$MODE" == "apply" ]]; then
-  echo "   apply schema changes..."
-  GRANT=apply npm run provision:schema:apply
+  echo "   └─ apply schema changes..."
+  export GRANT=apply
+  run_sub_bucket "      " npm run provision:schema:apply || exit $?
 elif [[ "$MODE" == "sync" ]]; then
   # reconcile the changelog for one change, no re-run of its sql. forward --slug
   # to sql-schema-control via npm's `--` passthrough.
-  echo "   sync changelog for change: $SLUG ..."
-  GRANT=apply npm run provision:schema:sync -- --slug "$SLUG"
+  echo "   └─ sync changelog for change: $SLUG ..."
+  export GRANT=apply
+  run_sub_bucket "      " npm run provision:schema:sync -- --slug "$SLUG" || exit $?
 fi
 
 echo ""

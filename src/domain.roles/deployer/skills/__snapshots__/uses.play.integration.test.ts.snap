@@ -30,6 +30,12 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case2] set --quan
 "
 `;
 
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case2] set --quant 1 — one-shot, auto-revoke when: [t1] the first prod op consumes the grant then: the consumption output matches snapshot 1`] = `
+"🦺 deploy.uses --env prod
+   └─ authorized via quota grant (1 → 0 left, re-locked)
+"
+`;
+
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case3] allow — unlimited grant does not revoke when: [t0] a human grants unlimited prod access then: the allow output matches snapshot 1`] = `
 "🐈 smooth sailin!
 
@@ -117,22 +123,161 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case10] a corrupt
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t0] deploy.sh runs against prod with no grant then: the gate output matches snapshot 1`] = `
-"🐈 wet paws...
+"🐈 chartin course...
 
-🦺 deploy.uses --env prod
-   ├─ prod is locked: no deploy.uses grant for prod (safe default)
-   └─ ask your human to grant:
-        $ rhx deploy.uses set --quant 1 --env prod
+⛵ deploy --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx deploy.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ deploy
+   └─ blocked at the gate
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t1] aws.cloudformation.rollback runs against prod then: the gate output matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-prod
+   ├─ stack: svc-test-prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx deploy.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   └─ blocked at the gate
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t2] provision.database apply runs against prod then: the gate output matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.database --which livedb --env prod --mode apply
+   ├─ which: livedb
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.database
+   └─ blocked at the gate
 "
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t2b] provision.database sync runs against prod then: the gate output matches snapshot 1`] = `
-"🐈 wet paws...
+"🐈 chartin course...
 
-🦺 provision.uses --env prod
-   ├─ prod is locked: no provision.uses grant for prod (safe default)
-   └─ ask your human to grant:
-        $ rhx provision.uses set --quant 1 --env prod
+⛵ provision.database --which livedb --env prod --mode sync --slug 2026_07_20.demo
+   ├─ which: livedb
+   ├─ env: prod
+   ├─ mode: sync
+   ├─ change: 2026_07_20.demo
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.database
+   └─ blocked at the gate
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t3] provision.terraform apply runs against prod then: the gate output matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod apply
+   ├─ env: prod
+   ├─ cmd: terraform apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.terraform
+   └─ blocked at the gate
+"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case11] consumer skills honor the gate — blocked prod exits 2 when: [t4] provision.declastruct apply runs against prod then: the gate output matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env prod --mode apply
+   ├─ wish: <WISH>
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.declastruct
+   └─ blocked at the gate
 "
 `;
 
@@ -392,16 +537,116 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision
    ├─ which: livedb
    ├─ env: prod
    ├─ mode: apply
-   └─ lets get some sun..."
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod --gate for-cicd
+   │  │     └─ authorized via github-environment approval (CI)
+   │  │
+   │  └─
+   ├─ lets get some sun..."
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case18] provision.database --gate for-cicd wires the cicd gate through when: [t1] prod apply --gate for-cicd runs outside CI then: the passthrough belay output matches snapshot 1`] = `
-"🐈 belay that...
+"🐈 chartin course...
 
-🦺 provision.uses --env prod --gate for-cicd
-   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
-   └─ the cicd gate defers to the github-environment approval; run it in CI
+⛵ provision.database --which livedb --env prod --mode apply
+   ├─ which: livedb
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 belay that...
+   │  │
+   │  │  🦺 provision.uses --env prod --gate for-cicd
+   │  │     ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   │  │     └─ the cicd gate defers to the github-environment approval; run it in CI
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.database
+   └─ blocked at the gate
 "
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18b] every composer renders the gate-CLEARED frame the same way when: [t0] deploy clears the gate then: the cleared frame matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18b] every composer renders the gate-CLEARED frame the same way when: [t1] aws.cloudformation.rollback clears the gate then: the cleared frame matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-prod
+   ├─ stack: svc-test-prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18b] every composer renders the gate-CLEARED frame the same way when: [t2] provision.terraform clears the gate then: the cleared frame matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod apply
+   ├─ env: prod
+   ├─ cmd: terraform apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18b] every composer renders the gate-CLEARED frame the same way when: [t3] provision.declastruct clears the gate then: the cleared frame matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env prod --mode apply
+   ├─ wish: <WISH>
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`uses (deploy.uses + provision.uses prod gate) given: [case18b] every composer renders the gate-CLEARED frame the same way when: [t3b] provision.database clears the gate then: the cleared frame matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ provision.database --which livedb --env prod --mode apply
+   ├─ which: livedb
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case19] provision.database rejects a bad --gate when: [t0] an invalid --gate value is passed then: it is a constraint error (exit 2) and matches snapshot 1`] = `
@@ -532,8 +777,22 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case22] provision
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision.declastruct --gate for-cicd reaches the cicd gate when: [t0] a prod apply --gate for-cicd runs inside CI then: the gate-CLEARED output matches snapshot (temp paths masked) 1`] = `
-"🦺 provision.uses --env prod --gate for-cicd
-   └─ authorized via github-environment approval (CI)
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env prod --mode apply
+   ├─ wish: <WISH>
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod --gate for-cicd
+   │  │     └─ authorized via github-environment approval (CI)
+   │  │
+   │  └─
+   └─ blocked: absent plan file
+
 🐈 belay that...
 
 ⛵ provision.declastruct
@@ -543,11 +802,29 @@ exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision
 `;
 
 exports[`uses (deploy.uses + provision.uses prod gate) given: [case23] provision.declastruct --gate for-cicd reaches the cicd gate when: [t1] the same prod apply runs outside CI then: the gate belay output matches snapshot 1`] = `
-"🐈 belay that...
+"🐈 chartin course...
 
-🦺 provision.uses --env prod --gate for-cicd
-   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
-   └─ the cicd gate defers to the github-environment approval; run it in CI
+⛵ provision.declastruct --wish <WISH> --env prod --mode apply
+   ├─ wish: <WISH>
+   ├─ env: prod
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 belay that...
+   │  │
+   │  │  🦺 provision.uses --env prod --gate for-cicd
+   │  │     ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   │  │     └─ the cicd gate defers to the github-environment approval; run it in CI
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.declastruct
+   └─ blocked at the gate
 "
 `;
 

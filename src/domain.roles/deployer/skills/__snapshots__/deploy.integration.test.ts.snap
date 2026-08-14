@@ -1,0 +1,166 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`deploy (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+⛵ deploy
+
+usage:
+  rhx deploy --env <env>
+
+options:
+  --env    environment: prep or prod
+"
+`;
+
+exports[`deploy (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] --env is absent then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ deploy
+   ├─ absent required arg: --env
+   └─ must be: prep or prod
+"
+`;
+
+exports[`deploy (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env is outside the value set then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ deploy
+   ├─ invalid env: test
+   └─ must be: prep or prod
+"
+`;
+
+exports[`deploy (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] an unknown flag is passed then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ deploy
+   ├─ unknown argument: --turbo
+   └─ use --help for usage
+"
+`;
+
+exports[`deploy (contract renders) given: [case3] a valued flag is handed no usable value when: [t0] --env is the last token, with no value then: the belay names the valid set, not just the symptom 1`] = `
+"🐈 belay that...
+
+⛵ deploy
+   ├─ absent value for --env
+   ├─ fix: pass one of prep,prod
+   └─ hint: rhx deploy help
+"
+`;
+
+exports[`deploy (contract renders) given: [case3] a valued flag is handed no usable value when: [t1] --env is handed the NEXT FLAG as its value then: it belays about --env, never about the flag it ate 1`] = `
+"🐈 belay that...
+
+⛵ deploy
+   ├─ absent value for --env
+   ├─ fix: pass one of prep,prod
+   └─ hint: rhx deploy help
+"
+`;
+
+exports[`deploy (contract renders) given: [case4] a non-prod deploy skips the gate entirely when: [t0] --env prep is run then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prep
+   ├─ env: prep
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ deploy
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`deploy (contract renders) given: [case5] the prod gate decides whether a prod deploy proceeds when: [t0] a prod deploy runs with no grant then: the FULL blocked stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx deploy.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ deploy
+   └─ blocked at the gate
+"
+`;
+
+exports[`deploy (contract renders) given: [case5] the prod gate decides whether a prod deploy proceeds when: [t1] a prod deploy runs with an unlimited grant then: the cleared frame matches snapshot (sliced at the bucket close) 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`deploy (contract renders) given: [case6] the serverless deploy is FRAMED in a bucket when: [t0] a non-prod deploy reaches the payload then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prep
+   ├─ env: prep
+   ├─ export credentials from: stub-aws-profile
+   ├─ access: prep
+   └─ eyes on target...
+      ├─
+      │
+      │  serverless: deploy underway
+      │  npm-run: deploy:dev
+      │
+      └─
+
+🐈 smooth sailin!
+
+⛵ deploy --env prep
+   └─ deployed to prep
+"
+`;
+
+exports[`deploy (contract renders) given: [case6] the serverless deploy is FRAMED in a bucket when: [t1] a prod deploy clears the gate and reaches the payload then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ deploy --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─
+   ├─ export credentials from: stub-aws-profile
+   ├─ access: prod
+   └─ eyes on target...
+      ├─
+      │
+      │  serverless: deploy underway
+      │  npm-run: deploy:prod
+      │
+      └─
+
+🐈 smooth sailin!
+
+⛵ deploy --env prod
+   └─ deployed to prod
+"
+`;

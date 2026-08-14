@@ -104,34 +104,66 @@ if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   show_help
 fi
 
+# require a value for a flag — belay fast when the next token cannot serve as the value.
+# the same helper, message and value-set hint as every kin skill
+# (rule.require.consistent-skill-contracts).
+#
+# it rejects TWO shapes, and the second is the subtle one:
+#   1. absent — the flag was the last arg. without this, set -u trips a cryptic
+#      unbound-variable crash instead of a helpful message
+#   2. a FLAG token — `--env --metric Errors` would otherwise set ENV='--metric' and eat
+#      the next flag whole, so the run belays about the WRONG flag
+require_val() {
+  # $1 = flag name, $2 = the candidate value (pass "${2:-}" from the case),
+  # $3 = optional comma-joined valid set, for flags whose values are a closed enum
+  if [[ -z "$2" || "$2" == --* ]]; then
+    echo "🐈 belay that..."
+    echo ""
+    echo "🔮 aws.cloudwatch.metrics.query"
+    echo "   ├─ absent value for $1"
+    [[ -n "${3:-}" ]] && echo "   ├─ fix: pass one of $3"
+    echo "   └─ hint: rhx aws.cloudwatch.metrics.query help"
+    exit 2
+  fi
+}
+
 # parse named args
 while [[ $# -gt 0 ]]; do
   case $1 in
     --env)
+      require_val --env "${2:-}" "test,prep,prod"
       ENV="$2"
       shift 2
       ;;
     --since)
+      require_val --since "${2:-}" "1d,7d,30d,1h,24h"
       SINCE="$2"
       shift 2
       ;;
     --metric)
+      # no value set named: the valid metrics differ per namespace, and one flat list
+      # would name metrics that are invalid for the namespace in play
+      require_val --metric "${2:-}"
       METRIC="$2"
       shift 2
       ;;
     --lambda)
+      require_val --lambda "${2:-}"
       LAMBDA="$2"
       shift 2
       ;;
     --queue)
+      require_val --queue "${2:-}"
       QUEUE="$2"
       shift 2
       ;;
     --namespace)
+      require_val --namespace "${2:-}" "lambda,sqs"
       NAMESPACE="$2"
       shift 2
       ;;
     --prefix)
+      require_val --prefix "${2:-}"
       PREFIX="$2"
       shift 2
       ;;
@@ -181,6 +213,19 @@ if [[ "$ENV" != "test" && "$ENV" != "prep" && "$ENV" != "prod" ]]; then
   echo "🔮 aws.cloudwatch.metrics.query"
   echo "   ├─ invalid env: $ENV"
   echo "   └─ must be: test, prep, or prod"
+  exit 2
+fi
+
+# --namespace decides which whole branch runs below, and it had NO validation at all: an
+# unknown value silently took the lambda branch, because that branch is the `else`. so
+# `--namespace sqz` reported lambda metrics under an sqs-shaped question
+# (rule.forbid.unexpected-defaults).
+if [[ "$NAMESPACE" != "lambda" && "$NAMESPACE" != "sqs" ]]; then
+  echo "🐈 belay that..."
+  echo ""
+  echo "🔮 aws.cloudwatch.metrics.query"
+  echo "   ├─ invalid namespace: $NAMESPACE"
+  echo "   └─ must be: lambda or sqs"
   exit 2
 fi
 
@@ -237,8 +282,11 @@ echo "   ├─ env: $ENV"
 echo "   ├─ prefix: $PREFIX"
 echo "   ├─ namespace: $NAMESPACE"
 echo "   ├─ metric: $METRIC"
-echo "   └─ since: $SINCE ($START_TIME to $END_TIME)"
-echo ""
+# a `├─` continuation, never a `└─`: the poll step and the whole result table still follow.
+# this line used to close the tree on its last ARG, after which two glyph-less strays
+# (`   poll N queues...`, `   poll N lambdas...`) and a `━━━`-ruled table were printed under
+# a tree that had already ended.
+echo "   ├─ since: $SINCE ($START_TIME to $END_TIME)"
 
 RESULTS=""
 
@@ -261,15 +309,27 @@ if [[ "$NAMESPACE" == "sqs" ]]; then
     fi
   done
 
-  # dedupe and sort
-  mapfile -t QUEUES < <(printf '%s\n' "${QUEUES[@]}" | sort -u)
+  # dedupe and sort.
+  #
+  # the `-gt 0` guard carries weight; it is not defensive noise. `printf '%s\n'` with NO
+  # arguments still prints one newline, so an EMPTY array piped through here comes back with
+  # one empty-string element in it. the count below then read 1, the "no queues" belay was
+  # unreachable, and the run rendered a phantom queue with a `0` datapoint as if it had found
+  # a real one.
+  if [[ ${#QUEUES[@]} -gt 0 ]]; then
+    mapfile -t QUEUES < <(printf '%s\n' "${QUEUES[@]}" | sort -u)
+  fi
 
   # filter by queue name if specified
-  if [[ -n "$QUEUE" ]]; then
+  if [[ -n "$QUEUE" && ${#QUEUES[@]} -gt 0 ]]; then
     mapfile -t QUEUES < <(printf '%s\n' "${QUEUES[@]}" | grep -i "$QUEUE" || true)
   fi
 
   if [[ ${#QUEUES[@]} -eq 0 ]]; then
+    # the header tree is already open, so close it before the belay. `halted:` because the
+    # exit is 1 (rule.require.consistent-skill-contracts).
+    echo "   └─ halted: no queues to poll"
+    echo ""
     echo "🐈 wet paws..."
     echo ""
     echo "🔮 aws.cloudwatch.metrics.query"
@@ -282,8 +342,7 @@ if [[ "$NAMESPACE" == "sqs" ]]; then
     exit 1
   fi
 
-  echo "   poll ${#QUEUES[@]} queues..."
-  echo ""
+  echo "   ├─ polled ${#QUEUES[@]} queues"
 
   # query each queue
   for queue in "${QUEUES[@]}"; do
@@ -341,6 +400,9 @@ else
       fi
     done
     if [[ -z "$FUNCTION_NAME" ]]; then
+      # the header tree is already open; close it before the belay
+      echo "   └─ halted: lambda not found"
+      echo ""
       echo "🐈 wet paws..."
       echo ""
       echo "🔮 aws.cloudwatch.metrics.query"
@@ -375,6 +437,9 @@ else
   fi
 
   if [[ ${#LAMBDA_MAP[@]} -eq 0 ]]; then
+    # the header tree is already open; close it before the belay
+    echo "   └─ halted: no lambdas to poll"
+    echo ""
     echo "🐈 wet paws..."
     echo ""
     echo "🔮 aws.cloudwatch.metrics.query"
@@ -387,8 +452,7 @@ else
     exit 1
   fi
 
-  echo "   poll ${#LAMBDA_MAP[@]} lambdas..."
-  echo ""
+  echo "   ├─ polled ${#LAMBDA_MAP[@]} lambdas"
 
   for FUNCTION_NAME in "${!LAMBDA_MAP[@]}"; do
     lambda="${LAMBDA_MAP[$FUNCTION_NAME]}"
@@ -413,31 +477,43 @@ else
   done
 fi
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-# sort by count (highest first) and display
+# ── the results ─────────────────────────────────────────────────────────────────────
+# the results are the tree's CLOSING item and its children, never a detached table.
+#
+# they used to render as a `━━━`-ruled block at column 0, below a tree that had closed six
+# lines earlier — three rulers, a printf header row, a dashed underline and a TOTAL line,
+# not one of them a mascot, a header, or a tree item. the ruled form also cost the reader
+# what the frame gives for free: which run these numbers belong to.
 RESOURCE_TYPE="Lambda"
 if [[ "$NAMESPACE" == "sqs" ]]; then
   RESOURCE_TYPE="Queue"
 fi
-printf "%12s  %s\n" "$METRIC" "$RESOURCE_TYPE"
-printf "%12s  %s\n" "────────────" "──────────────────────────────────────────────────────"
-echo "$RESULTS" | grep -v '^$' | sort -rn
+echo "   └─ $METRIC by $RESOURCE_TYPE"
 
-# summary
-TOTAL=$(echo "$RESULTS" | grep -v '^$' | awk '{sum+=$1} END {printf "%.0f", sum}')
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-printf "%12.0f  TOTAL\n" "$TOTAL"
+# sort by count, highest first. each row is a child at 6 spaces; the TOTAL takes the `└─`,
+# so every measured row above it is a `├─` — which is also why the total is rendered last
+# rather than merely printed last.
+SORTED=$(echo "$RESULTS" | grep -v '^$' | sort -rn)
+POLLED=0
+while IFS= read -r row; do
+  [[ -z "$row" ]] && continue
+  printf '      ├─ %s\n' "$row"
+  POLLED=$((POLLED + 1))
+done <<< "$SORTED"
 
+TOTAL=$(echo "$SORTED" | awk '{sum+=$1} END {printf "%.0f", sum}')
+printf '      └─ %12.0f  TOTAL\n' "$TOTAL"
+
+# the close states the ANSWER, never merely that a poll occurred. it used to read a bare
+# `observed`, which told a human that the skill ran but not one thing it learned — so the
+# human had to scroll back up the table to find the number they had asked for.
 echo ""
 echo "🐈 caught it!"
 echo ""
-echo "🔮 aws.cloudwatch.metrics.query"
+echo "🔮 aws.cloudwatch.metrics.query --env $ENV --namespace $NAMESPACE"
 if [[ -n "$USED_ALIAS" ]]; then
-  echo "   ├─ observed"
+  echo "   ├─ $TOTAL $METRIC across $POLLED $RESOURCE_TYPE"
   echo "   └─ (found via historic -$USED_ALIAS alias)"
 else
-  echo "   └─ observed"
+  echo "   └─ $TOTAL $METRIC across $POLLED $RESOURCE_TYPE"
 fi

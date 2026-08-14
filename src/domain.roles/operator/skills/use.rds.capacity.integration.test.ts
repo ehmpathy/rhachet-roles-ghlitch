@@ -2,7 +2,8 @@ import { genTempDir, given, then, useBeforeAll, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { asEnvHermetic, genStubBinPath } from '../../.test/runRoleSkill';
 
 /**
  * .what = integration test for use.rds.capacity failfast on absent config
@@ -31,23 +32,40 @@ const isExecSyncError = (
 const runSkill = (input: {
   args: string;
   cwd: string;
+  // a narrowed PATH that stages the stub bin FIRST. supplied only by the case that must
+  // reach the capacity poll; every other case belays long before a tool is touched.
+  path?: string;
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/use.rds.capacity.sh`;
 
-  // set static aws creds so the skill skips keyrack unlock + sso export
-  const env = {
-    ...process.env,
+  // the base withholds every ambient credential and closes the rc, so the static creds
+  // below are a DECLARATION rather than a top-up of whatever the host happened to hold —
+  // which is what keeps the keyrack-skip arm the same on a laptop and a runner
+  // (rule.require.hermetic-tests).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
     AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
     AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
+    ...(input.path
+      ? {
+          PATH: input.path,
+          // the stub npx delegates the config read to the genuine one; it reaches it by
+          // env var, never a PATH lookup, which would find the stub again and spin.
+          STUB_REAL_NPX: execSync('which npx', { encoding: 'utf-8' }).trim(),
+        }
+      : {}),
   };
 
   try {
-    const stdout = execSync(`bash "${skillPath}" ${input.args}`, {
-      encoding: 'utf-8',
-      cwd: input.cwd,
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const stdout = execSync(
+      `bash --noprofile --norc "${skillPath}" ${input.args}`,
+      {
+        encoding: 'utf-8',
+        cwd: input.cwd,
+        env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
     return { stdout, stderr: '', exitCode: 0 };
   } catch (error: unknown) {
     if (isExecSyncError(error)) {
@@ -205,6 +223,112 @@ describe('use.rds.capacity', () => {
       });
     });
   });
+
+  given(
+    '[case5] the happy path reaches capacity, and FRAMES its children',
+    () => {
+      // the coverage this suite lacked entirely. every other case belays before a tool is
+      // ever touched, so the branch that actually AWAITS capacity had never been rendered
+      // by a test. two children ran there: the composed `use.vpc.tunnel`, and the
+      // `timeout 180 bash -c "until pg_isready ...; done"` poll — and the poll streamed
+      // un-framed at column 0 for its whole life, right after this skill's tree had
+      // already closed.
+      //
+      // that miss is instructive: the earlier sweep for un-framed children grepped a
+      // command ALLOWLIST (npm/npx/terraform/rhx), and `timeout ... bash -c` matched none
+      // of them. a wrapper hides a child from a name-based sweep
+      // (rule.require.nest-subskill-output-in-buckets).
+      //
+      // the config points at localhost, so use.vpc.tunnel takes its short-circuit and no
+      // aws, keyrack, or ssm session is touched. the stub bin answers the poll.
+      const stubbed = useBeforeAll(async () => {
+        const dir = genTempDir({
+          slug: 'use-rds-capacity-happy',
+          git: true,
+          symlink: [{ at: 'node_modules', to: 'node_modules' }],
+        });
+        setStubConfig({
+          cwd: dir,
+          bastionExid: 'null',
+          clusterName: 'null',
+          account: 'null',
+          host: 'localhost',
+          port: '7821',
+        });
+        // node's own directory joins the narrowed PATH: the real npx (which the stub
+        // delegates the config read to) is a `#!/usr/bin/env node` executable, so an
+        // absent node would collapse the read to a 127 and the case would exercise a
+        // different path than the one it names. the stubs stay FIRST.
+        const nodeDir = dirname(
+          execSync('which node', { encoding: 'utf-8' }).trim(),
+        );
+        return runSkill({
+          args: '--env prep',
+          cwd: dir,
+          path: `${genStubBinPath({ cwd: dir })}:${nodeDir}`,
+        });
+      });
+
+      when('[t0] capacity is awaited', () => {
+        then('the run REACHES the poll (exit 0)', () => {
+          // the guard on this whole case. if a belay ever creeps back in ahead of the
+          // poll, this reddens — instead of the frame controls below quietly held over a
+          // render that was never produced.
+          expect({
+            exitCode: stubbed.exitCode,
+            stderr: stubbed.stderr,
+          }).toEqual({ exitCode: 0, stderr: '' });
+          expect(stubbed.stdout).toContain('accepting connections');
+        });
+
+        then('the pg_isready child sits BEHIND the bucket gutter', () => {
+          // the exact defect: `localhost:7821 - accepting connections` used to land at
+          // column 0. the negative control is what proves it moved.
+          expect(stubbed.stdout).toContain(
+            '      │  localhost:7821 - accepting connections',
+          );
+          expect(stubbed.stdout).not.toMatch(/^localhost:7821 - /m);
+        });
+
+        then('the tunnel child sits BEHIND its own, DEEPER gutter', () => {
+          // `   │  `, not 6 spaces: its item is a `├─`, so the tree's gutter continues
+          // past it. two children at two depths is what proves two separate buckets
+          // rather than one merged frame.
+          expect(stubbed.stdout).toContain(
+            '   │  │  🦺 use.vpc.tunnel --env prep',
+          );
+          expect(stubbed.stdout).toContain('   ├─ lets open the channel...');
+          expect(stubbed.stdout).toContain('   └─ await capacity...');
+        });
+
+        then('each frame is drawn, and NEITHER is empty', () => {
+          expect(stubbed.stdout).not.toMatch(
+            / {3}│ {2}├─\n {3}│ {2}│\n {3}│ {2}│\n {3}│ {2}└─/,
+          );
+          expect(stubbed.stdout).not.toMatch(/ {6}├─\n {6}│\n {6}│\n {6}└─/);
+        });
+
+        then('ONE header is drawn, not one per paragraph', () => {
+          // the other defect this case guards: the skill used to reprint
+          // `🦺 use.rds.capacity --env prep` before each paragraph, so one run drew three
+          // trees. exactly two artifact headers are correct — one per mascot phase
+          // (`🐈 rise and shine...` and `🐈 caught it!`), and the second drops the flag
+          // because it reports an outcome rather than an invocation.
+          const headers = stubbed.stdout
+            .split('\n')
+            .filter((line) => line.startsWith('🦺 use.rds.capacity'));
+          expect(headers).toEqual([
+            '🦺 use.rds.capacity --env prep',
+            '🦺 use.rds.capacity',
+          ]);
+        });
+
+        then('the FULL stdout matches snapshot (visual vibecheck)', () => {
+          expect(stubbed.stdout).toMatchSnapshot();
+        });
+      });
+    },
+  );
 
   given('[case4] help requested without --env', () => {
     when('[t0] help is passed as positional arg', () => {
