@@ -22,9 +22,7 @@ exports[`use.vpc.tunnel given: [case3] localhost target (local testdb, no bastio
 "🐈 chartin course...
 
 🦺 use.vpc.tunnel --env test
-   └─ env: test
-
-🦺 use.vpc.tunnel --env test
+   ├─ env: test
    ├─ target: localhost (local testdb)
    └─ no ssm tunnel needed
 
@@ -39,7 +37,8 @@ exports[`use.vpc.tunnel given: [case4] ssm target with placeholder "null" bastio
 "🐈 chartin course...
 
 🦺 use.vpc.tunnel --env prep
-   └─ env: prep
+   ├─ env: prep
+   └─ blocked: absent tunnel config
 
 🐈 belay that...
 
@@ -56,7 +55,8 @@ exports[`use.vpc.tunnel given: [case5] placeholder "null" local port when: [t0] 
 "🐈 chartin course...
 
 🦺 use.vpc.tunnel --env prep
-   └─ env: prep
+   ├─ env: prep
+   └─ blocked: absent tunnel config
 
 🐈 belay that...
 
@@ -113,7 +113,8 @@ exports[`use.vpc.tunnel given: [case7] prod ssm target with placeholder "null" c
 "🐈 chartin course...
 
 🦺 use.vpc.tunnel --env prod
-   └─ env: prod
+   ├─ env: prod
+   └─ blocked: absent tunnel config
 
 🐈 belay that...
 
@@ -139,7 +140,8 @@ exports[`use.vpc.tunnel given: [case9] placeholder "null" local host when: [t0] 
 "🐈 chartin course...
 
 🦺 use.vpc.tunnel --env prep
-   └─ env: prep
+   ├─ env: prep
+   └─ blocked: absent tunnel config
 
 🐈 belay that...
 
@@ -147,5 +149,39 @@ exports[`use.vpc.tunnel given: [case9] placeholder "null" local host when: [t0] 
    ├─ absent tunnel config for env: prep
    ├─ absent: database.tunnel.local.host
    └─ hint: set it in your repo config for prep (currently "null")
+"
+`;
+
+exports[`use.vpc.tunnel given: [case10] the ssm path opens the tunnel, and FRAMES its children when: [t0] the tunnel is opened then: the FULL stdout matches snapshot (skill dir masked) 1`] = `
+"🐈 chartin course...
+
+🦺 use.vpc.tunnel --env prep
+   ├─ env: prep
+   ├─ unlock the keyrack...
+   │  ├─
+   │  │
+   │  │  🔓 keyrack unlock
+   │  │     └─ stub: opened for the requested env
+   │  │
+   │  └─
+   ├─ account: 123456789012
+   ├─ region: us-east-1
+   ├─ bastion: vpc-main-bastion
+   ├─ cluster: ahbodedb-prep
+   ├─ host: aws.ssmproxy.ahbodedb.prep
+   ├─ port: 15432
+   └─ open the channel...
+      ├─
+      │
+      │  🌊 declastruct
+      │     └─ stub: reconciled the declared state
+      │  declastruct-argv: apply --plan yolo --wish <SKILL_DIR>/use.vpc.tunnel.ts
+      │
+      └─
+
+🐈 smooth sailin!
+
+🦺 use.vpc.tunnel --env prep
+   └─ tunnel open: aws.ssmproxy.ahbodedb.prep:15432
 "
 `;

@@ -33,6 +33,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# ── nest ────────────────────────────────────────────────────────────────────────────
+# this skill is BOTH a child (it renders inside provision.database's frames) and a
+# composer in its own right: it runs `rhx keyrack unlock` and `npx declastruct apply`.
+# both of those used to stream at column 0 — inside a parent's gutter, which made the
+# parent's frame look like it had sprung a leak.
+#
+# the frame is available here because _.nest.sh sits beside this file
+# (rule.require.nest-subskill-output-in-buckets).
+source "$SCRIPT_DIR/_.nest.sh"
+
 ARGS=("$@")
 
 show_help() {
@@ -114,10 +124,21 @@ export ACCESS="$ENV"
 export NODE_ENV="production"
 export AWS_SDK_LOAD_CONFIG=1
 
+# ── the tree ────────────────────────────────────────────────────────────────────────
+# ONE header, ONE tree, from here to the terminal mascot block.
+#
+# this skill used to reprint `🦺 use.vpc.tunnel --env $ENV` three times — once here, once
+# before the keyrack bucket, once before the ssm config items — each block closed with its
+# own `└─`. that renders THREE trees for ONE run, so a reader cannot tell a continuation
+# from a fresh invocation, and the bucket depths lie (every child looked like a `└─` close
+# because every block was its own one-item tree).
+#
+# a header is printed once per MASCOT PHASE, never per paragraph. every item below is a
+# `├─` continuation of this one header; the only `└─` is the last child.
 echo "🐈 chartin course..."
 echo ""
 echo "🦺 use.vpc.tunnel --env $ENV"
-echo "   └─ env: $ENV"
+echo "   ├─ env: $ENV"
 
 # read tunnel config from repo's config/
 CONFIG_JSON=$(npx tsx -e "
@@ -140,6 +161,10 @@ VPC_TUNNEL_PORT=$(echo "$CONFIG_JSON" | jq -r '.port')
 # fail fast when the local host is absent — never proceed with a null host, else the
 # localhost check falls through to the ssm path with a null host target
 if [[ -z "$VPC_TUNNEL_HOST" || "$VPC_TUNNEL_HOST" == "null" ]]; then
+  # close the tree on STDOUT before the belay. the header above went to stdout, so a
+  # bare exit here would leave it open — items under no close — for anyone who reads
+  # only stdout. the belay itself stays stderr-bound and self-contained.
+  echo "   └─ blocked: absent tunnel config"
   echo "" >&2
   echo "🐈 belay that..." >&2
   echo "" >&2
@@ -152,6 +177,7 @@ fi
 
 # fail fast when the local port is absent — never default a port
 if [[ -z "$VPC_TUNNEL_PORT" || "$VPC_TUNNEL_PORT" == "null" ]]; then
+  echo "   └─ blocked: absent tunnel config"
   echo "" >&2
   echo "🐈 belay that..." >&2
   echo "" >&2
@@ -166,8 +192,6 @@ fi
 # .note = the localhost decision is config-driven (host == localhost),
 #         not a hardcoded env == test check, so env values stay in config
 if [[ "$VPC_TUNNEL_HOST" == "localhost" ]]; then
-  echo ""
-  echo "🦺 use.vpc.tunnel --env $ENV"
   echo "   ├─ target: localhost (local testdb)"
   echo "   └─ no ssm tunnel needed"
   echo ""
@@ -183,8 +207,14 @@ fi
 #         real error, so an absent credential never proceeds to an opaque ssm failure.
 #         skipped when AWS creds are already set (e.g., CI static creds).
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
-  # unlock keyrack scoped to this env — never unlock --env all
-  rhx keyrack unlock --owner ehmpath --env "$ENV"
+  # unlock keyrack scoped to this env — never unlock --env all.
+  #
+  # framed: `rhx keyrack unlock` renders its own 🔓 tree, and this skill often runs as a
+  # child inside a parent's gutter, so an un-framed child here breaks TWO frames at once.
+  # a `├─` item, so its frame sits at `   │  ` — the gutter continues past it, because
+  # the tree is NOT closed here (the config items and the channel follow below).
+  echo "   ├─ unlock the keyrack..."
+  run_sub_bucket "   │  " rhx keyrack unlock --owner ehmpath --env "$ENV" || exit $?
 
   # export static credentials only — do NOT export AWS_PROFILE
   # AWS SDK prefers AWS_PROFILE over static creds, which causes SSO failures
@@ -207,6 +237,7 @@ if [[ -z "$VPC_TUNNEL_BASTION" || "$VPC_TUNNEL_BASTION" == "null" ]]; then absen
 if [[ -z "$VPC_TUNNEL_CLUSTER" || "$VPC_TUNNEL_CLUSTER" == "null" ]]; then absentKeys+=("database.tunnel.cluster.name"); fi
 if [[ -z "$AWS_ACCOUNT_ID" || "$AWS_ACCOUNT_ID" == "null" ]]; then absentKeys+=("aws.account"); fi
 if [[ ${#absentKeys[@]} -gt 0 ]]; then
+  echo "   └─ blocked: absent tunnel config"
   echo "" >&2
   echo "🐈 belay that..." >&2
   echo "" >&2
@@ -219,20 +250,23 @@ if [[ ${#absentKeys[@]} -gt 0 ]]; then
   exit 2
 fi
 
-echo ""
-echo "🦺 use.vpc.tunnel --env $ENV"
 echo "   ├─ account: $AWS_ACCOUNT_ID"
 echo "   ├─ region: $AWS_REGION"
 echo "   ├─ bastion: $VPC_TUNNEL_BASTION"
 echo "   ├─ cluster: $VPC_TUNNEL_CLUSTER"
 echo "   ├─ host: $VPC_TUNNEL_HOST"
-echo "   └─ port: $VPC_TUNNEL_PORT"
+echo "   ├─ port: $VPC_TUNNEL_PORT"
 
 # open the vpc tunnel
 # .note = idempotent by design — declastruct reconciles the declared state (tunnel
 #         status OPEN) against the actual state, so a re-run when the tunnel is already
 #         open is a no-op, not a duplicate. no extra re-entry guard is needed here.
-npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts"
+#
+# framed: declastruct emits its own 🌊/🔮/🥥 tree, so it is a render, never a payload —
+# and a render is framed whoever wrote it. no caller reads this skill's stdout, so there
+# is no forward contract to preserve (rule.require.nest-subskill-output-in-buckets).
+echo "   └─ open the channel..."
+run_sub_bucket "      " npx declastruct apply --plan yolo --wish "$SCRIPT_DIR/use.vpc.tunnel.ts" || exit $?
 
 echo ""
 echo "🐈 smooth sailin!"

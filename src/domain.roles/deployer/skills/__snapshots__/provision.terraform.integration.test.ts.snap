@@ -1,0 +1,256 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`provision.terraform (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+⛵ provision.terraform
+
+usage:
+  rhx provision.terraform <command> --env <env> [--approve]
+
+options:
+  --env      environment: test, prep, or prod
+  --approve  auto-approve terraform apply (no prompt)
+
+examples:
+  rhx provision.terraform init --env prep
+  rhx provision.terraform plan --env prep
+  rhx provision.terraform apply --env prod --approve
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] --env is absent then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.terraform
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env is the retired dev alias then: the belay names the replacement, not just the symptom 1`] = `
+"🐈 belay that...
+
+⛵ provision.terraform
+   ├─ invalid env: dev
+   └─ hint: use --env prep instead (supports dev/ directory for backcompat)
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] --env is outside the value set then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.terraform
+   ├─ invalid env: sandbox
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case2] argument constraints belay before any work is done when: [t3] no terraform subcommand is passed then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.terraform
+   ├─ absent terraform command
+   └─ example: rhx provision.terraform plan --env prep
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case2] argument constraints belay before any work is done when: [t4] terraform's own -auto-approve is passed instead of --approve then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ provision.terraform
+   ├─ invalid flag: -auto-approve
+   └─ hint: use --approve instead
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case3] the prep environment directory has two accepted names when: [t0] only prep/ exists then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prep plan
+   ├─ env: prep
+   ├─ cmd: terraform plan
+   ├─ dir: prep
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ provision.terraform
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case3] the prep environment directory has two accepted names when: [t1] only the legacy dev/ exists then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prep plan
+   ├─ env: prep
+   ├─ cmd: terraform plan
+   ├─ dir: dev
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ provision.terraform
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case3] the prep environment directory has two accepted names when: [t2] BOTH prep/ and dev/ exist then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prep plan
+   ├─ env: prep
+   ├─ cmd: terraform plan
+   └─ blocked: ambiguous environment directory
+
+🐈 belay that...
+
+⛵ provision.terraform
+   ├─ ambiguous: both dev/ and prep/ directories exist
+   └─ remove one to resolve
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case3] the prep environment directory has two accepted names when: [t3] NEITHER prep/ nor dev/ exists then: the FULL stdout matches snapshot (temp path masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prep plan
+   ├─ env: prep
+   ├─ cmd: terraform plan
+   └─ blocked: absent environment directory
+
+🐈 belay that...
+
+⛵ provision.terraform
+   ├─ directory not found: <DIR> (or dev)
+   └─ ensure terraform environment is configured
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case4] a non-prep environment directory is absent when: [t0] --env test is run with no test/ directory then: the FULL stdout matches snapshot (temp path masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env test plan
+   ├─ env: test
+   ├─ cmd: terraform plan
+   └─ blocked: absent environment directory
+
+🐈 belay that...
+
+⛵ provision.terraform
+   ├─ directory not found: <DIR>
+   └─ ensure terraform environment is configured
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case5] the prod gate decides whether a prod write proceeds when: [t0] a prod write runs with no grant then: the FULL blocked stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod apply
+   ├─ env: prod
+   ├─ cmd: terraform apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.terraform
+   └─ blocked at the gate
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case5] the prod gate decides whether a prod write proceeds when: [t1] a prod write runs with an unlimited grant then: the cleared frame matches snapshot (sliced at the bucket close) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod apply
+   ├─ env: prod
+   ├─ cmd: terraform apply
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`provision.terraform (contract renders) given: [case5] the prod gate decides whether a prod write proceeds when: [t2] a READ-ONLY prod subcommand runs with no grant then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod plan
+   ├─ env: prod
+   ├─ cmd: terraform plan
+   ├─ dir: prod
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ provision.terraform
+   ├─ absent AWS_PROFILE from keyrack for env=prod
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prod
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case6] a writer subcommand is unknown to the read-only allowlist when: [t0] an unlisted subcommand runs against prod with no grant then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prod taint
+   ├─ env: prod
+   ├─ cmd: terraform taint
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 provision.uses --env prod
+   │  │     ├─ prod is locked: no provision.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx provision.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ provision.terraform
+   └─ blocked at the gate
+"
+`;
+
+exports[`provision.terraform (contract renders) given: [case7] the terraform run is FRAMED in a bucket when: [t0] the terraform payload reaches the caller then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.terraform --env prep plan
+   ├─ env: prep
+   ├─ cmd: terraform plan
+   ├─ dir: prep
+   ├─ export credentials from: stub-aws-profile
+   └─ run terraform...
+      ├─
+      │
+      │  Terraform used the selected providers to generate the plan below.
+      │
+      │  Plan: 0 to add, 0 to change, 0 to destroy.
+      │  terraform-argv: plan
+      │
+      └─
+
+🐈 smooth sailin!
+
+⛵ provision.terraform --env prep plan
+   └─ provisioned
+"
+`;

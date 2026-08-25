@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `pg_isready` that stands in for the capacity poll `use.rds.capacity`
+#         wraps
+#
+# .why  = `use.rds.capacity` awaits the cluster with
+#         `timeout 180 bash -c "until pg_isready -h H -p P; do sleep 5; done"`. that child
+#         RENDERS — one line per poll — so it is framed, and a frame is a claim about a
+#         render, which needs a render to check
+#         (rule.require.nest-subskill-output-in-buckets, `.clamp the exemption, do not
+#         assert it`).
+#
+#         a real run would need a live postgres (or a woken serverless rds). this stub
+#         makes the branch reachable with neither, so the frame can be clamped
+#         hermetically (rule.require.hermetic-tests).
+#
+# .note = it RENDERS, deliberately, in the real tool's exact phrase — `<host>:<port> - `
+#         plus its ready state. a silent stub would frame an empty bucket and the controls
+#         would pass over a hollow shape — the defect the rule names under `.a bucket must
+#         never frame an empty child`.
+#
+# .note = it answers ready on the FIRST poll, so the `until` loop turns once and the case
+#         needs no `sleep 5`. the retry loop itself is not what the frame clamps; the
+#         gutter the output lands behind is.
+#
+# .note = deliberately dumb. it answers the one flag shape the skill uses and belays
+#         loudly on every other, so a skill that changes how it polls cannot silently take
+#         a success path while a test claims it reached the tool (rule.forbid.failhide).
+######################################################################
+set -euo pipefail
+
+HOST=""
+PORT=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h) HOST="$2"; shift 2 ;;
+    -p) PORT="$2"; shift 2 ;;
+    *)
+      echo "stub pg_isready: unhandled arg: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$HOST" || -z "$PORT" ]]; then
+  echo "stub pg_isready: both -h and -p are required (got host=$HOST port=$PORT)" >&2
+  exit 1
+fi
+
+echo "$HOST:$PORT - accepting connections"
+exit 0

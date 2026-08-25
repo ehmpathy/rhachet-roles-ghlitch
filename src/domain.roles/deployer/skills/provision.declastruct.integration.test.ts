@@ -3,6 +3,7 @@ import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { asEnvHermetic } from '../../.test/runRoleSkill';
 
 /**
  * .what = argument-boundary proof for provision.declastruct
@@ -135,7 +136,7 @@ const run = (
   },
 ): { stdout: string; stderr: string; exitCode: number } => {
   const envScrubbed = Object.fromEntries(
-    Object.entries(process.env).filter(
+    Object.entries(asEnvHermetic()).filter(
       ([name]) => !CRED_VAR_PATTERN.test(name),
     ),
   ) as Record<string, string>;
@@ -143,11 +144,22 @@ const run = (
     ...envScrubbed,
     ...(options?.creds ?? CRED_STUB),
   };
-  const result = spawnSync('bash', ['-c', `bash "${SKILL}" ${input.args}`], {
-    encoding: 'utf-8',
-    cwd: input.cwd,
-    env,
-  });
+  // the host's shell rc must not load into a run — an rc-defined FUNCTION or ALIAS beats
+  // PATH outright, so a stub cannot shadow one. BASH_ENV is the vector that carries one
+  // into a NON-interactive bash, and CRED_VAR_PATTERN scrubs credentials only, so it
+  // survives that scrub (rule.require.hermetic-tests).
+  delete env.BASH_ENV;
+
+  const result = spawnSync(
+    'bash',
+    [
+      '--noprofile',
+      '--norc',
+      '-c',
+      `bash --noprofile --norc "${SKILL}" ${input.args}`,
+    ],
+    { encoding: 'utf-8', cwd: input.cwd, env },
+  );
   if (result.status === null)
     throw new Error(
       `skill did not exit normally: ${result.error?.message ?? 'killed by signal'}`,
@@ -888,17 +900,116 @@ describe('provision.declastruct (argument boundary)', () => {
       );
     },
   );
+
+  given(
+    '[case10] every render that OPENS the header tree also CLOSES it',
+    () => {
+      // the audit case. the header split put `wish`/`env`/`mode`/`auth` above the gate and
+      // left the tree's `└─` on the handoff line far below — so every exit taken between
+      // the two must close the tree on its way out, or it leaves items under no close.
+      //
+      // three did not: the absent-plan-file belay, the absent-credentials belay, and the
+      // credential-scan malfunction. all three were reachable and none was clamped, so the
+      // half-drawn shape rendered unseen. this walks the whole span at once, because a
+      // per-belay assertion is exactly what let three of them slip.
+      const expectHeaderTreeClosed = (out: string): void => {
+        if (!out.includes('⛵ provision.declastruct --wish')) return; // no tree opened
+        expect(out).toMatch(/\n {3}└─ /);
+      };
+
+      const runs = useBeforeAll(async () => ({
+        // apply with no prior plan file — belays AFTER the header, on stdout
+        absentPlan: run({
+          args: `--wish ${scene.wish} --env test --mode apply`,
+          cwd: scene.dir,
+        }),
+        // via-ambient with a ZERO-credential shell — the identity block's `(none detected)`
+        // arm, which must still close the tree it opened
+        zeroCreds: run(
+          {
+            args: `--wish ${scene.wish} --env test --mode plan --auth via-ambient`,
+            cwd: scene.dir,
+          },
+          { creds: {} },
+        ),
+      }));
+
+      when('[t0] the run belays on an absent plan file', () => {
+        then('it is a constraint error (exit 2)', () => {
+          expect(runs.absentPlan.exitCode).toBe(2);
+        });
+
+        then('the header tree is CLOSED before the belay', () => {
+          expectHeaderTreeClosed(runs.absentPlan.stdout);
+          expect(runs.absentPlan.stdout).toContain(
+            '   └─ blocked: absent plan file',
+          );
+        });
+
+        then('the belay itself stays SELF-CONTAINED below the seam', () => {
+          // a closed tree does NOT make the belay in-tree: it still carries its own mascot
+          // and its own ⛵ block, because a belay that inherits `chartin course...` reads
+          // as a run that started fine.
+          expect(runs.absentPlan.stdout).toMatch(
+            /\n\n🐈 belay that\.\.\.\n\n⛵ provision\.declastruct\n/,
+          );
+        });
+
+        then('the FULL stdout matches snapshot (temp paths masked)', () => {
+          expect(
+            withStablePaths({ stdout: runs.absentPlan.stdout, ...scene }),
+          ).toMatchSnapshot();
+        });
+      });
+
+      when(
+        '[t1] via-ambient is declared by a shell with zero credentials',
+        () => {
+          then('the identity branch still reports, never hangs empty', () => {
+            // `(none detected)` is a real report — the caller declared a source that yielded
+            // naught. an empty branch would be the empty-bucket sin one level down.
+            expect(runs.zeroCreds.stdout).toContain('   ├─ identity');
+            expect(runs.zeroCreds.stdout).toContain('   │  └─ (none detected)');
+          });
+
+          then('the gate branch is never entered — only prod is gated', () => {
+            // the negative control on the split: with the gate skipped, the asked-for half
+            // (`wish`/`env`/`mode`/`auth`) and the landed half (`identity`) must still read
+            // as ONE whole tree.
+            expect(runs.zeroCreds.stdout).not.toContain('check the gate...');
+            expectHeaderTreeClosed(runs.zeroCreds.stdout);
+          });
+
+          then('the header block matches snapshot (visual vibecheck)', () => {
+            expect(
+              withHeaderOnly({
+                stdout: withStablePaths({
+                  stdout: runs.zeroCreds.stdout,
+                  ...scene,
+                }),
+              }),
+            ).toMatchSnapshot();
+          });
+        },
+      );
+    },
+  );
 });
 
 /**
- * .what = live forward-contract proof: real `npx declastruct plan` end-to-end
- * .why = the skill's core promise is that declastruct's plan/apply stdout flows through
- *        UNMODIFIED (a forward contract CI greps). the arg-boundary suite above stops at
- *        validation; this suite drives the real `npx declastruct` on a hermetic
- *        empty-resources wish (no providers, no resources → naught to reconcile → exit 0,
- *        plan file written). that proves, without any aws call, that: the skill reaches
- *        the declastruct invocation, forwards its stdout, writes <wish>.plan.json at the
- *        CI-convention path, and frames it with the ⛵ headers.
+ * .what = live end-to-end proof: real `npx declastruct plan` / `apply` through the skill
+ * .why = the arg-boundary suite above stops at validation; this suite drives the real
+ *        `npx declastruct` on a hermetic empty-resources wish (no providers, no resources
+ *        → naught to reconcile → exit 0, plan file written). that proves, without any aws
+ *        call, that: the skill reaches the declastruct invocation, NESTS its output in a
+ *        treestruct sub.bucket, writes <wish>.plan.json at the CI-convention path, and
+ *        frames the whole with the ⛵ headers.
+ * .note = this suite formerly described the child as a FORWARD CONTRACT — output a caller
+ *         greps, hence exempt from the bucket. that claim did not survive a check: no
+ *         caller reads this skill's stdout, and .github/workflows/.declastruct.yml pipes
+ *         `npx declastruct` directly. declastruct renders its own tree, so it is a kin
+ *         skill to nest (rule.require.nest-subskill-output-in-buckets); [case1][t1] is
+ *         the control that keeps it nested.
  * .note = the run DECLARES `--auth via-ambient`, so the skill never touches keyrack. that
  *         declaration is the caller's own — it is not a sniff on an ambient variable, and
  *         it is exactly how a CI caller on OIDC creds now spells its intent. the env is
@@ -1000,7 +1111,7 @@ describe('provision.declastruct (live plan forward-contract)', () => {
     // below declares this shell as the source, so keyrack is never touched (no sso
     // prompt); the empty wish declares no providers, so no credential is exercised.
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;
@@ -1009,11 +1120,17 @@ describe('provision.declastruct (live plan forward-contract)', () => {
       AWS_PROFILE: 'test-stub-profile',
     };
     const skill = `${__dirname}/provision.declastruct.sh`;
+    // see `run` above — the rc must not load into either bash level
+    // (rule.require.hermetic-tests).
+    delete env.BASH_ENV;
+
     const result = spawnSync(
       'bash',
       [
+        '--noprofile',
+        '--norc',
         '-c',
-        `bash "${skill}" --wish "${wish}" --env ${input.env} --mode plan --auth via-ambient`,
+        `bash --noprofile --norc "${skill}" --wish "${wish}" --env ${input.env} --mode plan --auth via-ambient`,
       ],
       { encoding: 'utf-8', cwd: REPO_ROOT, env },
     );
@@ -1043,7 +1160,7 @@ describe('provision.declastruct (live plan forward-contract)', () => {
   }> => {
     const { dir, wish } = input.scene;
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;
@@ -1052,11 +1169,17 @@ describe('provision.declastruct (live plan forward-contract)', () => {
       AWS_PROFILE: 'test-stub-profile',
     };
     const skill = `${__dirname}/provision.declastruct.sh`;
+    // see `run` above — the rc must not load into either bash level
+    // (rule.require.hermetic-tests).
+    delete env.BASH_ENV;
+
     const result = spawnSync(
       'bash',
       [
+        '--noprofile',
+        '--norc',
         '-c',
-        `bash "${skill}" --wish "${wish}" --env test --mode apply --auth via-ambient`,
+        `bash --noprofile --norc "${skill}" --wish "${wish}" --env test --mode apply --auth via-ambient`,
       ],
       { encoding: 'utf-8', cwd: REPO_ROOT, env },
     );
@@ -1107,16 +1230,53 @@ describe('provision.declastruct (live plan forward-contract)', () => {
         'the FULL plan-success stdout matches snapshot (temp paths masked)',
         () => {
           // the positive-path snapshot: the whole success stdout — 🐈/⛵ frame, the
-          // forwarded declastruct plan body, and the `planned →` footer — with only the
+          // bucketed declastruct plan body, and the `planned →` footer — with only the
           // per-run temp paths masked. mirrors provision.database's masked plan snapshot
           // so a reviewer sees the real success output a user gets, and drift surfaces in
-          // the diff. guard against a failhide: the forwarded in-sync marker + the footer
-          // must actually be present in the masked text before it is snapped.
+          // the diff. guard against a failhide: the in-sync marker + the footer must
+          // actually be present in the masked text before it is snapped.
           expect(scene.stdoutMasked).toContain('in sync');
           expect(scene.stdoutMasked).toContain('planned → <WISH>.plan.json');
           expect(scene.stdoutMasked).toMatchSnapshot();
         },
       );
+    });
+
+    when('[t1] the declastruct child renders', () => {
+      // the property this route repaired. declastruct draws its OWN treestruct (🌊 / 🔮 /
+      // 🥥), so it is a kin skill to nest, never a raw payload to forward. it used to run
+      // un-framed at column 0 — a second wall of headers beside this skill's own, the
+      // exact shape rule.require.nest-subskill-output-in-buckets exists to retire.
+      //
+      // the exemption it hid behind claimed a caller pipes this skill's stdout to
+      // ./plan.log and greps it. no caller does: .github/workflows/.declastruct.yml runs
+      // `npx declastruct` DIRECTLY. the contract was never real, and an un-verified claim
+      // is not a contract (rule.require.trust-but-verify).
+      then('NO declastruct header renders at column 0', () => {
+        // the negative control. each of these was at column 0 before the repair, so this
+        // reddens the moment the bucket is dropped.
+        expect(scene.stdout).not.toMatch(/^🌊 /m);
+        expect(scene.stdout).not.toMatch(/^🔮 /m);
+        expect(scene.stdout).not.toMatch(/^🥥 /m);
+        expect(scene.stdout).not.toMatch(/^🎉 /m);
+      });
+
+      then('the child sits behind the bucket gutter instead', () => {
+        expect(scene.stdout).toMatch(/^ +│ {2}🌊 declastruct plan/m);
+      });
+
+      then('the frame OPENS and CLOSES around it', () => {
+        expect(scene.stdout).toContain('      ├─');
+        expect(scene.stdout).toContain('      └─');
+      });
+
+      then('the bucket is NOT empty', () => {
+        // a frame around no output is worse than the un-bucketed shape it replaced, so
+        // the known-bad reference from _.nest.sh's own suite is asserted absent here.
+        expect(scene.stdout).not.toContain(
+          '      ├─\n      │\n      │\n      └─',
+        );
+      });
     });
   });
 
@@ -1237,17 +1397,23 @@ describe('provision.declastruct (live plan forward-contract)', () => {
       // environment-coupled shape this suite was rebuilt to retire, alive in the one case
       // the rewrite missed.
       const envScrubbed = Object.fromEntries(
-        Object.entries(process.env).filter(
+        Object.entries(asEnvHermetic()).filter(
           ([name]) => !CRED_VAR_PATTERN.test(name),
         ),
       ) as Record<string, string>;
       const env: Record<string, string> = { ...envScrubbed, ...CRED_STUB };
       const skill = `${__dirname}/provision.declastruct.sh`;
+      // see `run` above — the rc must not load into either bash level
+      // (rule.require.hermetic-tests).
+      delete env.BASH_ENV;
+
       const result = spawnSync(
         'bash',
         [
+          '--noprofile',
+          '--norc',
           '-c',
-          `bash "${skill}" --wish "${wish}" --env test --mode plan --plan "${planCustom}" --auth via-ambient`,
+          `bash --noprofile --norc "${skill}" --wish "${wish}" --env test --mode plan --plan "${planCustom}" --auth via-ambient`,
         ],
         { encoding: 'utf-8', cwd: REPO_ROOT, env },
       );
@@ -1327,7 +1493,20 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
         'set -eo pipefail',
         '[[ "$1" == "keyrack" ]] || { echo "shim: unexpected rhx call: $*" >&2; exit 1; }',
         'case "$2" in',
-        '  unlock) exit 0 ;;',
+        // unlock RENDERS, because the real `rhx keyrack unlock` always does — it draws a
+        // 🔓 tree that names the credential it opened. a silent stub framed an EMPTY
+        // bucket in the skill's render (`├─ │ │ └─` around not one line), the known-bad
+        // shape clamped in _.nest.sh's own suite, and it would have entered the snapshot
+        // as though the skill itself emitted it.
+        //
+        // the lesson is the stub's, not the frame's: a stub that stays quiet where the
+        // real tool speaks makes the captured render diverge from the one a human gets,
+        // which is precisely what the snapshot exists to show.
+        '  unlock)',
+        '    echo "🔓 keyrack unlock"',
+        '    echo "   └─ ehmpathy.test.AWS_PROFILE"',
+        '    echo "      └─ expires in: 540m"',
+        '    exit 0 ;;',
         "  source) cat <<'KEYRACK_SHIM_EOF'",
         input.keyrackExports,
         'KEYRACK_SHIM_EOF',
@@ -1342,7 +1521,7 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
     // scrub every credential variable, then supply exactly the ambient set this case
     // declares — so a developer's own AWS_PROFILE can never satisfy (or pollute) the run.
     const envScrubbed = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(asEnvHermetic()).filter(
         ([name]) => !CRED_VAR_PATTERN.test(name),
       ),
     ) as Record<string, string>;
@@ -1351,11 +1530,21 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
       ...input.ambient,
       PATH: `${shimDir}:${process.env.PATH}`,
     };
-    const result = spawnSync('bash', ['-c', `bash "${SKILL}" ${input.args}`], {
-      encoding: 'utf-8',
-      cwd: input.cwd,
-      env,
-    });
+    // this case stakes everything on the shim PATH above, and an rc-defined FUNCTION or
+    // ALIAS would beat that PATH outright — so the rc must not load
+    // (rule.require.hermetic-tests).
+    delete env.BASH_ENV;
+
+    const result = spawnSync(
+      'bash',
+      [
+        '--noprofile',
+        '--norc',
+        '-c',
+        `bash --noprofile --norc "${SKILL}" ${input.args}`,
+      ],
+      { encoding: 'utf-8', cwd: input.cwd, env },
+    );
     if (result.status === null)
       throw new Error(
         `skill did not exit normally: ${result.error?.message ?? 'killed by signal'}`,
@@ -1419,6 +1608,24 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
         expect(result.stdout).not.toContain('absent credentials');
       });
 
+      then('the keyrack child is BUCKETED, and the bucket is not empty', () => {
+        // `rhx keyrack unlock` draws its own 🔓 tree, so un-framed it lands at column 0
+        // in the middle of THIS skill's header — a second tree inside ours.
+        // the child sits TWO gutters deep: `   │  ` is the frame indent this composer
+        // hands run_sub_bucket_or_belay, and `│  ` is the gutter the frame itself draws.
+        expect(result.stdout).toContain('   ├─ unlock the keyrack...');
+        expect(result.stdout).toMatch(/^ {3}│ {2}│ {2}🔓 keyrack unlock/m);
+        expect(result.stdout).not.toMatch(/^🔓 /m);
+
+        // the empty-bucket guard. a frame around no output is worse than the un-bucketed
+        // shape it replaced, and it slipped into this very snapshot once — the shim was
+        // silent on unlock, so the render carried a labeled item wrapped around not one
+        // line. the literal is the exact known-bad string _.nest.sh's [case3] pins.
+        expect(result.stdout).not.toContain(
+          '   │  ├─\n   │  │\n   │  │\n   │  └─',
+        );
+      });
+
       then('the header block matches snapshot (visual vibecheck)', () => {
         expect(
           withHeaderOnly({
@@ -1453,11 +1660,29 @@ describe('provision.declastruct (via-keyrack credential supply)', () => {
         expect(result.stderr).toContain('--auth via-ambient');
       });
 
-      then('it belays BEFORE the handoff — no header, no declastruct', () => {
-        // a pre-header belay, so the ⛵ tree is never left half-drawn, and no provider
-        // call is made under a credential the caller never got.
-        expect(result.stdout).not.toContain('chartin course');
+      then('it belays BEFORE the handoff — no declastruct call', () => {
+        // the substantive guarantee: no provider call is made under a credential the
+        // caller never got.
         expect(result.stdout).not.toContain('plan infra changes');
+      });
+
+      then('the stderr belay stands on its own — mascot and artifact', () => {
+        // this replaces an older clamp that asserted the belay printed NO header at
+        // all. that property was retired deliberately: the composer must print its
+        // header ahead of the prod gate so the gate can nest under it as a sub.bucket
+        // (rule.require.nest-subskill-output-in-buckets), and credentials are settled
+        // after the gate — so a credential belay can no longer precede the header.
+        //
+        // what replaces it is a stronger guarantee. the header tree goes to STDOUT
+        // and this belay goes to STDERR, so the belay carries its OWN two-header
+        // block: a caller who captures only stderr gets a complete, legible message
+        // rather than orphan leaves hung off a tree they never received.
+        expect(result.stderr).toContain('🐈 belay that...');
+        expect(result.stderr).toContain('⛵ provision.declastruct');
+
+        // and it must never inherit the success mascot — a belay that opens with
+        // `chartin course...` reads as a run that started fine.
+        expect(result.stderr).not.toContain('chartin course');
       });
 
       then('the belay stderr matches snapshot (visual vibecheck)', () => {

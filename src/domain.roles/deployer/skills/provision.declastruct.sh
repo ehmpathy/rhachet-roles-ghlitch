@@ -40,10 +40,13 @@
 #                 passthrough flags), so `... --mode plan -- --wish-flag=v` reaches the
 #                 wish file intact instead of matching this skill's own flags
 #
-# note: the declastruct plan/apply stdout is propagated unmodified, so a caller can
-#       `| tee ./plan.log` and grep it (e.g. for the up-to-date marker to skip a
-#       gated apply). the chosen --env is exported (STAGE/ACCESS) so the wish file
-#       may reuse the given env or source its own env separately.
+# note: the declastruct plan/apply output is FRAMED in a treestruct sub.bucket, not
+#       propagated at column 0. declastruct renders its own tree, so it is a kin skill
+#       to nest, never a raw payload to forward (see the bucket call far below).
+#       a caller that needs declastruct's stdout to grep should invoke `npx declastruct`
+#       directly, which is what .github/workflows/.declastruct.yml already does.
+#       the chosen --env is exported (STAGE/ACCESS) so the wish file may reuse the
+#       given env or source its own env separately.
 #
 # note: declastruct provisions ANY declared resource — aws, github, stripe, or whatever
 #       sdk the wish file imports. this skill therefore SUPPORTS providers but REQUIRES
@@ -416,23 +419,71 @@ fi
 # gate skill speaks the same word (rule.require.consistent-skill-contracts). a
 # caller-faced term that had to be re-spelled internally would be the same one-concept-
 # two-words defect, one layer down.
-if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
-  DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" \
-    --meter provision.uses --env prod --gate "$GATE" || exit $?
-fi
-
 # the plan file defaults beside the wish, exactly as CI does (.declastruct.yml uses
 # <wish-path>.plan.json), so the local skill and CI never drift on the plan location.
 # an explicit --plan overrides this default when a caller wants a custom plan location
 # (declastruct's own --wish/--plan backbone), while the default keeps the pit of success.
 PLAN_FILE="${PLAN:-$WISH.plan.json}"
 
+# ── nest ────────────────────────────────────────────────────────────────────────────
+# sourced ONCE, unconditionally, because this skill frames TWO children: the prod gate
+# below and the declastruct run at the end. it used to be sourced inside the gate branch
+# alone, which is why the declastruct run had no frame available to it.
+#
+# reach the nest helper PACKAGE-relatively, via BASH_SOURCE — never through
+# `git rev-parse --show-toplevel`, which resolves to the CONSUMER's repo root and so
+# only works in a repo that happens to hold this src tree.
+DEPLOYER_SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OPERATOR_SKILL_DIR="$(cd "$DEPLOYER_SKILL_DIR/../../operator/skills" && pwd)"
+source "$OPERATOR_SKILL_DIR/_.nest.sh"
+
+# ── header ──────────────────────────────────────────────────────────────────────────
+# printed BEFORE the gate, so the gate's output has a parent tree to nest under as a
+# treestruct sub.bucket (rule.require.nest-subskill-output-in-buckets).
+#
+# only the `identity` block further below depends on the credential work; every field
+# here is known from parsed args alone. those two facts were bundled into one header
+# for a long while, which made the gate look un-bucketable — it is not. the header is
+# a sequence of independent lines, so it splits at the credential boundary: what the
+# caller ASKED FOR renders now, what actually LANDED renders after the credentials do.
+#
+# every belay that resolves from parsed args alone is hoisted ABOVE this line, so it
+# keeps its own mascot and its own ⛵ block. a belay must never inherit the success
+# mascot, and a belay on stderr must never depend on a tree that went to stdout.
+echo "🐈 chartin course..."
+echo ""
+echo "⛵ provision.declastruct --wish $WISH --env $ENV --mode $MODE"
+echo "   ├─ wish: $WISH"
+echo "   ├─ env: $ENV"
+echo "   ├─ mode: $MODE"
+echo "   ├─ auth: $AUTH"
+
+if [[ "$ENV" == "prod" && "$MODE" != "plan" ]]; then
+  echo "   ├─ check the gate..."
+  # _or_belay, not `|| exit $?`: a blocked gate must close THIS tree and state the
+  # verdict at column 0, never exit mid-frame and leave the ⛵ tree half-drawn.
+  run_sub_bucket_or_belay "   │  " "⛵ provision.declastruct" "blocked at the gate" \
+    bash "$DEPLOYER_SKILL_DIR/uses._.check.sh" \
+    --meter provision.uses --env prod --gate "$GATE"
+fi
+
 # apply requires a prior plan file so apply never ships an unreviewed diff (gitops
-# safety; matches CI's plan-artifact handoff). belay pre-header, like every other
-# validation belay (case2–case6), so the header tree is never left half-drawn — and a
-# doomed apply never touches keyrack. see rule.require.treestruct-output.
+# safety; matches CI's plan-artifact handoff). it sits AFTER the gate on purpose — a
+# prod write that is not authorized must be refused on that ground, never on a plan
+# file it was never entitled to reach.
+#
+# a SELF-CONTAINED belay: its own mascot, its own ⛵ block, seamed off the header tree
+# above. it cannot inherit the header's `chartin course...` mascot — a belay that opens
+# with the success vibe reads as a run that started fine.
+#
+# it CLOSES the header tree first. the tree's `└─` is the `plan infra changes...` /
+# `apply reviewed plan...` line far below, so a belay that skips it leaves the ⛵ tree
+# half-drawn — items under no close, the same defect `run_sub_bucket_or_belay` exists to
+# prevent at the gate. the close names the OUTCOME, with `blocked:` for a constraint and
+# `halted:` for a malfunction, so the render states the exit class the code carries.
 if [[ "$MODE" == "apply" && ! -f "$PLAN_FILE" ]]; then
+  echo "   └─ blocked: absent plan file"
+  echo ""
   echo "🐈 belay that..."
   echo ""
   echo "⛵ provision.declastruct"
@@ -447,18 +498,23 @@ fi
 # AWS_ACCESS_KEY_ID happened to be set, which MISSED a human's selected admin session
 # (that sets AWS_PROFILE, not AWS_ACCESS_KEY_ID) and silently overwrote their identity.
 #
-# this whole section runs BEFORE the header, so its belay is a pre-header belay like
-# every other one (case2–case7) and no tree is ever left half-drawn. the header then
-# reports the outcome, which is also the honest order: it can only state the identity
-# once the identity is settled. see rule.require.treestruct-output.
+# this section runs AFTER the header's asked-for half (`wish`/`env`/`mode`/`auth`) and
+# BEFORE its landed half (`identity`), because only the identity depends on the outcome
+# here. the two costs that order carries are each paid explicitly:
 #
-# DELIBERATE DEVIATION from the vision's timeline, which ordered it
-# "header printed → supply creds → assert → echo the identity block". that order has two
-# costs this one avoids: (1) the absent-credentials belay would land AFTER the header, so
-# a failed run prints a tree with no closing `└─` — the half-drawn tree every other belay
-# in this file is placed to avoid; (2) `keyrack unlock` prints its own tree, which would
-# then interleave INTO ours mid-branch rather than sit above it. the vision's intent —
-# identity reported only once settled — is preserved exactly; only the print point moved.
+#   1. a belay taken here lands mid-tree, so it must CLOSE the tree on its way out. the
+#      absent-credentials belay does (`└─ blocked: absent credentials`), and the unlock
+#      failure does via run_sub_bucket_or_belay. neither may exit with items left under
+#      no close.
+#   2. `rhx keyrack unlock` prints its OWN 🔓 tree, so un-framed it interleaves into ours
+#      mid-branch. it is therefore bucketed, exactly as the prod gate is
+#      (rule.require.nest-subskill-output-in-buckets).
+#
+# an earlier revision of this comment claimed the section ran BEFORE the header and so
+# could never leave a half-drawn tree. that stopped being true when the header split, and
+# the claim outlived the code: a `keyrack unlock` timeout rendered a 🔓 wall at column 0
+# inside our tree and exited with the tree still open. read the render, not the comment
+# (rule.require.trust-but-verify).
 
 # via-keyrack: unlock, then SOURCE the keys into THIS process. `rhx keyrack unlock` alone
 # runs in a subprocess whose exports die with it, so the parent kept whatever credential
@@ -472,7 +528,18 @@ fi
 # it sets the global KEYRACK_EXPORTS, which the identity report reads afterward.
 set_creds_via_keyrack() {
   # $1 = env
-  rhx keyrack unlock --owner ehmpath --env "$1"
+  #
+  # bucketed, because keyrack renders its own 🔓 tree. un-framed it lands at column 0 in
+  # the middle of THIS skill's header — a second wall of tree inside ours, which is the
+  # shape rule.require.nest-subskill-output-in-buckets exists to retire.
+  #
+  # _or_belay, not `|| exit $?`: an unlock that fails (an expired sso session, a timed-out
+  # browser prompt) must CLOSE this skill's tree and state the verdict at column 0. under
+  # a bare call, set -e exited mid-frame and left the ⛵ tree open — items under no close,
+  # with keyrack's own error the last thing on screen and no word from this skill at all.
+  echo "   ├─ unlock the keyrack..."
+  run_sub_bucket_or_belay "   │  " "⛵ provision.declastruct" "blocked at the keyrack" \
+    rhx keyrack unlock --owner ehmpath --env "$1"
 
   # capture before eval so we can (a) count what arrived and (b) clear rivals first.
   # --lenient makes an env with no keys a silent no-op rather than an error, which is
@@ -519,7 +586,18 @@ set_creds_via_keyrack() {
   # assert the DECLARATION held — zero keys means via-keyrack cannot be honored. this is
   # the one credential assert, and it keys on the declared SOURCE rather than on any
   # provider's variables, so it is true for an aws, github, or stripe wish alike.
+  # a SELF-CONTAINED belay: its own mascot, its own ⛵ block. this cannot be an in-tree
+  # belay, because the header's tree went to STDOUT and this goes to STDERR — an
+  # in-tree shape would leave a caller who reads only stderr with orphan leaves and no
+  # tree above them. the blank ahead of the mascot seams it off the header tree when
+  # both streams land on one tty.
+  #
+  # the tree CLOSE goes to stdout, because that is the stream the tree itself lives on.
+  # only the belay below is stderr-bound. a close written to stderr would hang off no
+  # tree for a stdout reader, and leave the stdout tree open forever.
   if [[ -z "${KEYRACK_EXPORTS//[[:space:]]/}" ]]; then
+    echo "   └─ blocked: absent credentials"
+    echo "" >&2
     echo "🐈 belay that..." >&2
     echo "" >&2
     echo "⛵ provision.declastruct" >&2
@@ -542,16 +620,9 @@ fi
 # over a credential it never needed. an empty shell simply renders an empty identity
 # block below, so the gap is visible before the handoff.
 
-# output header — printed AFTER the credential work above, so the identity block can
-# state what actually landed rather than what was asked for. it is also why every
-# credential belay above is a pre-header belay: the tree is never left half-drawn.
-echo "🐈 chartin course..."
-echo ""
-echo "⛵ provision.declastruct --wish $WISH --env $ENV --mode $MODE"
-echo "   ├─ wish: $WISH"
-echo "   ├─ env: $ENV"
-echo "   ├─ mode: $MODE"
-echo "   ├─ auth: $AUTH"
+# the header's asked-for half is already on screen (printed above the gate, so the gate
+# could nest under it). what follows is the landed half: the identity block, which can
+# only be stated once the credential work above has run.
 
 # report which credentials are in play. this REPORTS, it never INTERPRETS — it does not
 # claim any of these is the one the wish needs, because only the wish knows that.
@@ -587,7 +658,18 @@ if [[ "$AUTH" == "via-ambient" ]]; then
 
   # exit >1 is grep's own error signal, never an empty result. fail loud rather than
   # report a shell we did not actually manage to read.
+  # a SELF-CONTAINED wet-paws block, for the same reason as the belay above: this goes
+  # to STDERR while the header tree went to STDOUT, so it carries its own mascot and
+  # artifact header rather than hang leaves off a tree the stderr reader never saw.
+  #
+  # `├─ identity` is already on screen by this point, so the close has TWO jobs: fill
+  # that branch (an open branch with no leaf is the empty-bucket sin, one level down) and
+  # close the tree. `halted:` rather than `blocked:` — this is a malfunction (exit 1),
+  # not a caller constraint.
   if [[ $CRED_SCAN_STATUS -gt 1 ]]; then
+    echo "   │  └─ (unreadable)"
+    echo "   └─ halted: credential scan failed"
+    echo "" >&2
     echo "🐈 wet paws..." >&2
     echo "" >&2
     echo "⛵ provision.declastruct" >&2
@@ -620,28 +702,43 @@ fi
 export STAGE="$ENV"
 export ACCESS="$ENV"
 
-# run declastruct with inherited fds — its stdout (incl. the up-to-date marker)
-# propagates unmodified to the caller, so a workflow can `| tee ./plan.log` and grep it
-# to decide whether a gated apply runs. forward DECLASTRUCT_ARGS verbatim.
-# declastruct frames its own output with one blank line before and one after (like the
-# schema tool provision.database wraps), so this skill adds no blank of its own around
-# the call — a self-added blank would double the gap. matches provision.database's
-# single-blank gap, not provision.terraform's frame-both-sides (terraform emits no blank
-# of its own).
+# run declastruct inside a treestruct sub.bucket. declastruct is NOT a raw payload — it
+# draws its own treestruct with its own mascots (🌊 / 🔮 / 🥥), so un-framed it stacks a
+# second wall of headers at column 0 beside this skill's own. that is exactly the shape
+# rule.require.nest-subskill-output-in-buckets exists to retire, and the rule's payload
+# exemption does not reach it: the exemption is for output a CALLER PARSES (a data blob,
+# a schema diff), not for a kin tool that renders a tree.
+#
+# this call carried a forward-contract exemption on the claim that a workflow would
+# `| tee ./plan.log` this skill's stdout and grep it. no caller does. .declastruct.yml
+# pipes `npx declastruct` DIRECTLY and never invokes this skill, so the contract the
+# exemption rested on was never real — and an un-verified claim is not a contract
+# (rule.require.trust-but-verify).
+#
+# `|| exit $?` is mandatory: run_sub_bucket runs the child in a pipe, so a bare call
+# would not trip set -e and a failed provision would read as a success.
+#
+# .note = the bucket reads the child as 2>&1, so declastruct's stderr now arrives on THIS
+#         skill's stdout. that stream shift is a real contract change, clamped explicitly
+#         in the suite rather than left to whichever stream a test happens to read.
+#
 # plan mode: preview the diff and write the plan file. explicit-if (not an else
 # arm) keeps the two modes as flat, independently-guarded paths (no else).
 if [[ "$MODE" == "plan" ]]; then
   echo "   └─ plan infra changes..."
-  npx declastruct plan --wish "$WISH" --into "$PLAN_FILE" ${DECLASTRUCT_ARGS[@]+"${DECLASTRUCT_ARGS[@]}"}
+  run_sub_bucket "      " \
+    npx declastruct plan --wish "$WISH" --into "$PLAN_FILE" ${DECLASTRUCT_ARGS[@]+"${DECLASTRUCT_ARGS[@]}"} || exit $?
 fi
 
 # apply mode: apply the reviewed plan (the prior-plan-file guard already belayed
 # pre-header above, so an absent plan never reaches here).
 if [[ "$MODE" == "apply" ]]; then
   echo "   └─ apply reviewed plan..."
-  npx declastruct apply --plan "$PLAN_FILE" ${DECLASTRUCT_ARGS[@]+"${DECLASTRUCT_ARGS[@]}"}
+  run_sub_bucket "      " \
+    npx declastruct apply --plan "$PLAN_FILE" ${DECLASTRUCT_ARGS[@]+"${DECLASTRUCT_ARGS[@]}"} || exit $?
 fi
 
+echo ""
 echo "🐈 smooth sailin!"
 echo ""
 echo "⛵ provision.declastruct --wish $WISH --env $ENV --mode $MODE"

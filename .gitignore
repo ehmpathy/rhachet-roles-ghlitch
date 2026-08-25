@@ -9,6 +9,8 @@
 .cache/
 .env
 .log/slowtest/
+.review/*
+!.review/snaps/
 .rhachet
 .serverless
 .slowtest/integration.report.json

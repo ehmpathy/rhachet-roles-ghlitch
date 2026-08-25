@@ -1,0 +1,147 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.postgres.query (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.postgres.query
+
+usage:
+  rhx aws.postgres.query --env <env> --sql <query>
+  echo 'SELECT ...' | rhx aws.postgres.query --env <env> --sql @stdin
+
+options:
+  --env      environment: test, prep, or prod
+  --sql      SQL query to execute (use @stdin to read from stdin)
+  --format   output format: table (default), csv, json
+
+safety:
+  - readonly enforced at connection level
+  - PostgreSQL rejects INSERT/UPDATE/DELETE/DROP
+
+examples:
+  rhx aws.postgres.query --env prep --sql 'SELECT uuid FROM job LIMIT 5'
+  rhx aws.postgres.query --env prep --sql 'SELECT 1' --format json
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] --env is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ invalid env: camp
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] --format names a shape this skill cannot render then: it belays rather than fall back to table 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ invalid format: yaml
+   └─ must be: table, csv, or json
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t3] an unknown flag is passed then: the belay names the flag the caller actually mistyped 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ unknown argument: --sq
+   └─ hint: rhx aws.postgres.query help
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case3] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx aws.postgres.query help
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case3] a flag is passed with no value when: [t1] a free-form flag is the last token then: --sql belays rather than die silently 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ absent value for --sql
+   └─ hint: rhx aws.postgres.query help
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case3] a flag is passed with no value when: [t2] a flag with a closed value set is last then: --format names its set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ absent value for --format
+   ├─ fix: pass one of table,csv,json
+   └─ hint: rhx aws.postgres.query help
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case4] the credential read finds no profile when: [t0] the keyrack answers empty then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.postgres.query
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case5] the query is run against a database when: [t0] --format json is asked for then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"[
+  {
+    "uuid": "a-1",
+    "status": "QUEUED"
+  },
+  {
+    "uuid": "b-2",
+    "status": "DONE"
+  }
+]
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case5] the query is run against a database when: [t0] --format json is asked for then: the render on stderr is a well-formed tree 1`] = `
+"
+🐈 smooth sailin!
+
+🔮 aws.postgres.query
+   └─ rows: 2
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case5] the query is run against a database when: [t1] --format csv is asked for then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"uuid,status
+"a-1","QUEUED"
+"b-2","DONE"
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case6] the database refuses the connection when: [t0] the connection is refused then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.postgres.query
+   ├─ connect ECONNREFUSED 127.0.0.1:5432
+   └─ hint: rhx use.rds.capacity
+"
+`;
+
+exports[`aws.postgres.query (contract renders) given: [case7] --sql is omitted entirely when: [t0] the typescript half is reached with no query then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.postgres.query
+   ├─ absent required arg: --sql
+   └─ hint: rhx aws.postgres.query help
+"
+`;

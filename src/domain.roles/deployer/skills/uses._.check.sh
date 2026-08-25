@@ -50,6 +50,11 @@ require_val() {
   fi
 }
 
+# .note = this gate emits NO seam of its own. its composers wrap the call in a
+#         treestruct sub.bucket (run_sub_bucket), which supplies the frame and the
+#         blank spacers — a seam here would render as a second, doubled gutter line
+#         inside that frame. see rule.require.nest-subskill-output-in-buckets.
+
 METER=""
 ENV=""
 # --gate names which caller-kind's approval clears a prod write. it defaults to
@@ -197,17 +202,37 @@ case "$DECISION" in
     # local unlimited grant — no decrement
     # note: there is no "allowed:org" — an org allow never grants on its own;
     # only a local grant reaches an "allowed:*" outcome.
+    #
+    # it REPORTS, like its two sibling authorization paths (the cicd gate and the quota
+    # grant) do. a silent exit 0 was the odd one out: a prod write got authorized and
+    # said not one word, so a log gave the operator no way to tell WHY it was permitted
+    # (rule.require.status-feedback). the silence also rendered as an empty sub.bucket
+    # in every composer that frames this gate — a labeled item wrapped around no output.
+    print_tree_start "🦺 $METER --env prod" >&2
+    echo "   └─ authorized via local unlimited grant" >&2
     exit 0
     ;;
   allowed:local:*)
     # quota grant — decrement, auto-revoke at zero
+    #
+    # it renders an ARTIFACT BLOCK, exactly as its three kin authorization paths do (the
+    # unlimited grant above, the cicd gate, and every blocked path below). this arm alone
+    # used to emit a bare `🐈 <meter>: prod use consumed (2 → 1 left)` one-liner: a mascot
+    # with no tree under it, and no `🦺` header to say which skill spoke.
+    #
+    # two costs. the caller could not tell WHICH meter authorized the write without a
+    # re-read of the sentence, where every kin path states it in the header. and inside
+    # the prod-gate sub.bucket that five composers frame this gate with, the child's
+    # render broke shape mid-frame — one bucket held a tree, the next held a sentence
+    # (rule.require.consistent-skill-contracts, at the render layer).
     LEFT="${DECISION##*:}"
     NEW=$((LEFT - 1))
     write_local_uses "$METER" "$ENV" "$NEW"
+    print_tree_start "🦺 $METER --env prod" >&2
     if [[ "$NEW" -le 0 ]]; then
-      echo "🐈 $METER: prod use consumed ($LEFT → 0, re-locked)" >&2
+      echo "   └─ authorized via quota grant ($LEFT → 0 left, re-locked)" >&2
     else
-      echo "🐈 $METER: prod use consumed ($LEFT → $NEW left)" >&2
+      echo "   └─ authorized via quota grant ($LEFT → $NEW left)" >&2
     fi
     exit 0
     ;;

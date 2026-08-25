@@ -2,7 +2,13 @@ import { genTempDir, given, then, useBeforeAll, useThen, when } from 'test-fns';
 
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+// the stub bin is generic — it stands in for `rhx`, `aws`, `npx` and friends — so every
+// role's suite reuses the one copy rather than grow a second that could drift. it used to
+// live under the deployer suite, where the first caller was; this comment is what made the
+// cross-role reach look intentional rather than like the lift it was owed
+// (rule.prefer.most-common-denominator).
+import { asEnvHermetic, genStubBinPath } from '../../.test/runRoleSkill';
 
 /**
  * .what = integration test for use.vpc.tunnel env-awareness
@@ -32,23 +38,50 @@ const isExecSyncError = (
 const runSkill = (input: {
   args: string;
   cwd: string;
+  // when set, PATH is pinned to this and the static aws creds are WITHHELD, so the run
+  // takes the keyrack branch and reaches the wrapped tools through the stub bin. absent,
+  // the legacy behavior holds: creds set, keyrack skipped, host PATH.
+  path?: string;
 }): { stdout: string; stderr: string; exitCode: number } => {
   const skillPath = `${__dirname}/use.vpc.tunnel.sh`;
 
-  // set static aws creds so the skill skips keyrack unlock + sso export
-  const env = {
-    ...process.env,
-    AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
-    AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
+  // the base withholds every ambient credential and closes the rc, so each branch below
+  // DECLARES the credential state it wants rather than inherit the host's.
+  //
+  // the stub branch used to say the creds were "withheld" while a bare `...process.env`
+  // spread handed the run whatever the host held. that read true on an sso laptop, which
+  // sets AWS_PROFILE and no AWS_ACCESS_KEY_ID — and false on a runner, which sets the
+  // key. so the skill skipped its keyrack branch in cicd and the whole 7-line keyrack
+  // bucket went absent from the render, while the comment still claimed otherwise
+  // (rule.require.trust-but-verify).
+  const env: Record<string, string | undefined> = {
+    ...asEnvHermetic(),
+    ...(input.path
+      ? {
+          PATH: input.path,
+          // the stub npx shadows the real one, but the skill's CONFIG READ (`npx tsx -e`)
+          // is real work this case depends on — the tunnel target comes out of it. hand
+          // the stub the genuine npx by absolute path so it can delegate that one call.
+          // resolved from the host PATH here, before it is narrowed for the child.
+          STUB_REAL_NPX: execSync('which npx', { encoding: 'utf-8' }).trim(),
+        }
+      : {
+          // declared, so the skill skips keyrack unlock + sso export on every host
+          AWS_ACCESS_KEY_ID: 'test-skip-keyrack',
+          AWS_SECRET_ACCESS_KEY: 'test-skip-keyrack',
+        }),
   };
 
   try {
-    const stdout = execSync(`bash "${skillPath}" ${input.args}`, {
-      encoding: 'utf-8',
-      cwd: input.cwd,
-      env,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const stdout = execSync(
+      `bash --noprofile --norc "${skillPath}" ${input.args}`,
+      {
+        encoding: 'utf-8',
+        cwd: input.cwd,
+        env,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
     return { stdout, stderr: '', exitCode: 0 };
   } catch (error: unknown) {
     if (isExecSyncError(error)) {
@@ -416,4 +449,125 @@ describe('use.vpc.tunnel', () => {
       });
     });
   });
+
+  given(
+    '[case10] the ssm path opens the tunnel, and FRAMES its children',
+    () => {
+      // the coverage this suite lacked entirely. every other case belays before the ssm
+      // path — on an absent env, an invalid env, a localhost short-circuit, or a "null"
+      // config key — so the branch that actually opens a tunnel had NEVER been rendered by
+      // a test. two children ran un-framed at column 0 there for its whole life:
+      // `rhx keyrack unlock` (its own 🔓 tree) and `npx declastruct apply` (its own
+      // 🌊/🔮/🥥 tree). both are renders, so both are framed
+      // (rule.require.nest-subskill-output-in-buckets — a tree is never a payload).
+      //
+      // it matters doubly here because this skill usually runs AS a child, inside
+      // provision.database's gutter. an un-framed grandchild there does not just lose its
+      // own delineation — it punches a hole in the parent's frame.
+      //
+      // the stub bin makes the branch reachable: it answers the credential read and stands
+      // in for the wrapped tools, so no aws, no keyrack, and no ssm session is touched.
+      const stubbed = useBeforeAll(async () => {
+        const dir = genTempDir({
+          slug: 'use-vpc-tunnel-ssm',
+          git: true,
+          symlink: [{ at: 'node_modules', to: 'node_modules' }],
+        });
+        setStubConfig({
+          cwd: dir,
+          bastionExid: 'vpc-main-bastion',
+          clusterName: 'ahbodedb-prep',
+          account: '123456789012',
+          host: 'aws.ssmproxy.ahbodedb.prep',
+          port: '15432',
+        });
+        // node's own directory joins the narrowed PATH, for the same reason `git` already
+        // sits on it: the real npx (which the stub delegates the config read to) is a
+        // `#!/usr/bin/env node` executable, so an absent node collapses the read to a 127
+        // and the case would exercise a different path than the one it names.
+        // the stubs stay FIRST, so they still shadow any same-named tool the host holds.
+        const nodeDir = dirname(
+          execSync('which node', { encoding: 'utf-8' }).trim(),
+        );
+
+        // no AWS_ACCESS_KEY_ID, so the keyrack branch is taken — that is the point
+        return runSkill({
+          args: '--env prep',
+          cwd: dir,
+          path: `${genStubBinPath({ cwd: dir })}:${nodeDir}`,
+        });
+      });
+
+      when('[t0] the tunnel is opened', () => {
+        then('the run REACHES both tools (exit 0)', () => {
+          // the guard on this whole case. if a belay ever creeps back in ahead of the ssm
+          // path, this reddens instead of the frame controls below quietly held over a
+          // render that was never produced.
+          expect({
+            exitCode: stubbed.exitCode,
+            stderr: stubbed.stderr,
+          }).toEqual({ exitCode: 0, stderr: '' });
+          expect(stubbed.stdout).toContain('declastruct-argv:');
+        });
+
+        then('the keyrack child sits BEHIND the bucket gutter', () => {
+          // `   │  `, not 6 spaces: its item is a `├─`, so the tree's gutter continues
+          // past it (the config items and the channel still follow). the depth IS the
+          // claim — a 6-space frame here would say the tree had closed, which is the
+          // lie the three-header shape used to tell.
+          expect(stubbed.stdout).toContain('   │  │  🔓 keyrack unlock');
+          expect(stubbed.stdout).not.toMatch(/^🔓 keyrack unlock/m);
+        });
+
+        then('the declastruct child sits BEHIND the bucket gutter', () => {
+          // 6 spaces here, because `└─ open the channel...` IS the tree's close.
+          expect(stubbed.stdout).toContain('      │  declastruct-argv:');
+          expect(stubbed.stdout).not.toMatch(/^declastruct-argv:/m);
+        });
+
+        then(
+          'the two frames sit at DIFFERENT depths (separate buckets)',
+          () => {
+            // equal depths would mean one merged frame, which the one-bucket-per-invocation
+            // rule forbids. the difference also proves the tree stayed open across the
+            // first child and closed on the second.
+            expect(stubbed.stdout).toContain('   ├─ unlock the keyrack...');
+            expect(stubbed.stdout).toContain('   └─ open the channel...');
+          },
+        );
+
+        then('each frame is drawn, and NEITHER is empty', () => {
+          expect(stubbed.stdout).not.toMatch(
+            / {3}│ {2}├─\n {3}│ {2}│\n {3}│ {2}│\n {3}│ {2}└─/,
+          );
+          expect(stubbed.stdout).not.toMatch(/ {6}├─\n {6}│\n {6}│\n {6}└─/);
+        });
+
+        then('ONE header is drawn, not one per paragraph', () => {
+          // the defect this case now also guards: the skill used to reprint
+          // `🦺 use.vpc.tunnel --env prep` before each paragraph, so one run drew three
+          // trees. exactly two artifact headers are correct — one per mascot phase
+          // (`🐈 chartin course...` and `🐈 smooth sailin!`).
+          const headers = stubbed.stdout
+            .split('\n')
+            .filter((line) => line.startsWith('🦺 use.vpc.tunnel'));
+          expect(headers).toEqual([
+            '🦺 use.vpc.tunnel --env prep',
+            '🦺 use.vpc.tunnel --env prep',
+          ]);
+        });
+
+        then('the FULL stdout matches snapshot (skill dir masked)', () => {
+          // the declastruct argv carries `--wish <SCRIPT_DIR>/use.vpc.tunnel.ts`, an
+          // ABSOLUTE path that differs between this developer's worktree and a CI runner.
+          // left raw it would be a host-shaped snapshot that reddens on drift
+          // (rule.require.hermetic-tests). mask the directory, keep the filename — the
+          // filename is the part the contract actually asserts.
+          expect(
+            stubbed.stdout.split(`${__dirname}/`).join('<SKILL_DIR>/'),
+          ).toMatchSnapshot();
+        });
+      });
+    },
+  );
 });

@@ -1,0 +1,206 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🔮 aws.cloudwatch.metrics.query
+
+usage:
+  rhx aws.cloudwatch.metrics.query --env prod                    # 7d invocations, all lambdas
+  rhx aws.cloudwatch.metrics.query --env prod --since 30d        # 30d invocations
+  rhx aws.cloudwatch.metrics.query --env prod --metric Errors    # error counts
+  rhx aws.cloudwatch.metrics.query --env prep --lambda createJob # single lambda
+  rhx aws.cloudwatch.metrics.query --env prod --namespace sqs    # sqs queue metrics
+  rhx aws.cloudwatch.metrics.query --env prod --namespace sqs --queue dlq  # dlq queues only
+
+options:
+  --env ENV       environment: test, prep, or prod (required)
+  --since TIME    how far back to query (default: 7d) - e.g., 1d, 7d, 30d
+  --metric NAME   metric name
+                    lambda: Invocations (default), Errors, Duration, Throttles
+                    sqs: ApproximateNumberOfMessagesVisible (default), NumberOfMessagesSent, NumberOfMessagesReceived
+  --lambda NAME   single lambda to query (default: all)
+  --queue NAME    filter queues by name (partial match, default: all)
+  --namespace NS  namespace: lambda (default), sqs
+  --prefix PREFIX service prefix (default: from package.json)
+  --help          show this help
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] --env is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ absent required arg: --env
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ invalid env: camp
+   └─ must be: test, prep, or prod
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] --namespace names a namespace that does not exist then: it belays rather than fall through to the lambda branch 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ invalid namespace: sqz
+   └─ must be: lambda or sqs
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case2] argument constraints belay before any work is done when: [t3] an unknown flag is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ unknown option: --namespac
+   └─ use --help for usage
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case3] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ absent value for --env
+   ├─ fix: pass one of test,prep,prod
+   └─ hint: rhx aws.cloudwatch.metrics.query help
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case3] a flag is passed with no value when: [t1] a flag with a closed value set is last then: --namespace names its set and matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ absent value for --namespace
+   ├─ fix: pass one of lambda,sqs
+   └─ hint: rhx aws.cloudwatch.metrics.query help
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case3] a flag is passed with no value when: [t2] a free-form flag is last then: --metric belays with no fabricated value set 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ absent value for --metric
+   └─ hint: rhx aws.cloudwatch.metrics.query help
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case4] the credential read finds no profile when: [t0] the keyrack answers empty then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case5] lambda metrics are polled across all lambdas when: [t0] three lambdas answer then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace lambda
+   ├─ env: prod
+   ├─ prefix: svc-test
+   ├─ namespace: lambda
+   ├─ metric: Invocations
+   ├─ since: 7d (<START> to <END>)
+   ├─ polled 3 lambdas
+   └─ Invocations by Lambda
+      ├─           42  getJob
+      ├─           17  createJob
+      ├─            0  idleJob
+      └─           59  TOTAL
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace lambda
+   └─ 59 Invocations across 3 Lambda
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case6] a single --lambda is polled when: [t0] the lambda exists then: the run REACHES the poll (exit 0) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace lambda
+   ├─ env: prod
+   ├─ prefix: svc-test
+   ├─ namespace: lambda
+   ├─ metric: Errors
+   ├─ since: 7d (<START> to <END>)
+   ├─ polled 1 lambdas
+   └─ Errors by Lambda
+      ├─            3  createJob
+      └─            3  TOTAL
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace lambda
+   └─ 3 Errors across 1 Lambda
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case6] a single --lambda is polled when: [t1] the lambda does not exist then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace lambda
+   ├─ env: prod
+   ├─ prefix: svc-test
+   ├─ namespace: lambda
+   ├─ metric: Invocations
+   ├─ since: 7d (<START> to <END>)
+   └─ halted: lambda not found
+
+🐈 wet paws...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ lambda not found: svc-test-prod-absentJob
+   └─ check: aws lambda get-function --function-name svc-test-prod-absentJob
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case7] sqs metrics are polled when: [t0] two queues answer then: the run REACHES the poll (exit 0) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace sqs
+   ├─ env: prod
+   ├─ prefix: svc-test
+   ├─ namespace: sqs
+   ├─ metric: ApproximateNumberOfMessagesVisible
+   ├─ since: 7d (<START> to <END>)
+   ├─ polled 2 queues
+   └─ ApproximateNumberOfMessagesVisible by Queue
+      ├─            8  jobs
+      ├─            2  jobs-dlq
+      └─           10  TOTAL
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace sqs
+   └─ 10 ApproximateNumberOfMessagesVisible across 2 Queue
+"
+`;
+
+exports[`aws.cloudwatch.metrics.query (contract renders) given: [case7] sqs metrics are polled when: [t1] no queue matches then: it is a malfunction (exit 1) and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🔮 aws.cloudwatch.metrics.query --env prod --namespace sqs
+   ├─ env: prod
+   ├─ prefix: svc-test
+   ├─ namespace: sqs
+   ├─ metric: ApproximateNumberOfMessagesVisible
+   ├─ since: 7d (<START> to <END>)
+   └─ halted: no queues to poll
+
+🐈 wet paws...
+
+🔮 aws.cloudwatch.metrics.query
+   ├─ no queues found for svc-test-prod
+   └─ check: aws sqs list-queues --queue-name-prefix svc-test-prod
+"
+`;

@@ -72,8 +72,17 @@ jobs:
       - name: evaluate plan
         id: evaluate-plan
         run: |
-          # check whether it said there were required changes
-          if grep "Everything is in sync" ./plan.log
+          # check whether it said there were required changes.
+          #
+          # the marker is matched CASE-SENSITIVELY against what declastruct actually
+          # emits: `🎉 everything is in sync!` (lowercase e), from planChanges.js. this
+          # grep read a capital E and so never matched — every plan, in-sync or not, fell
+          # to the else arm and reported has-changes-planned=true. that failed SAFE (it
+          # over-gated: an in-sync plan still sought apply approval), which is why it went
+          # unseen, but it made the no-op fast path dead code.
+          #
+          # -F keeps it a fixed string so no character in the marker is read as a regex.
+          if grep -qF "everything is in sync" ./plan.log
           then
             echo "has-changes-planned=false" >> "$GITHUB_OUTPUT"
           else

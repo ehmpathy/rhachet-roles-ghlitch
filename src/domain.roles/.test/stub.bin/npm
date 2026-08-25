@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `npm` that answers the run-commands the ghlitch skills wrap
+#
+# .why  = `deploy` ends in `npm run deploy:prod` / `deploy:dev`, `provision.database` in
+#         `npm run provision:schema:*`, and `use.testdb` in `npm run start:testdb`. every
+#         one of those children RENDERS and is therefore framed, and a frame is a claim
+#         about a render, which needs a render to check
+#         (rule.require.nest-subskill-output-in-buckets). a real serverless deploy or a
+#         real docker compose is neither hermetic nor free, so none of those branches were
+#         reachable and none of those frames had ever been observed.
+#
+# .note = it echoes back which command it was asked for, so a case can prove the skill
+#         routed prod to deploy:prod and non-prod to deploy:dev — a branch that had no
+#         coverage at all.
+#
+# .note = it RENDERS, deliberately. a silent stub would frame an empty bucket and the
+#         controls would pass over a hollow shape — the defect the rule names under `.a
+#         bucket must never frame an empty child`.
+######################################################################
+set -euo pipefail
+
+if [[ "${1:-}" == "run" ]]; then
+  # a per-command banner, so each wrapped tool reads as the tool it stands in for rather
+  # than as one generic line. the deploy phrase is pinned by extant snapshots.
+  case "${2:-}" in
+    deploy:*) echo "serverless: deploy underway" ;;
+    start:testdb) echo "docker compose: container ghlitch-testdb is healthy" ;;
+  esac
+  echo "npm-run: ${2:-}"
+
+  # STUB_NPM_FAIL_ONCE_AT names a marker path. while it is absent, this command fails and
+  # the marker is laid down; the NEXT call succeeds. that is what makes a skill's
+  # retry-after-recovery branch reachable — `use.testdb` self-heals and retries once, and
+  # no case could reach that branch while the stub always succeeded.
+  if [[ -n "${STUB_NPM_FAIL_ONCE_AT:-}" && ! -e "$STUB_NPM_FAIL_ONCE_AT" ]]; then
+    : > "$STUB_NPM_FAIL_ONCE_AT"
+    echo "npm-run: ${2:-} exited nonzero" >&2
+    exit 1
+  fi
+
+  # STUB_NPM_FAIL names a command that ALWAYS fails, for the path where a recovery does
+  # not help and the skill must halt loud.
+  if [[ "${STUB_NPM_FAIL:-}" == "${2:-}" ]]; then
+    echo "npm-run: ${2:-} exited nonzero" >&2
+    exit 1
+  fi
+
+  exit 0
+fi
+
+echo "stub npm: unhandled call: $*" >&2
+exit 1

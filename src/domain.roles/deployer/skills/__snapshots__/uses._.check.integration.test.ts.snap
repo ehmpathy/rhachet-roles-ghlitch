@@ -1,0 +1,162 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`uses.check (gate decision renders) given: [case1] a prod write is authorized by an unlimited local grant when: [t0] the gate is checked for deploy.uses then: the render matches snapshot on STDERR (visual vibecheck) 1`] = `
+"🦺 deploy.uses --env prod
+   └─ authorized via local unlimited grant
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case1] a prod write is authorized by an unlimited local grant when: [t1] the gate is checked for provision.uses then: the render matches snapshot on STDERR (visual vibecheck) 1`] = `
+"🦺 provision.uses --env prod
+   └─ authorized via local unlimited grant
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case2] a prod write is authorized by a quota grant when: [t0] the first use is consumed then: it exits 0 and reports what is left 1`] = `
+"🦺 deploy.uses --env prod
+   └─ authorized via quota grant (2 → 1 left)
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case2] a prod write is authorized by a quota grant when: [t1] the last use is consumed then: it exits 0 and reports the auto re-lock 1`] = `
+"🦺 deploy.uses --env prod
+   └─ authorized via quota grant (1 → 0 left, re-locked)
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case2] a prod write is authorized by a quota grant when: [t2] a use is attempted after the grant is spent then: the blocked render matches snapshot (visual vibecheck) 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case3] a prod write is blocked when: [t0] no grant exists at all then: the render names the grant command, not just the block 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case3] a prod write is blocked when: [t1] a global freeze overrides a live local grant then: the render names the freeze specifically, and how to lift it 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: global freeze in effect
+   └─ a human must lift it: rhx deploy.uses allow --global
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case4] the cicd gate defers prod authorization to github when: [t0] --gate for-cicd is used inside CI then: it exits 0 and says WHY prod was permitted 1`] = `
+"🦺 provision.uses --env prod --gate for-cicd
+   └─ authorized via github-environment approval (CI)
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case4] the cicd gate defers prod authorization to github when: [t1] --gate for-cicd is used OUTSIDE CI then: the belay render matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+🦺 provision.uses --env prod --gate for-cicd
+   ├─ --gate for-cicd requires the CI environment (CI=true), which is absent
+   └─ the cicd gate defers to the github-environment approval; run it in CI
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t0] both required args are absent then: it is a constraint error (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent required args: --meter and --env
+   └─ hint: both are supplied by the skill that composes this gate
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t1] --meter is the last token, with no value then: it belays by name, never a set -u crash 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --meter
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t2] --env is the last token, with no value then: it belays by name and matches snapshot 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --env
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t3] --gate is the last token, with no value then: it names the CAUSE and the valid set, not just the symptom 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t4] --gate EATS the next flag as its value then: it belays about --gate, never about the flag it ate 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ absent value for --gate
+   ├─ fix: pass one of for-ehmpath, for-cicd
+   └─ hint: the skill that composes this gate supplies it
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t5] --gate carries a value outside the set then: it is rejected loud, never ignored (exit 2) 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ invalid gate: for-robots
+   └─ must be: for-ehmpath or for-cicd
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t6] the retired --auth flag is passed then: it is caught by NAME and given the migration 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ retired flag: --auth (this skill takes no credential channel)
+   ├─ fix: for prod-write approval use --gate for-ehmpath|for-cicd
+   └─ note: --auth as-cicd is now --gate for-cicd
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case6] argument constraints belay by NAME, never by symptom when: [t7] an unknown flag is passed then: the whole class is closed, not one flag at a time 1`] = `
+"🐈 belay that...
+
+🦺 uses.check
+   ├─ unknown flag: --grate
+   └─ valid: --meter, --env, --gate
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case7] an org policy exists but the repo org cannot be read when: [t0] an org freeze is in effect and the org IS readable then: it blocks (exit 2) and matches snapshot 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   └─ ask your human to grant:
+        $ rhx deploy.uses set --quant 1 --env prod
+"
+`;
+
+exports[`uses.check (gate decision renders) given: [case7] an org policy exists but the repo org cannot be read when: [t1] the org policy is set but the repo org is unreadable then: the render names what could not be read 1`] = `
+"🐈 wet paws...
+
+🦺 deploy.uses --env prod
+   └─ org policy set but repo org unreadable: .agent/keyrack.yml#org required
+"
+`;

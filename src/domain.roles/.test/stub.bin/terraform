@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `terraform` that emits a plan-shaped payload
+#
+# .why  = provision.terraform forwards this tool's stdout at column 0, un-bucketed,
+#         under the forward-contract exemption in
+#         rule.require.nest-subskill-output-in-buckets. that exemption was asserted and
+#         never observed, because no case ever got past the credential read.
+#
+#         this stub makes the passthrough reachable, so the exemption can be clamped by a
+#         negative control instead of trusted.
+#
+# .note = the payload is deliberately plan-SHAPED, not plan-accurate. what the control
+#         reads is the COLUMN the lines land in, never their content, so a faithful diff
+#         would add volatility and buy no coverage.
+######################################################################
+set -euo pipefail
+
+echo "Terraform used the selected providers to generate the plan below."
+echo ""
+echo "Plan: 0 to add, 0 to change, 0 to destroy."
+echo "terraform-argv: $*"

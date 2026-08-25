@@ -1,0 +1,123 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`_.nest.sh (bucket frame contract) given: [case1] run_sub_bucket frames a child that succeeds when: [t0] the child writes to stdout then: the frame + gutter matches snapshot (visual vibecheck) 1`] = `
+"   ├─
+   │
+   │  🦺 child --env prod
+   │     └─ did the thing
+   │
+   └─
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case2] the child prints a blank line of its own when: [t0] a blank line sits between two content lines then: the frame matches snapshot (visual vibecheck) 1`] = `
+"   ├─
+   │
+   │  🐈 wet paws...
+   │
+   │  🦺 child
+   │
+   └─
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case2b] the child frames ITSELF with a blank at each edge when: [t0] the child supplies its own edge blanks then: the frame matches snapshot (visual vibecheck) 1`] = `
+"   ├─
+   │
+   │  🔓 child
+   │
+   │  🌊 more
+   │
+   └─
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case3] the child prints no output at all when: [t0] a silent child is bucketed then: the empty shape matches snapshot (the known-bad reference) 1`] = `
+"   ├─
+   │
+   │
+   └─
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case4] run_sub_bucket forwards a failed child exit code when: [t0] the child exits 2 (a constraint) then: the bucket still CLOSES before the run halts 1`] = `
+"   ├─
+   │
+   │  🦺 child
+   │
+   └─
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case5] run_sub_bucket_or_belay closes the PARENT tree on failure when: [t0] the child succeeds then: the render is the plain bucket — no belay, no early close 1`] = `
+"🐈 chartin course...
+
+⛵ demo --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 gate --env prod
+   │  │     └─ authorized
+   │  │
+   │  └─
+   └─ eyes on target...
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case5] run_sub_bucket_or_belay closes the PARENT tree on failure when: [t1] the child fails with a constraint (exit 2) then: the FULL blocked render matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ demo --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 gate --env prod
+   │  │     └─ prod is locked
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ demo
+   └─ blocked at the gate
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case5] run_sub_bucket_or_belay closes the PARENT tree on failure when: [t2] the child fails with a malfunction (exit 1) then: the FULL malfunction render matches snapshot 1`] = `
+"🐈 chartin course...
+
+⛵ demo --env prod
+   ├─ env: prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 wet paws...
+
+⛵ demo
+   └─ blocked at the gate
+"
+`;
+
+exports[`_.nest.sh (bucket frame contract) given: [case6] the gutter scales with the indent it is handed when: [t0] the same child is framed at two nesting depths then: both depths match snapshot (visual vibecheck) 1`] = `
+{
+  "deep": "      │  ├─
+      │  │
+      │  │  🦺 child
+      │  │
+      │  └─
+",
+  "shallow": "   ├─
+   │
+   │  🦺 child
+   │
+   └─
+",
+}
+`;

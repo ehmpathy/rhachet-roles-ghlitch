@@ -23,24 +23,25 @@ exports[`use.rds.capacity given: [case3] ssm config is placeholder "null" for tu
 
 🦺 use.rds.capacity --env prep
    ├─ env: prep
-   └─ lets open the channel...
-      ├─
-      │
-      │  🐈 chartin course...
-      │
-      │  🦺 use.vpc.tunnel --env prep
-      │     └─ env: prep
-      │
-      │  🐈 belay that...
-      │
-      │  🦺 use.vpc.tunnel --env prep
-      │     ├─ absent tunnel config for env: prep
-      │     ├─ absent: database.tunnel.bastion.exid
-      │     ├─ absent: database.tunnel.cluster.name
-      │     ├─ absent: aws.account
-      │     └─ hint: set these in your repo config for prep (currently "null")
-      │
-      └─
+   ├─ lets open the channel...
+   │  ├─
+   │  │
+   │  │  🐈 chartin course...
+   │  │
+   │  │  🦺 use.vpc.tunnel --env prep
+   │  │     ├─ env: prep
+   │  │     └─ blocked: absent tunnel config
+   │  │
+   │  │  🐈 belay that...
+   │  │
+   │  │  🦺 use.vpc.tunnel --env prep
+   │  │     ├─ absent tunnel config for env: prep
+   │  │     ├─ absent: database.tunnel.bastion.exid
+   │  │     ├─ absent: database.tunnel.cluster.name
+   │  │     ├─ absent: aws.account
+   │  │     └─ hint: set these in your repo config for prep (currently "null")
+   │  │
+   │  └─
 "
 `;
 
@@ -56,5 +57,42 @@ usage:
 
 options:
   --env   environment: test, prep, or prod (required)
+"
+`;
+
+exports[`use.rds.capacity given: [case5] the happy path reaches capacity, and FRAMES its children when: [t0] capacity is awaited then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 rise and shine...
+
+🦺 use.rds.capacity --env prep
+   ├─ env: prep
+   ├─ lets open the channel...
+   │  ├─
+   │  │
+   │  │  🐈 chartin course...
+   │  │
+   │  │  🦺 use.vpc.tunnel --env prep
+   │  │     ├─ env: prep
+   │  │     ├─ target: localhost (local testdb)
+   │  │     └─ no ssm tunnel needed
+   │  │
+   │  │  🐈 smooth sailin!
+   │  │
+   │  │  🦺 use.vpc.tunnel --env prep
+   │  │     └─ points at localhost:7821
+   │  │
+   │  └─
+   ├─ host: localhost
+   ├─ port: 7821
+   └─ await capacity...
+      ├─
+      │
+      │  localhost:7821 - accepting connections
+      │
+      └─
+
+🐈 caught it!
+
+🦺 use.rds.capacity
+   └─ database ready
 "
 `;

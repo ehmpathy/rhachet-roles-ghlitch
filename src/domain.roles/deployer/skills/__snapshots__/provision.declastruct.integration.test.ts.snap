@@ -114,7 +114,16 @@ exports[`provision.declastruct (argument boundary) given: [case4] enum args carr
 `;
 
 exports[`provision.declastruct (argument boundary) given: [case4] enum args carry an invalid value when: [t5] --env camp (the env from the reported incident) then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
-"🐈 belay that...
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env camp --mode apply
+   ├─ wish: <WISH>
+   ├─ env: camp
+   ├─ mode: apply
+   ├─ auth: via-ambient
+   └─ blocked: absent plan file
+
+🐈 belay that...
 
 ⛵ provision.declastruct
    ├─ plan not found: <WISH>.plan.json
@@ -247,7 +256,16 @@ exports[`provision.declastruct (argument boundary) given: [case6] the -- hard st
 `;
 
 exports[`provision.declastruct (argument boundary) given: [case7] apply is requested with no prior plan file when: [t0] --mode apply and no <wish>.plan.json exists then: the belay stdout matches snapshot — temp paths normalized (visual vibecheck) 1`] = `
-"🐈 belay that...
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode apply
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   └─ blocked: absent plan file
+
+🐈 belay that...
 
 ⛵ provision.declastruct
    ├─ plan not found: <WISH>.plan.json
@@ -283,6 +301,37 @@ exports[`provision.declastruct (argument boundary) given: [case9] the shell hold
    └─ plan infra changes..."
 `;
 
+exports[`provision.declastruct (argument boundary) given: [case10] every render that OPENS the header tree also CLOSES it when: [t0] the run belays on an absent plan file then: the FULL stdout matches snapshot (temp paths masked) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode apply
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: apply
+   ├─ auth: via-keyrack
+   └─ blocked: absent plan file
+
+🐈 belay that...
+
+⛵ provision.declastruct
+   ├─ plan not found: <WISH>.plan.json
+   └─ hint: run --mode plan first
+"
+`;
+
+exports[`provision.declastruct (argument boundary) given: [case10] every render that OPENS the header tree also CLOSES it when: [t1] via-ambient is declared by a shell with zero credentials then: the header block matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ provision.declastruct --wish <WISH> --env test --mode plan
+   ├─ wish: <WISH>
+   ├─ env: test
+   ├─ mode: plan
+   ├─ auth: via-ambient
+   ├─ identity
+   │  └─ (none detected)
+   └─ plan infra changes..."
+`;
+
 exports[`provision.declastruct (live plan forward-contract) given: [case1] a plan runs against a hermetic empty wish when: [t0] --mode plan is invoked then: the FULL plan-success stdout matches snapshot (temp paths masked) 1`] = `
 "🐈 chartin course...
 
@@ -294,25 +343,28 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1] a pla
    ├─ identity
    │  └─ AWS_PROFILE = test-stub-profile
    └─ plan infra changes...
-
-🌊 declastruct plan
-   ├─ wish: <WISH>
-   ├─ plan: <WISH>.plan.json
-   └─ snap: (none)
-
-🔮 plan changes...
-
-
-🎉 everything is in sync!
-
-🌊 declastruct plan
-   ├─ resources: 0
-   ├─ plan: <WISH>.plan.json
-   └─ snap: (none)
-
-🥥 did you know?
-   ├─ to apply, run
-   └─ declastruct apply --plan <WISH>.plan.json
+      ├─
+      │
+      │  🌊 declastruct plan
+      │     ├─ wish: <WISH>
+      │     ├─ plan: <WISH>.plan.json
+      │     └─ snap: (none)
+      │
+      │  🔮 plan changes...
+      │
+      │
+      │  🎉 everything is in sync!
+      │
+      │  🌊 declastruct plan
+      │     ├─ resources: 0
+      │     ├─ plan: <WISH>.plan.json
+      │     └─ snap: (none)
+      │
+      │  🥥 did you know?
+      │     ├─ to apply, run
+      │     └─ declastruct apply --plan <WISH>.plan.json
+      │
+      └─
 
 🐈 smooth sailin!
 
@@ -332,25 +384,28 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1b] the 
    ├─ identity
    │  └─ AWS_PROFILE = test-stub-profile
    └─ plan infra changes...
-
-🌊 declastruct plan
-   ├─ wish: <WISH>
-   ├─ plan: <WISH>.plan.json
-   └─ snap: (none)
-
-🔮 plan changes...
-
-
-🎉 everything is in sync!
-
-🌊 declastruct plan
-   ├─ resources: 0
-   ├─ plan: <WISH>.plan.json
-   └─ snap: (none)
-
-🥥 did you know?
-   ├─ to apply, run
-   └─ declastruct apply --plan <WISH>.plan.json
+      ├─
+      │
+      │  🌊 declastruct plan
+      │     ├─ wish: <WISH>
+      │     ├─ plan: <WISH>.plan.json
+      │     └─ snap: (none)
+      │
+      │  🔮 plan changes...
+      │
+      │
+      │  🎉 everything is in sync!
+      │
+      │  🌊 declastruct plan
+      │     ├─ resources: 0
+      │     ├─ plan: <WISH>.plan.json
+      │     └─ snap: (none)
+      │
+      │  🥥 did you know?
+      │     ├─ to apply, run
+      │     └─ declastruct apply --plan <WISH>.plan.json
+      │
+      └─
 
 🐈 smooth sailin!
 
@@ -370,18 +425,21 @@ exports[`provision.declastruct (live plan forward-contract) given: [case1c] the 
    ├─ identity
    │  └─ AWS_PROFILE = test-stub-profile
    └─ apply reviewed plan...
-
-🌊 declastruct apply
-   ├─ plan: <WISH>.plan.json
-   └─ wish: <WISH>
-
-🔮 plan changes...
-
-
-🎉 everything is in sync!
-
-🌊 declastruct apply
-   └─ applied: 0
+      ├─
+      │
+      │  🌊 declastruct apply
+      │     ├─ plan: <WISH>.plan.json
+      │     └─ wish: <WISH>
+      │
+      │  🔮 plan changes...
+      │
+      │
+      │  🎉 everything is in sync!
+      │
+      │  🌊 declastruct apply
+      │     └─ applied: 0
+      │
+      └─
 
 🐈 smooth sailin!
 
@@ -398,13 +456,22 @@ exports[`provision.declastruct (via-keyrack credential supply) given: [case1] ke
    ├─ env: test
    ├─ mode: plan
    ├─ auth: via-keyrack
+   ├─ unlock the keyrack...
+   │  ├─
+   │  │
+   │  │  🔓 keyrack unlock
+   │  │     └─ ehmpathy.test.AWS_PROFILE
+   │  │        └─ expires in: 540m
+   │  │
+   │  └─
    ├─ identity
    │  └─ AWS_PROFILE = keyrack-supplied-profile
    └─ plan infra changes..."
 `;
 
 exports[`provision.declastruct (via-keyrack credential supply) given: [case2] keyrack holds no keys for the env when: [t0] the source block comes back empty then: the belay stderr matches snapshot (visual vibecheck) 1`] = `
-"🐈 belay that...
+"
+🐈 belay that...
 
 ⛵ provision.declastruct
    ├─ absent credentials: keyrack holds no keys for env=test

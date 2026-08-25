@@ -1,0 +1,132 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.cloudformation.status (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+⛵ aws.cloudformation.status
+
+usage:
+  rhx aws.cloudformation.status --env <env>
+  rhx aws.cloudformation.status --stack <name>
+
+options:
+  --env    environment: prep or prod
+  --stack  explicit stack name (overrides --env)
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] neither --env nor --stack is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.status
+   └─ --env or --stack is required
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env names an env this skill does not serve then: it names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.status
+   ├─ invalid env: test
+   └─ must be: prep or prod
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] an unknown flag is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.status
+   ├─ unknown argument: --stak
+   └─ use --help for usage
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case3] a flag is passed with no value when: [t0] --env is the last token then: it belays with the valid set, never a set -u crash 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.status
+   ├─ absent value for --env
+   ├─ fix: pass one of prep,prod
+   └─ hint: rhx aws.cloudformation.status help
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case3] a flag is passed with no value when: [t1] --stack is the last token then: it belays with no fabricated value set 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.status
+   ├─ absent value for --stack
+   └─ hint: rhx aws.cloudformation.status help
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case4] the credential read finds no profile when: [t0] the run reaches the credential read then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.status --stack svc-test-dev
+   ├─ stack: svc-test-dev
+   ├─ eyes on target...
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ aws.cloudformation.status
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case4] the credential read finds no profile when: [t1] --stack overrides --env then: the header carries the explicit stack name 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.status --stack custom-stack
+   ├─ stack: custom-stack
+   ├─ eyes on target...
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ aws.cloudformation.status
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case5] the status runs to completion with no failed events when: [t0] the stack is healthy then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.status --stack svc-test-dev
+   ├─ stack: svc-test-dev
+   ├─ eyes on target...
+   ├─ status: UPDATE_COMPLETE
+   ├─ reason: (none)
+   └─ failed events
+      └─ (none)
+
+🐈 smooth sailin!
+
+⛵ aws.cloudformation.status --stack svc-test-dev
+   └─ status: UPDATE_COMPLETE
+"
+`;
+
+exports[`aws.cloudformation.status (contract renders) given: [case6] the stack holds failed events when: [t0] the event list is rendered then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.status --stack svc-test-prod
+   ├─ stack: svc-test-prod
+   ├─ eyes on target...
+   ├─ status: UPDATE_ROLLBACK_FAILED
+   ├─ reason: update failed on [ApiHandlerLambdaFunction]
+   └─ failed events
+      ├─ 2026-08-12 05:00:02Z TheStackItself (UPDATE_ROLLBACK_FAILED)
+      │  └─ resource did not stabilize
+      └─ 2026-08-12 05:00:01Z ApiHandlerLambdaFunction (UPDATE_FAILED)
+         └─ handler.zip absent from the deployment bucket
+
+🐈 smooth sailin!
+
+⛵ aws.cloudformation.status --stack svc-test-prod
+   └─ status: UPDATE_ROLLBACK_FAILED
+"
+`;

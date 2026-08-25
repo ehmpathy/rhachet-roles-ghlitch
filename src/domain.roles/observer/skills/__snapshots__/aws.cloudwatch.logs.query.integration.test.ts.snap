@@ -1,7 +1,9 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`aws.cloudwatch.logs.query given: [case1] --help flag when: [t0] --help is passed then: help output matches snapshot 1`] = `
-"🔮 aws.cloudwatch.logs.query
+"🐈 heres the deal...
+
+🔮 aws.cloudwatch.logs.query
 
 usage:
   rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
@@ -22,7 +24,9 @@ options:
 `;
 
 exports[`aws.cloudwatch.logs.query given: [case2] -h flag when: [t0] -h is passed then: help output matches snapshot 1`] = `
-"🔮 aws.cloudwatch.logs.query
+"🐈 heres the deal...
+
+🔮 aws.cloudwatch.logs.query
 
 usage:
   rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
@@ -43,7 +47,9 @@ options:
 `;
 
 exports[`aws.cloudwatch.logs.query given: [case3] help as positional arg when: [t0] help is passed then: help output matches snapshot 1`] = `
-"🔮 aws.cloudwatch.logs.query
+"🐈 heres the deal...
+
+🔮 aws.cloudwatch.logs.query
 
 usage:
   rhx aws.cloudwatch.logs.query --lambda <name> --env <env>
@@ -110,6 +116,11 @@ exports[`aws.cloudwatch.logs.query given: [case8] list mode with test env when: 
 🔮 aws.cloudwatch.logs.query --list --env test
    └─ log groups for rhachet-roles-ghlitch-test
       └─ /aws/lambda/rhachet-roles-ghlitch-test-echo
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.logs.query --list --env test
+   └─ 1 log groups
 "
 `;
 
@@ -119,6 +130,11 @@ exports[`aws.cloudwatch.logs.query given: [case9] list mode with prod env when: 
 🔮 aws.cloudwatch.logs.query --list --env prod
    └─ log groups for rhachet-roles-ghlitch-prod
       └─ (none)
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.logs.query --list --env prod
+   └─ 0 log groups
 "
 `;
 
@@ -127,7 +143,12 @@ exports[`aws.cloudwatch.logs.query given: [case10] list mode with prep env when:
 
 🔮 aws.cloudwatch.logs.query --list --env prep
    └─ log groups for rhachet-roles-ghlitch-prep
-      └─ /aws/lambda/rhachet-roles-ghlitch-prep-echo
+      └─ <LOG GROUPS OF THIS SHARED ACCOUNT, AS DEPLOYED>
+
+🐈 caught it!
+
+🔮 aws.cloudwatch.logs.query --list --env prep
+   └─ 1 log groups
 "
 `;
 
@@ -165,7 +186,7 @@ exports[`aws.cloudwatch.logs.query given: [case14] query mode with nonexistent l
 🔮 aws.cloudwatch.logs.query
    ├─ log group not found: /aws/lambda/rhachet-roles-ghlitch-prep-nonexistent-lambda-name-xyz
    └─ available log groups:
-      └─ /aws/lambda/rhachet-roles-ghlitch-prep-echo
+      └─ <LOG GROUPS OF THIS SHARED ACCOUNT, AS DEPLOYED>
 "
 `;
 
@@ -181,9 +202,7 @@ exports[`aws.cloudwatch.logs.query given: [case16] query mode with valid lambda 
 "🐈 chartin course...
 
 🔮 aws.cloudwatch.logs.query --env test
-   └─ found 1 log group with prefix /aws/lambda/rhachet-roles-ghlitch-test
-
-🔮 aws.cloudwatch.logs.query
+   ├─ found 1 log group with prefix /aws/lambda/rhachet-roles-ghlitch-test
    ├─ log group: /aws/lambda/rhachet-roles-ghlitch-test (all)
    ├─ since: 5m ago
    ├─ filter: UNLIKELY_MATCH_STRING_xyz123 (AND)
@@ -195,7 +214,7 @@ exports[`aws.cloudwatch.logs.query given: [case16] query mode with valid lambda 
 🐈 caught it!
 
 🔮 aws.cloudwatch.logs.query
-   └─ observed
+   └─ 0 events
 
 "
 `;
@@ -205,5 +224,17 @@ exports[`aws.cloudwatch.logs.query given: [case17] query mode with prep env when
 
 🔮 aws.cloudwatch.logs.query
    └─ no log groups found with prefix: /aws/lambda/nonexistent-svc-xyz-prep
+"
+`;
+
+exports[`aws.cloudwatch.logs.query given: [case18] the log-group inventory call is refused by aws when: [t0] skill searches for a lambda it cannot look up then: output matches snapshot 1`] = `
+"🐈 belay that...
+
+🔮 aws.cloudwatch.logs.query
+   ├─ log group not found: /aws/lambda/rhachet-roles-ghlitch-test-echo
+   └─ available log groups:
+      ├─ could not list -test groups: <AWS SAID SO, VERBATIM>
+      ├─ aws: [ERROR]: An error occurred (UnrecognizedClientException) when calling the DescribeLogGroups operation: The security token included in the request is invalid.
+      └─ (none)
 "
 `;

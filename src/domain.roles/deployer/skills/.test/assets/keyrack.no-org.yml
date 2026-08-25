@@ -1,0 +1,9 @@
+# a keyrack manifest with NO `org:` key.
+#
+# .what = the shape a repo has when it never declared which org it belongs to.
+# .why  = `uses._.check.sh` must fail LOUD when an org policy file exists but the repo's
+#         own org cannot be read — a misread there would quietly bypass an org freeze,
+#         which is a prod-write authorization decision made by an unreadable file. that
+#         malfunction path needs a manifest the org lookup genuinely cannot answer from,
+#         and this is it.
+keys: {}

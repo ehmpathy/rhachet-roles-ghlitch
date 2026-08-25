@@ -1,0 +1,184 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+⛵ aws.cloudformation.rollback
+
+usage:
+  rhx aws.cloudformation.rollback --env <env>
+  rhx aws.cloudformation.rollback --stack <name>
+
+options:
+  --env    environment: prep or prod
+  --stack  explicit stack name (overrides --env)
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case2] argument constraints belay before any work is done when: [t0] neither --env nor --stack is passed then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   └─ --env or --stack is required
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case2] argument constraints belay before any work is done when: [t1] --env is outside the value set then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   ├─ invalid env: test
+   └─ must be: prep or prod
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case2] argument constraints belay before any work is done when: [t2] an unknown flag is passed then: the belay stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   ├─ unknown argument: --force
+   └─ use --help for usage
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case3] a valued flag is handed no usable value when: [t0] --env is the last token, with no value then: the belay names the valid set and matches snapshot 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   ├─ absent value for --env
+   ├─ fix: pass one of prep,prod
+   └─ hint: rhx aws.cloudformation.rollback help
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case3] a valued flag is handed no usable value when: [t1] --stack is the last token, with no value then: the belay names NO value set — a stack name is free-form 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   ├─ absent value for --stack
+   └─ hint: rhx aws.cloudformation.rollback help
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case3] a valued flag is handed no usable value when: [t2] --env is handed the NEXT FLAG as its value then: it belays about --env, never about the flag it ate 1`] = `
+"🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   ├─ absent value for --env
+   ├─ fix: pass one of prep,prod
+   └─ hint: rhx aws.cloudformation.rollback help
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case4] the selector decides the stack name and the gate when: [t0] --env prep selects the stack by convention then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-dev
+   ├─ stack: svc-test-dev
+   ├─ eyes on target...
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ aws.cloudformation.rollback
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case4] the selector decides the stack name and the gate when: [t1] --stack names the stack explicitly then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack legacy-stack-name
+   ├─ stack: legacy-stack-name
+   ├─ eyes on target...
+   └─ halted: absent credentials
+
+🐈 wet paws...
+
+⛵ aws.cloudformation.rollback
+   ├─ absent AWS_PROFILE from keyrack for env=prep
+   └─ hint: rhx keyrack unlock --owner ehmpath --env prep
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case5] the prod gate decides whether a prod rollback proceeds when: [t0] a prod rollback runs with no grant then: the FULL blocked stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-prod
+   ├─ stack: svc-test-prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🐈 wet paws...
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     ├─ prod is locked: no deploy.uses grant for prod (safe default)
+   │  │     └─ ask your human to grant:
+   │  │          $ rhx deploy.uses set --quant 1 --env prod
+   │  │
+   │  └─
+   └─ blocked at the gate
+
+🐈 belay that...
+
+⛵ aws.cloudformation.rollback
+   └─ blocked at the gate
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case5] the prod gate decides whether a prod rollback proceeds when: [t1] a prod rollback runs with an unlimited grant then: the cleared frame matches snapshot (sliced at the bucket close) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-prod
+   ├─ stack: svc-test-prod
+   ├─ check the gate...
+   │  ├─
+   │  │
+   │  │  🦺 deploy.uses --env prod
+   │  │     └─ authorized via local unlimited grant
+   │  │
+   │  └─"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case6] the rollback runs to completion when: [t0] the stack reaches a terminal status then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-dev
+   ├─ stack: svc-test-dev
+   ├─ eyes on target...
+   ├─ anchors away!
+   ├─ rollback continued
+   ├─ events
+   ├─ 2026-08-12 05:00:01Z ApiHandlerLambdaFunction UPDATE_ROLLBACK_IN_PROGRESS
+   ├─ 2026-08-12 05:00:02Z svc-test-dev UPDATE_ROLLBACK_COMPLETE
+   └─ UPDATE_ROLLBACK_COMPLETE
+
+🐈 smooth sailin!
+
+⛵ aws.cloudformation.rollback --stack svc-test-dev
+   └─ rolled back
+"
+`;
+
+exports[`aws.cloudformation.rollback (contract renders) given: [case7] the stack lands in a FAILED status when: [t0] the poll reads a FAILED status then: the FULL stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 chartin course...
+
+⛵ aws.cloudformation.rollback --stack svc-test-dev
+   ├─ stack: svc-test-dev
+   ├─ eyes on target...
+   ├─ anchors away!
+   ├─ rollback continued
+   ├─ events
+   ├─ 2026-08-12 05:00:01Z ApiHandlerLambdaFunction UPDATE_ROLLBACK_IN_PROGRESS
+   ├─ 2026-08-12 05:00:02Z svc-test-dev UPDATE_ROLLBACK_COMPLETE
+   └─ halted: UPDATE_ROLLBACK_FAILED
+
+🐈 wet paws...
+
+⛵ aws.cloudformation.rollback
+   ├─ stack: svc-test-dev
+   ├─ final status: UPDATE_ROLLBACK_FAILED
+   └─ hint: rhx aws.cloudformation.status --stack svc-test-dev
+"
+`;

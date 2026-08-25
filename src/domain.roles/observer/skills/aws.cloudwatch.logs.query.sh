@@ -48,27 +48,18 @@ set -euo pipefail
 # get git root for output paths
 GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo ".")
 
-# help
-if [[ "${1:-}" == "help" || "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo "🔮 aws.cloudwatch.logs.query"
-  echo ""
-  echo "usage:"
-  echo "  rhx aws.cloudwatch.logs.query --lambda <name> --env <env>"
-  echo "  rhx aws.cloudwatch.logs.query --prefix <prefix> --env <env>"
-  echo "  rhx aws.cloudwatch.logs.query --list --env <env>"
-  echo ""
-  echo "options:"
-  echo "  --lambda     lambda function name"
-  echo "  --prefix     search log groups by prefix"
-  echo "  --env        environment: test, prep, or prod"
-  echo "  --since      how far back (default: 1h) - 5m, 1h, 2d"
-  echo "  --filter     filter by term (can repeat for AND)"
-  echo "  --query      raw Logs Insights filter clause"
-  echo "  --limit      max events (default: 100)"
-  echo "  --list       list available log groups"
-  echo "  --tail       follow logs in real-time"
-  exit 0
-fi
+# .note = help is served from the argument loop below, never from a `$1` guard here.
+#
+#         this skill carried BOTH, and the pre-loop guard shadowed the loop's copy — so the
+#         help a caller actually saw was the mascot-less one, while the correct render sat
+#         unreachable thirty lines further down. two costs from one duplicate:
+#
+#         - it broke shape. every kin help render opens `🐈 heres the deal...`; this one
+#           opened straight at `🔮`, so a phase began with no cat to name it
+#         - a `$1` guard cannot work under rhx at all, which passes `--skill --repo --role`
+#           ahead of the caller's own args (`rule.require.skill-help`, `.antipattern`)
+#
+#         one help block, in the loop. never a second.
 
 # generate iso timestamp for output files
 ISO_TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
@@ -442,6 +433,15 @@ if [[ "$LIST_ONLY" == true ]]; then
       fi
     done
   fi
+
+  # this mode used to end on its last tree ITEM, with no terminal mascot block at all — so
+  # a `chartin course...` was opened and never answered, and the run gave no verdict for the
+  # count it had just spent an api call to learn (rule.require.status-feedback).
+  echo ""
+  echo "🐈 caught it!"
+  echo ""
+  echo "🔮 aws.cloudwatch.logs.query --list --env $ENV"
+  echo "   └─ ${#LIST_GROUPS[@]} log groups"
   exit 0
 fi
 
@@ -468,8 +468,15 @@ if [[ -n "$LAMBDA" ]]; then
     echo "🔮 aws.cloudwatch.logs.query"
     echo "   ├─ log group not found: /aws/lambda/$PREFIX-$ENV-$LAMBDA"
     echo "   └─ available log groups:"
-    # collect log groups; show errors if aws cli fails
+    # collect log groups; bank any per-suffix failure to report as a tree item below
+    #
+    # the failure used to print `      (error: ...)` STRAIGHT TO STDERR, mid-loop. two
+    # defects in one line: it wore no branch glyph, and it went to the other stream than
+    # the tree it sat inside — so a caller who captured stdout saw a gap with no
+    # explanation, and one who watched the terminal saw a glyph-less line wedged among the
+    # children (rule.require.nest-subskill-output-in-buckets).
     AVAILABLE_GROUPS=""
+    LIST_ERRORS=()
     for suffix in $(get_env_suffixes "$ENV"); do
       if SUFFIX_OUTPUT=$(aws logs describe-log-groups \
         --log-group-name-prefix "/aws/lambda/$PREFIX-$suffix" \
@@ -477,9 +484,24 @@ if [[ -n "$LAMBDA" ]]; then
         --output text 2>&1); then
         AVAILABLE_GROUPS+=$(echo "$SUFFIX_OUTPUT" | tr '\t' '\n')$'\n'
       else
-        echo "      (error: could not list -$suffix log groups: $SUFFIX_OUTPUT)" >&2
+        LIST_ERRORS+=("could not list -$suffix groups: $SUFFIX_OUTPUT")
       fi
     done
+
+    # the banked failures render FIRST, as `├─` children — the list that follows always
+    # supplies the `└─` close, whether it holds groups or `(none)`
+    #
+    # an aws error is routinely MULTI-LINE (a summary line, then `aws: [ERROR]: ...`).
+    # a bare `echo "      ├─ $err"` would glyph only the FIRST line and drop every line
+    # after it at column 0 — the exact stray this branch was repaired to stop, reborn one
+    # layer in. give each line its own item so the depth holds for all of them.
+    for err in ${LIST_ERRORS[@]+"${LIST_ERRORS[@]}"}; do
+      while IFS= read -r errline; do
+        [[ -z "$errline" ]] && continue
+        echo "      ├─ $errline"
+      done <<< "$err"
+    done
+
     # print as tree children under the "available log groups" node
     mapfile -t GROUP_LIST < <(echo "$AVAILABLE_GROUPS" | sed '/^$/d' | sort -u | head -20)
     if [[ ${#GROUP_LIST[@]} -eq 0 ]]; then
@@ -538,19 +560,34 @@ else
     GROUP_NOUN="log groups"
   fi
 
-  echo "🐈 chartin course..."
-  echo ""
-  echo "🔮 aws.cloudwatch.logs.query --env $ENV"
+fi
+
+# ── the tree ────────────────────────────────────────────────────────────────────────
+# ONE mascot, ONE header, ONE tree, for BOTH discovery paths.
+#
+# this had the reprint defect in one path and the opposite defect in the other. on the
+# multi-group path the discovery block above printed its own `🐈 chartin course...` + header
+# and closed its own tree with `└─`, after which this block reprinted the header for the
+# query items — two trees for one run. on the single-lambda path the discovery block never
+# ran, so this header printed with no mascot ahead of it at all.
+#
+# a header is printed once per MASCOT PHASE, never per paragraph
+# (rule.require.nest-subskill-output-in-buckets).
+echo "🐈 chartin course..."
+echo ""
+echo "🔮 aws.cloudwatch.logs.query --env $ENV"
+
+# the discovery result is now a `├─` continuation, not its own closed tree. only the
+# multi-group path has a discovery result to report.
+if [[ "$MULTI_GROUP" == true ]]; then
   if [[ -n "$USED_ALIAS" ]]; then
     echo "   ├─ found ${#LOG_GROUPS[@]} $GROUP_NOUN"
-    echo "   └─ (includes historic -$USED_ALIAS alias)"
+    echo "   ├─ (includes historic -$USED_ALIAS alias)"
   else
-    echo "   └─ found ${#LOG_GROUPS[@]} $GROUP_NOUN with prefix /aws/lambda/$PREFIX-$ENV"
+    echo "   ├─ found ${#LOG_GROUPS[@]} $GROUP_NOUN with prefix /aws/lambda/$PREFIX-$ENV"
   fi
 fi
 
-echo ""
-echo "🔮 aws.cloudwatch.logs.query"
 if [[ -n "$USED_ALIAS" && "$MULTI_GROUP" == false ]]; then
   echo "   ├─ log group: $LOG_GROUP"
   echo "   ├─ (found via historic -$USED_ALIAS alias)"
@@ -565,15 +602,31 @@ elif [[ ${#FILTERS[@]} -gt 0 ]]; then
 fi
 
 # tail mode (--tail requires --lambda; validated upfront before aws calls)
+#
+# the notes come FIRST, as `├─` items. they used to print after the `└─` close, with no
+# branch glyph at all — two bare lines under a tree that had already ended.
+#
+# the stream itself is NOT bucketed, and this is not the un-verified forward-contract
+# claim the four deployer composers made. two reasons, either alone decisive:
+#   1. `--follow` never ends, so the frame's close `└─` is unreachable. a bucket that
+#      can never close is not a bucket; it is an open bracket.
+#   2. the log lines ARE this skill's product — what the human asked for — not a
+#      sub-step's narration of its own work. a gutter would corrupt every line for any
+#      downstream read and wrap the long ones. same treatment as the non-tail results
+#      at the end of this file, which also print at column 0.
+# so the tree is CLOSED first, then the terminal is handed to the stream.
 if [[ "$TAIL" == true ]]; then
-  echo "   └─ tail logs (ctrl+c to stop)..."
   if [[ -n "$CUSTOM_FILTER" ]]; then
-    echo "   note: tail mode uses server-side filter - --query not supported"
+    echo "   ├─ note: tail mode uses a server-side filter — --query not supported"
+  fi
+  if [[ -z "$CUSTOM_FILTER" && ${#FILTERS[@]} -gt 1 ]]; then
+    echo "   ├─ note: tail mode uses only the first filter: ${FILTERS[0]}"
+  fi
+  echo "   └─ tail logs (ctrl+c to stop)..."
+  echo ""
+  if [[ -n "$CUSTOM_FILTER" ]]; then
     aws logs tail "$LOG_GROUP" --follow
   elif [[ ${#FILTERS[@]} -gt 0 ]]; then
-    if [[ ${#FILTERS[@]} -gt 1 ]]; then
-      echo "   note: tail mode only uses first filter: ${FILTERS[0]}"
-    fi
     aws logs tail "$LOG_GROUP" --follow --filter-pattern "${FILTERS[0]}"
   else
     aws logs tail "$LOG_GROUP" --follow
@@ -635,10 +688,17 @@ fi
 
 
 if [[ -z "$QUERY_ID" ]]; then
+  # close the open tree before the belay. these three exits sit BETWEEN the header above
+  # and its `└─ summary:` close, so a bare exit leaves items under no close — the
+  # half-drawn shape (rule.require.nest-subskill-output-in-buckets). `halted:` because the
+  # exit is 1, a malfunction (rule.require.consistent-skill-contracts).
+  echo "   └─ halted: query would not start"
+  echo ""
   echo "🐈 wet paws..."
   echo ""
   echo "🔮 aws.cloudwatch.logs.query"
-  echo "   └─ query start failed"
+  echo "   ├─ cloudwatch returned no query id for log group: $LOG_GROUP"
+  echo "   └─ hint: check the log group exists — rhx aws.cloudwatch.logs.query --list --env $ENV"
   exit 1
 fi
 
@@ -652,10 +712,13 @@ while [[ $POLL_COUNT -lt $MAX_POLLS ]]; do
   if [[ "$STATUS" == "Complete" ]]; then
     break
   elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]]; then
+    echo "   └─ halted: query $STATUS"
+    echo ""
     echo "🐈 wet paws..."
     echo ""
     echo "🔮 aws.cloudwatch.logs.query"
-    echo "   └─ query $STATUS"
+    echo "   ├─ cloudwatch reported the query as $STATUS"
+    echo "   └─ hint: narrow --since, or simplify the filter, then retry"
     exit 1
   fi
 
@@ -664,10 +727,17 @@ while [[ $POLL_COUNT -lt $MAX_POLLS ]]; do
 done
 
 if [[ "$STATUS" != "Complete" ]]; then
+  # the third and last mid-tree exit. same close as its two kin above: the tree opened by the
+  # header is still open here, so it must be closed before the belay.
+  echo "   └─ halted: query timed out"
+  echo ""
   echo "🐈 wet paws..."
   echo ""
   echo "🔮 aws.cloudwatch.logs.query"
-  echo "   └─ query timed out (status: $STATUS)"
+  echo "   ├─ cloudwatch left the query at status $STATUS after ${MAX_POLLS} polls"
+  # the old belay closed on the bare status and named no next move at all — a symptom with no
+  # fix (rule.require.errors-name-the-fix). a timeout is a scope problem, so the fix is scope.
+  echo "   └─ hint: narrow --since, or add --limit, then retry"
   exit 1
 fi
 
@@ -689,11 +759,17 @@ echo "   ├─ json: $OUTPUT_JSON"
 # generate summary
 generate_output_summary "$OUTPUT_JSON" "$OUTPUT_MD"
 
+# the terminal block used to close on a bare `└─ observed` — a word that reports the run
+# finished and withholds the one fact the caller spent an api call to learn. its kin
+# aws.cloudwatch.metrics.query states the answer in its close, and so does this now
+# (rule.require.status-feedback).
+EVENT_COUNT=$(jq 'length' "$OUTPUT_JSON")
+
 echo ""
 echo "🐈 caught it!"
 echo ""
 echo "🔮 aws.cloudwatch.logs.query"
-echo "   └─ observed"
+echo "   └─ $EVENT_COUNT events"
 echo ""
 
 # output formatted logs to stdout
