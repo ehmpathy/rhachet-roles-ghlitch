@@ -19,6 +19,7 @@ ignores:
   - "@src/.*"
   - yalc
   - rhachet-roles-bhrain
+  - rhachet-roles-bhrowser
   - rhachet-roles-bhuild
   - rhachet-roles-ehmpathy
   - rhachet-brains-anthropic
@@ -29,3 +30,4 @@ ignores:
   - type-fns
   - test-fns
   - rhachet-brains-fireworksai
+  - playwright

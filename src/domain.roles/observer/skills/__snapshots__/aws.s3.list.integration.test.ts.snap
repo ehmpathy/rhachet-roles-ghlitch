@@ -138,7 +138,7 @@ exports[`aws.s3.list given: [case9] list buckets when: [t0] skill runs with only
 🐈 smooth sailin!
 
 🔮 aws.s3.list --env test
-   └─ 5 buckets
+   └─ <N> buckets
 "
 `;
 

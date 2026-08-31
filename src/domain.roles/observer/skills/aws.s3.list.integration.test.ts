@@ -32,8 +32,10 @@ const maskDynamicOutput = (output: string): string => {
  *
  *         so the snapshot still verifies: the treestruct frame, the `buckets` label, the two
  *         branch chars, and the full owned entry. it gives up only the third-party names and
- *         the account-wide count — and the count is still checked, on the RAW stdout, by the
- *         kin `then` block `expect(result.stdout).toMatch(/found: \d+ buckets/)`.
+ *         the account-wide count — masked in BOTH spots it appears, the course-phase
+ *         `found: N buckets` and the verdict-phase `└─ N buckets` — and the count is still
+ *         checked, on the RAW stdout, by the kin `then` block
+ *         `expect(result.stdout).toMatch(/found: \d+ buckets/)`.
  *
  * .note = when the owned bucket is ABSENT the block is left untouched, so the snapshot goes
  *         red rather than render a placeholder over a real regression.
@@ -41,6 +43,7 @@ const maskDynamicOutput = (output: string): string => {
 const maskUnownedBuckets = (output: string): string =>
   output
     .replace(/found: \d+ buckets/, 'found: <N> buckets')
+    .replace(/└─ \d+ buckets/, '└─ <N> buckets')
     .replace(/ {3}└─ buckets\n(?: {6}[├└]─ .*\n)+/, (block): string => {
       const entries = block.split('\n').slice(1).filter(Boolean);
       const owned = entries.find((line) => line.includes(TEST_BUCKET));

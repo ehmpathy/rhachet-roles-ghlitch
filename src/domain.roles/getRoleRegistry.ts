@@ -4,6 +4,7 @@ import { ROLE_ALERTER } from './alerter/getAlerterRole';
 import { ROLE_BUDGETER } from './budgeter/getBudgeterRole';
 import { ROLE_DEPLOYER } from './deployer/getDeployerRole';
 import { ROLE_DETECTIVE } from './detective/getDetectiveRole';
+import { ROLE_GUARDIAN } from './guardian/getGuardianRole';
 import { ROLE_HARDENER } from './hardener/getHardenerRole';
 import { ROLE_OBSERVER } from './observer/getObserverRole';
 import { ROLE_OPERATOR } from './operator/getOperatorRole';
@@ -26,5 +27,6 @@ export const getRoleRegistry = (): RoleRegistry =>
       ROLE_BUDGETER,
       ROLE_ALERTER,
       ROLE_HARDENER,
+      ROLE_GUARDIAN,
     ],
   });

@@ -22,6 +22,14 @@ npm install rhachet-roles-ghlitch
 
 used to watch all that goes on — surfaces anomalies, tracks patterns, adds health checks, and ensures no event goes unseen.
 
+### 🦺 operator
+
+- **scale**: system-wide, cross-service
+- **focus**: operational support, database tunnels, command execution
+- **maximizes**: safe, reliable operational access
+
+used for operational support — provides secure database access, runs registered commands and vitals, and maintains operational tunnels.
+
 ### ⛵ deployer
 
 - **scale**: system-level, infrastructure
@@ -62,6 +70,14 @@ used to ensure real defects trigger alerts while noise stays silent — avoids f
 
 used to review for security vulnerabilities and harden systems — audits code, identifies weaknesses, and fortifies defenses.
 
+### 🧿 guardian
+
+- **scale**: habitat-level, cyber-health
+- **focus**: attack vectors, exposure/symptom causal chains, elimination, detection
+- **maximizes**: an inhabitant kept safe — a cited inventory of the hazards, eliminations, and detections
+
+used as an active watchful ward for a **habitat's** cyber health (the environment an inhabitant — a person, an agent — lives and works in) — traces cited causal chains from an exposure to its observable harm. ships the cited inventory (the answer-router is a planned follow-on). a **distinct** persona, not one of the ops cats; its mark is the **nazar** (🧿). see `src/domain.roles/guardian/briefs/im_a.guardian.md` for the mark's etymology and lore.
+
 ## mascot
 
 this repo houses the cat 🐈 — curious, nimble, fast, and highly suspicious of all around it.
@@ -81,6 +97,7 @@ why cats? because they embody the principles of good ops work:
 - 💰 ledger — for budgeter — to track where resources flow
 - 🔔 bell — for alerter — to signal real threats, silence noise
 - 🛡️ shield — for hardener — to fortify defenses
+- 🧿 nazar — for guardian — to ward the habitat folks work in
 
 **the cat hunts:**
 - 🐦 birds — for observer — watches their movements, tracks their patterns
