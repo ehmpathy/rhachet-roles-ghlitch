@@ -37,8 +37,14 @@ describe('getRoleRegistry', () => {
         expect(deployer?.name).toEqual('Deployer');
       });
 
-      then('it has all seven roles', () => {
-        expect(registry.roles).toHaveLength(7);
+      then('it has guardian role', () => {
+        const guardian = registry.roles.find((r) => r.slug === 'guardian');
+        expect(guardian).toBeDefined();
+        expect(guardian?.name).toEqual('Guardian');
+      });
+
+      then('it has all eight roles', () => {
+        expect(registry.roles).toHaveLength(8);
         const slugs = registry.roles.map((r) => r.slug);
         expect(slugs).toContain('observer');
         expect(slugs).toContain('operator');
@@ -47,6 +53,7 @@ describe('getRoleRegistry', () => {
         expect(slugs).toContain('budgeter');
         expect(slugs).toContain('alerter');
         expect(slugs).toContain('hardener');
+        expect(slugs).toContain('guardian');
       });
     });
   });
@@ -57,6 +64,9 @@ describe('getRoleRegistry', () => {
       const notFound = registry.roles.find((r) => r.slug === 'nonexistent');
 
       then('it returns undefined', () => {
+        // independent assertion alongside the snapshot, so a careless --resnap cannot silently
+        // accept drift (rule.forbid.failhide — no snapshot-only verification).
+        expect(notFound).toBeUndefined();
         expect(notFound).toMatchSnapshot();
       });
     });

@@ -6,6 +6,10 @@ roles for observability, deployment, diagnostics, budgets, health, and alerts.
 
 watch all that goes on — surfaces anomalies and tracks patterns.
 
+## 🦺 operator
+
+operational support — secure database access, registered commands and vitals, and tunnels.
+
 ## ⛵ deployer
 
 escort code to prod safely across environments.
@@ -25,3 +29,7 @@ ensure real defects alert while false positives stay silent.
 ## 🛡️ hardener
 
 review for security vulnerabilities and harden systems.
+
+## 🧿 guardian
+
+ward a habitat's cyber health — cited hazard, elimination, and detection inventories.

@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getGuardianRole given: [edge] minimal contract surface when: only identity fields are extracted then: it matches the expected minimal structure 1`] = `
+{
+  "name": "Guardian",
+  "slug": "guardian",
+}
+`;
+
+exports[`getGuardianRole given: the guardian role when: inspected then: it matches the expected structure 1`] = `
+{
+  "hasBoot": true,
+  "hasBriefDirs": true,
+  "hasSkillDirs": true,
+  "name": "Guardian",
+  "purpose": "watchguard cyber health — trace cited hazards, eliminations, and detections",
+  "slug": "guardian",
+}
+`;

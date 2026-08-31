@@ -4,12 +4,13 @@ exports[`getRoleRegistry given: [edge] query for absent role when: searched by u
 
 exports[`getRoleRegistry given: the ghlitch role registry when: loaded then: it matches the expected structure 1`] = `
 {
-  "roleCount": 7,
+  "roleCount": 8,
   "roleSlugs": [
     "alerter",
     "budgeter",
     "deployer",
     "detective",
+    "guardian",
     "hardener",
     "observer",
     "operator",
