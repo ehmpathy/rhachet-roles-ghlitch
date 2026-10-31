@@ -1,0 +1,543 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`security.habitat.redteam (contract renders) given: [case1] help is requested when: [t0] help is the first token then: the full help stdout matches snapshot (visual vibecheck) 1`] = `
+"🐈 heres the deal...
+
+🧿 security.habitat.redteam — hunt a habitat the way an adversary would
+
+   the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+
+usage:
+  rhx security.habitat.redteam init --scope <path> --grain <grain>
+  rhx security.habitat.redteam --scope <path> --grain <grain> --peers <n> --budget <n> --mode plan
+  rhx security.habitat.redteam --scope <path> --grain <grain> --peers <n> --budget <n> --mode apply
+
+options:
+  --scope   habitat surface to sweep (a repo, a subtree)   (required)
+  --grain   infil | exfil | leak | all                     (required)
+  --peers   blind peers per grain-partition (breadth)      (default: 3)
+  --budget  the loop's spend allowance (drawn per cycle)   (default: 1)
+  --mode    plan | apply                                   (required)
+  --skip-route-bind   scaffold without a branch bind (escape hatch)
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case2] plan mode emits the partition + cost, drives no peer when: [t0] --grain all spreads three disjoint partitions then: it exits 0 and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain all --peers 6 --budget 3
+   ├─ scope: .
+   ├─ grains: infil exfil leak  (3 partition(s), disjoint by grain-surface)
+   ├─ peers: 6 per grain-partition  ⇒ 18 blind peers total
+   ├─ budget: 3 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 18 peers × 3 cycle(s) = up to 54 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ infil — "what reaches IN to this slice, from where, with what power?"
+      ├─ exfil — "by what channel could data leave this slice — net, DNS, log, webhook?"
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case2] plan mode emits the partition + cost, drives no peer when: [t1] a single grain defaults peers=3, budget=1 then: it exits 0 and matches snapshot 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain exfil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: exfil  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ exfil — "by what channel could data leave this slice — net, DNS, log, webhook?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t0] --scope is absent then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: absent required arg: --scope
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t1] --scope names a path that does not exist then: it names the found-miss and exits 2 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass a path that exists (a repo or a subtree)
+   └─ blocked: scope not found: ./nope
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t2] --grain is absent then: it names the valid set and exits 2 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass one of infil,exfil,leak,all
+   └─ blocked: absent required arg: --grain
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t3] --grain is not in the enum then: it names the invalid value and exits 2 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass one of infil,exfil,leak,all
+   └─ blocked: invalid grain: bogus
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t4] --peers is not a positive integer then: it exits 2 and names the fix 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass a positive integer (blind peers per grain-partition)
+   └─ blocked: invalid --peers: 0
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t5] --budget is not a positive integer then: it exits 2 and names the fix 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass a positive integer (the loop's spend allowance)
+   └─ blocked: invalid --budget: abc
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t6] --mode is absent on a non-init run then: it exits 2 and names the fix 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass plan or apply
+   └─ blocked: absent required arg: --mode
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t7] --mode is not in the enum then: it belays (exit 2), never a silent exit-0 no-op 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass plan or apply
+   └─ blocked: invalid --mode: bogus
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case3] argument constraints belay before any work when: [t8] an unknown argument is passed then: it is a constraint (exit 2) and matches snapshot 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: unknown argument: --bogus
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case4] init scaffolds the route (hermetic, --skip-route-bind) when: [t0] init runs through the main skill dispatch then: it exits 0 and matches snapshot (date masked) 1`] = `
+"🐈 anchors away!
+
+🧿 security.habitat.redteam init --scope . --grain all
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=all/ ✨
+   ├─ claims: .behavior/v<date>.guardian-redteam.grain=all/.claims/ (gitignored — live claims never publish)
+   ├─ stones
+      ├─ 1.ground.stone / .guard
+      ├─ 2.detect.stone / .guard
+      ├─ 3.verify.stone / .guard
+      ├─ 4.repair.stone / .guard
+      └─ 5.promote.stone / .guard
+   └─ skipped (--skip-route-bind)
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t0] init help is requested then: it renders the init help (snapshot) 1`] = `
+"🐈 heres the deal...
+
+🧿 security.habitat.redteam init — scaffold the ward-loop route
+
+usage:
+  rhx security.habitat.redteam init --scope <path> --grain <grain> [--peers <n>] [--budget <n>] [--skip-route-bind]
+
+args:
+  --scope <path>      the habitat surface to sweep (required)
+  --grain <grain>     one of infil,exfil,leak,all (required)
+  --peers <n>         blind peers per grain-partition (default: 3)
+  --budget <n>        the loop's spend allowance, drawn down per cycle (default: 1)
+  --skip-route-bind   scaffold the route but do not bind it to the branch
+
+what it does:
+  1. creates route at .behavior/v<date>.guardian-redteam.grain=<grain>[.scope=<token>]/
+     (the slug folds in the grain — and a scope token for a subtree — so two same-day sweeps get distinct routes)
+  2. copies the ward-loop .stone + .guard files
+  3. stands up a gitignored claims path (live claims never publish)
+  4. binds route to the current branch (unless --skip-route-bind)
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t1] an unknown argument is passed to init then: it belays (exit 2), never scaffolds under a wrong default 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: unknown argument: --bogus — see: rhx security.habitat.redteam help
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t2] --grain is given no value then: it belays about the absent value, never mis-scaffolds 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: absent value for --grain
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t3] --scope points at a path that does not exist then: it belays (exit 2) with scope-not-found, never scaffolds 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: scope not found: ./does-not-exist — pass a path that exists (a repo or a subtree)
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t4] --peers is not a positive integer then: it belays (exit 2) about invalid --peers, never scaffolds 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: invalid --peers: 0 — pass a positive integer
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t5] --budget is not a positive integer then: it belays (exit 2) about invalid --budget, never scaffolds 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: invalid --budget: x — pass a positive integer
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t6] init is invoked outside a git repository then: it belays (exit 2) about the absent git repository 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: not in a git repository — run this from within a repo
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case5] init guards its own args when invoked directly when: [t7] a route for today already exists then: the second refuses to clobber (exit 2) 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam init
+   └─ blocked: a redteam route for this grain+scope today already exists: .behavior/v<date>.guardian-redteam.grain=all — drive it (rhx route.drive) or remove it before a fresh init
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case6] apply scaffolds + hands off honestly when no route is bound when: [t0] apply runs with no bound route then: it reaches the handoff (exit 0) and matches snapshot (date masked) 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain exfil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: exfil  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ exfil — "by what channel could data leave this slice — net, DNS, log, webhook?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 anchors away!
+
+🧿 security.habitat.redteam --mode apply
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=exfil/ (scaffolded, NOT bound)
+   ├─ the ward loop runs through the route stones (blind peers are agent work):
+   │  ├─ 1.ground   — map the focus-surface per grain
+   │  ├─ 2.detect   — dispatch blind peers, fan claims in (keyed channel+mechanism)
+   │  ├─ 3.verify   — confirm vs tree, classify, sort by permanence trigger
+   │  ├─ 4.repair   — gated, disposition-aware, PENDING-REDETECT until confirmed
+   │  └─ 5.promote  — teach the kin (fullsun-safe), then loop or terminate
+   ├─ ⚠️ the route is NOT bound — bind it before you drive:
+   │  └─ rhx route.bind.set --route .behavior/v<date>.guardian-redteam.grain=exfil/
+   └─ then drive it: rhx route.drive
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case7] apply halts loud when the route probe malfunctions when: [t0] the bind probe cannot run then: it is a malfunction (exit 1), never a false clean terminal 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain exfil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: exfil  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ exfil — "by what channel could data leave this slice — net, DNS, log, webhook?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 wet paws...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ fix the cause above, then re-run
+   └─ halted: could not probe the bound route (rhx route.bind.get malfunctioned)
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case8] apply reuses a bound route only when its scope+grain match the request when: [t0] the request grain differs from the bound route then: it belays (exit 2) and names the mismatch, matches snapshot 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain infil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: infil  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ infil — "what reaches IN to this slice, from where, with what power?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 belay that...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ the bound route was scaffolded for a different sweep:
+   │  ├─ bound:     scope=. grain=leak peers=3 budget=1
+   │  └─ requested: scope=. grain=infil peers=3 budget=1
+   ├─ fix: re-run with the bound route's parameters, OR unbind
+   │       (rhx route.bind.del) and init a fresh route for this request
+   └─ blocked: requested sweep does not match the bound route
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case8] apply reuses a bound route only when its scope+grain match the request when: [t1] the request grain matches the bound route then: it reuses the route and hands off (exit 0) 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 anchors away!
+
+🧿 security.habitat.redteam --mode apply
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=leak (reused the bound route)
+   ├─ the ward loop runs through the route stones (blind peers are agent work):
+   │  ├─ 1.ground   — map the focus-surface per grain
+   │  ├─ 2.detect   — dispatch blind peers, fan claims in (keyed channel+mechanism)
+   │  ├─ 3.verify   — confirm vs tree, classify, sort by permanence trigger
+   │  ├─ 4.repair   — gated, disposition-aware, PENDING-REDETECT until confirmed
+   │  └─ 5.promote  — teach the kin (fullsun-safe), then loop or terminate
+   └─ drive it: rhx route.drive
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case8] apply reuses a bound route only when its scope+grain match the request when: [t2] the bound route's scope record cannot be read then: it halts (exit 1) and names the unreadable record 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 wet paws...
+
+🧿 security.habitat.redteam --mode apply
+   └─ halted: could not read the bound route's scope record: .behavior/v<date>.guardian-redteam.grain=leak/0.scope.md
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case8] apply reuses a bound route only when its scope+grain match the request when: [t3] the bind persists but its route dir is gone from disk then: it halts (exit 1) and names the bound route absent on disk 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 wet paws...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ bound route is absent on disk: .behavior/v<date>.guardian-redteam.grain=leak
+   ├─ fix: unbind (rhx route.bind.del), then re-run to scaffold fresh
+   └─ halted: the bind persists but its route dir + stones are gone
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case11] init binds the route (the real bind path, not skipped) when: [t0] the bind takes then: init exits 0 and reports the route bound to the branch 1`] = `
+"🐈 anchors away!
+
+🧿 security.habitat.redteam init --scope . --grain all
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=all/ ✨
+   ├─ claims: .behavior/v<date>.guardian-redteam.grain=all/.claims/ (gitignored — live claims never publish)
+   ├─ stones
+      ├─ 1.ground.stone / .guard
+      ├─ 2.detect.stone / .guard
+      ├─ 3.verify.stone / .guard
+      ├─ 4.repair.stone / .guard
+      └─ 5.promote.stone / .guard
+   └─ bound to branch main
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case11] init binds the route (the real bind path, not skipped) when: [t1] the requested bind does not take then: init halts (exit 1) and names the bind as NOT taken 1`] = `
+"🐈 anchors away!
+
+🧿 security.habitat.redteam init --scope . --grain all
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=all/ ✨
+   ├─ claims: .behavior/v<date>.guardian-redteam.grain=all/.claims/ (gitignored — live claims never publish)
+   ├─ stones
+      ├─ 1.ground.stone / .guard
+      ├─ 2.detect.stone / .guard
+      ├─ 3.verify.stone / .guard
+      ├─ 4.repair.stone / .guard
+      └─ 5.promote.stone / .guard
+   ├─ NOT bound: stub rhx: route.bind.set refused (STUB_BIND_RC=1) — retry: rhx route.bind.set --route .behavior/v<date>.guardian-redteam.grain=all
+   └─ halted: route scaffolded, but the bind did not take — retry above
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case13] apply reuse halts loud on a PARTIALLY-deleted bound route (the complete-set check, not merely non-empty) when: [t0] the bound route is on disk but one required file is gone then: it halts (exit 1), names the route incomplete, and names the absent file 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 wet paws...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ bound route is incomplete on disk: .behavior/v<date>.guardian-redteam.grain=leak
+   ├─ absent required file(s):
+   │  3.verify.guard
+   ├─ fix: unbind (rhx route.bind.del), then re-run to scaffold fresh
+   └─ halted: a partial route cannot be driven to terminal
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case14] apply scaffolds AND really binds a fresh route (the vision PRIMARY shape — no --skip-route-bind) when: [t0] no route is bound, so apply scaffolds and the bind takes then: it reaches the handoff (exit 0) and reports the route scaffolded + bound 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 anchors away!
+
+🧿 security.habitat.redteam --mode apply
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=leak (scaffolded + bound a fresh route)
+   ├─ the ward loop runs through the route stones (blind peers are agent work):
+   │  ├─ 1.ground   — map the focus-surface per grain
+   │  ├─ 2.detect   — dispatch blind peers, fan claims in (keyed channel+mechanism)
+   │  ├─ 3.verify   — confirm vs tree, classify, sort by permanence trigger
+   │  ├─ 4.repair   — gated, disposition-aware, PENDING-REDETECT until confirmed
+   │  └─ 5.promote  — teach the kin (fullsun-safe), then loop or terminate
+   └─ drive it: rhx route.drive
+
+   ⚠️ informational only — NOT professional security advice. analyses are
+      not exhaustive; consult a qualified security professional for any
+      assessment of your own habitat.
+"
+`;
+
+exports[`security.habitat.redteam (contract renders) given: [case15] apply scaffolds but the bind FAILS (init exits non-zero — the halt render) when: [t0] init cannot bind, so the scaffold does not cleanly land then: apply halts (exit 1), surfaces init under the gutter, and names the halt 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 partition(s), disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle(s) — each draws one detect → verify → repair pass
+   ├─ projected: 3 peers × 1 cycle(s) = up to 3 peer-dispatch runs
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 wet paws...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ init did not cleanly scaffold a fresh route:
+   │  🐈 anchors away!
+   │  🧿 security.habitat.redteam init --scope . --grain leak
+   │     ├─ route: .behavior/v<date>.guardian-redteam.grain=leak/ ✨
+   │     ├─ claims: .behavior/v<date>.guardian-redteam.grain=leak/.claims/ (gitignored — live claims never publish)
+   │     ├─ stones
+   │        ├─ 1.ground.stone / .guard
+   │        ├─ 2.detect.stone / .guard
+   │        ├─ 3.verify.stone / .guard
+   │        ├─ 4.repair.stone / .guard
+   │        └─ 5.promote.stone / .guard
+   │     ├─ NOT bound: stub rhx: route.bind.set refused (STUB_BIND_RC=1) — retry: rhx route.bind.set --route .behavior/v<date>.guardian-redteam.grain=leak
+   │     └─ halted: route scaffolded, but the bind did not take — retry above
+   │     ⚠️ informational only — NOT professional security advice. analyses are
+   │        not exhaustive; consult a qualified security professional for any
+   │        assessment of your own habitat.
+   └─ halted: fix the cause above, then re-run
+"
+`;

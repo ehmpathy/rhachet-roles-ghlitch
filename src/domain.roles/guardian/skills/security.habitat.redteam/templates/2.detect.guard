@@ -1,0 +1,21 @@
+artifacts:
+  - $route/.claims/2.detect.yield.md
+
+reviews:
+  self:
+    - slug: has-blind-disjoint-chains
+      say: |
+        did the detect stone dispatch blind, disjoint peers and return CHAINS?
+
+        BLOCKERS:
+        - a claim is a smell ("this looks risky"), not a chain (channel → mechanism → harm)
+        - a claim has no channel+mechanism key (so the fan-in cannot dedup, the re-detect cannot confirm)
+        - a prior cycle left PENDING-REDETECT keys in `.claims/0.cycle.md` and this detect did NOT re-hunt each one (§2.0) — the repair-trust check the promote stone waits on never ran
+        - a carried key was re-hunted but tagged neither REDETECT-ABSENT nor still-open (the verify stone has no flip to make)
+        - a research citation came from WebFetch/WebSearch, not a verbatim bhrowser read
+        - a peer read outside its assigned slice (an out-of-scope read is a reportable violation)
+        - two peers' same-chain claims were left un-merged, OR two distinct-mechanism claims were wrongly merged
+        - a live claim OR a yield that names a claim was written anywhere but the gitignored `.claims/` path (a driven + committed route would publish the map on the next push)
+
+        every claim is a chain, keyed on (channel, mechanism). blindness holds through 2.1/2.2;
+        blend is the one non-blind join.

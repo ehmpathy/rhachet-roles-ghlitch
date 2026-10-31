@@ -1,0 +1,21 @@
+artifacts:
+  - $route/.claims/3.verify.yield.md
+
+reviews:
+  self:
+    - slug: has-verified-and-sorted-by-permanence
+      say: |
+        did the verify stone confirm each claim and sort by the permanence trigger?
+
+        BLOCKERS:
+        - a claim marked CLOSED/confirmed with no command + output behind it (a claim, not a confirmation)
+        - a REDETECT-ABSENT key from detect §2.0 left un-flipped (not moved to CLOSED — the promote convergence test waits on that flip), OR flipped to CLOSED with no detect re-run behind it
+        - a false positive kept as a work item (a placeholder named a secret, a carve-out named a leak)
+        - the sort is by SEVERITY, not by the permanence trigger (leaks by deadline, infil+exfil by blast radius)
+        - leaks and infil/exfil interleaved before the end (the cheap irreversible leaks must not expire behind attacker-triggered items)
+        - a third-party disclosure routed to a repair or an issue instead of a private channel
+        - a disposition absent on any verified claim
+        - the roadmap written anywhere but the gitignored `.claims/` path (it names live claims — a driven + committed route would publish the map on the next push)
+        - the roadmap emitted with no not-security-advice disclaimer (it is a recommendation surface a human acts on — rule.require.recommendation-disclaimer)
+
+        a peer read is a lead, never a verdict. the sort key follows who fires the permanence, not how scary it sounds.

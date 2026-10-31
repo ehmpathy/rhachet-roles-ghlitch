@@ -401,6 +401,24 @@
             "command": "./node_modules/.bin/rhachet roles boot --repo bhrowser --role playwright",
             "timeout": 60,
             "author": "repo=bhrowser/role=playwright"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --role dreamer",
+            "timeout": 10,
+            "author": "repo=bhuild/role=dreamer"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --repo ghlitch --role guardian",
+            "timeout": 60,
+            "author": "repo=ghlitch/role=guardian"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles boot --role telepath",
+            "timeout": 30,
+            "author": "repo=bhrain/role=telepath"
           }
         ]
       },
@@ -557,6 +575,12 @@
             "command": "./node_modules/.bin/rhx route.drive --when hook.onStop",
             "timeout": 5,
             "author": "repo=bhrain/role=driver"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx elucidate.summary --when hook.onStop",
+            "timeout": 5,
+            "author": "repo=bhrain/role=telepath"
           }
         ]
       }

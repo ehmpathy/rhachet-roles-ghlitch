@@ -1,0 +1,106 @@
+dispatch blind peers over the disjoint slices; hunt candidate claims two ways; fan them all in.
+
+.why = a code review asks "is this code good?"; a redteam asks "what reaches in, what could get
+out, what's already out?". the grain does the work a review is blind to. blind, disjoint peers
+catch compositional chains a shared theory would miss.
+
+read `.claims/1.ground.yield.md` for the partition. dispatch one blind peer per slice (via the Agent
+mechanism — fresh context per peer, no shared summary). each peer hunts ITS slice only.
+
+---
+
+## 2.0 re-detect the prior cycle's repairs FIRST — the trust check the loop rests on
+
+**this stone is the one that confirms a repair held.** the repair stone marks each fix
+PENDING-REDETECT and earns it CLOSED only here; the promote stone's convergence test reads
+"repairs held (re-detect confirmed)". so before the fresh hunt, re-detect every repair the last
+cycle made — otherwise the whole repair-safety story references a check no stone performs.
+
+read `.claims/0.cycle.md` (the cross-cycle record — named by convention so a fresh agent context
+after a rewind finds it). it carries, per prior cycle, the open `{channel}::{mechanism}`
+PENDING-REDETECT keys. for each carried key:
+
+- **re-hunt that exact channel + mechanism against the repaired tree** (re-run the command that
+  banked the claim in the first place — the grep, the config read, the port probe).
+- a key whose channel + mechanism **no longer matches** → mark it **REDETECT-ABSENT**. the verify
+  stone flips a REDETECT-ABSENT key to CLOSED (the repair held).
+- a key that **still matches** → the repair did NOT hold. keep it an open claim, carried forward into
+  this cycle's candidate set alongside the fresh hunt below.
+
+⚠️ **trust follows the re-detect, never a yield file.** read the keys from `.claims/0.cycle.md`, not
+from `.claims/4.repair.yield.md` — the rewind that restarts this stone may archive the repair yield
+out from under you, but `0.cycle.md` is written to survive it (see `5.promote.stone`). if there is no
+prior cycle (the first pass), `0.cycle.md` carries no keys — proceed straight to the fresh hunt.
+
+---
+
+## each peer itemizes its findings TWO ways
+
+### 2.1 detect.via_imagination
+the peer reasons from its slice + first principles. the instinct that hunts PAST any checklist and
+catches novel chains. itemize every candidate.
+
+### 2.2 detect.via_research
+the peer researches the current vuln landscape for the subjects on its slice, grounded on the
+`inventory.of=vuln.class` corpus (known classes). cite each source **verbatim via the bhrowser**
+(never WebFetch/WebSearch — see `rule.require.bhrowser-citations`). itemize every candidate.
+
+> a checklist alone misses novel chains; instinct alone misses known classes. the value is the AND.
+
+---
+
+## 2.3 detect.blend — the TOTAL fan-in
+
+merge the itemized candidates on **both** axes at once:
+- **within each peer** — its 2.1 + 2.2 findings
+- **across peers** — dedup a chain two peers reached from opposite ends
+
+**the dedup key = the (channel, mechanism) pair, NOT the prose.** two blind peers describe the same
+chain in different words. same channel + same mechanism → one claim, merge. same channel +
+different mechanism → two claims, keep both. this key doubles as the re-detect key later.
+
+blindness held through 2.1 / 2.2; blend is the ONE non-blind join.
+
+---
+
+## ⚠️ the KNOWN BLIND SPOT — the aggregate map (deferred)
+
+blind, disjoint peers catch compositional chains, but they **cannot** see a leak that is a property
+of the WHOLE corpus — the *map* (topology + principal names + retrieval commands + guardrail status)
+that no single slice holds, yet the published SET discloses. a union reader whose scope is the whole
+tree would see it, but that reader breaks the blindness the rest of the sweep depends on.
+
+this v1 does **not** run that non-blind union pass — it is deferred (a design call the vision left
+open). so blend must **flag** a suspected aggregate map as an open item for a separate non-blind
+review, and must NOT report "no leaks, clean" on the strength of the blind slices alone. the map is
+the highest-value leak and the one this method is weakest on; name the gap, never paper over it.
+
+---
+
+## every claim is a CHAIN, never a smell
+
+| grain | the chain |
+|-------|-----------|
+| **infil** | entry point → mechanism → blast radius |
+| **exfil** | exit channel → mechanism → blast radius \| audience |
+| **leak**  | exposure → audience → payload |
+
+record each claim into `$route/.claims/{grain}/{peer-slug}.md` (gitignored — a live claim NEVER
+publishes). the per-grain namespace keeps the three disjoint grain-partitions from a filename clash
+in one flat dir, and attributes each claim file to its grain + slice without a read. EVERY artifact
+that names a claim — the per-claim records AND the yield below — lives under `.claims/`; no artifact
+with a channel/mechanism/blast-radius lands in the tracked route root.
+
+## emit
+
+```
+### claim: {short name}
+- grain: {infil | exfil | leak}
+- channel: {the entry/exit point, or the exposed-value location}
+- mechanism: {what makes it exploitable}
+- blast-radius | audience | payload: {the harm}
+- found-by: {which peer(s), which method(s)}
+- key: {channel}::{mechanism}   ← the dedup + re-detect key
+```
+
+emit the candidate set into $route/.claims/2.detect.yield.md (all claim records live under .claims/)

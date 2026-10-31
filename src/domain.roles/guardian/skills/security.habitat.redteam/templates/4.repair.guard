@@ -1,0 +1,21 @@
+artifacts:
+  - $route/.claims/4.repair.yield.md
+
+reviews:
+  self:
+    - slug: has-gated-repairs-with-proof
+      say: |
+        did the repair stone gate each repair by disposition, prove each closure, and hold
+        each repair as PENDING-REDETECT until the next detect confirms it?
+
+        BLOCKERS:
+        - a repair marked CLOSED rather than PENDING-REDETECT (a repair is trusted only after the next detect, never on the edit)
+        - a repaired claim with no command + output behind it (a claim, not a closure)
+        - a third-party disclosure auto-repaired, committed, or routed to an issue (the mechanism IS the payload — private channel only)
+        - a repair begun before the verify stone's sorted roadmap exists (repair follows the sorted roadmap, never precedes it — a route only ever exists because apply ran, so this is the reachable hazard, not a plan-mode run)
+        - the roadmap order broken — a phase-2 blast-radius item repaired before a phase-1 deadline leak
+        - a repair with no re-detect key (the channel::mechanism key must carry, so the next detect can confirm)
+        - the repair log written anywhere but the gitignored `.claims/` path (it names each closed hole AND the fix command that proves what was vulnerable — a driven + committed route would publish it on the next push)
+
+        a repair mutates the tree. an unverified fix can open a worse path than it closed —
+        so trust follows the re-detect, never the edit.

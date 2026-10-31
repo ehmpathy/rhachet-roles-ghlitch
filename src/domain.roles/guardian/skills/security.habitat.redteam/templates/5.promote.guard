@@ -1,0 +1,24 @@
+artifacts:
+  - $route/.claims/5.promote.yield.md
+
+reviews:
+  self:
+    - slug: has-fullsun-gate-and-terminal-verdict
+      say: |
+        did the promote stone gate every dispatched lesson through fullsun-safe, and emit a
+        terminal verdict on budget AND convergence?
+
+        BLOCKERS:
+        - a dispatched radio task that carries a path, host, key, or identifier from this tree (a live claim, not a fullsun-safe class)
+        - a lesson dispatched that could not have its specifics stripped and its lesson kept (keep it in .claims/, do not dispatch)
+        - a terminal verdict absent — no {converged | budget-out-with-critical} state stated
+        - a budget-out state with critical claims open that terminates SILENTLY (must escalate "add budget" to the human)
+        - convergence claimed with critical claims still open, or with repairs still PENDING-REDETECT (unconfirmed)
+        - a loop-back decision taken with budget exhausted (budget is the cap; convergence is the terminal)
+        - a loop-back decision with no named rewind command (the route is forward-only — "loop" MUST name `rhx route.stone.set --stone 2.detect --as rewound`, or the walking agent has no command to invoke)
+        - a loop-back that does not carry the open PENDING-REDETECT keys into `.claims/0.cycle.md` first (the rewind may clear the yield that holds them — the re-detect trust check would silently lose its record)
+        - the verdict written anywhere but the gitignored `.claims/` path (it names the open critical claims — a driven + committed route would publish them on the next push)
+        - the verdict emitted with no not-security-advice disclaimer (it is a recommendation surface a human acts on — rule.require.recommendation-disclaimer)
+
+        promote is the hinge: teach the kin only what is safe to publish, then decide loop or
+        terminate on budget AND convergence — never a silent stop while critical claims remain.

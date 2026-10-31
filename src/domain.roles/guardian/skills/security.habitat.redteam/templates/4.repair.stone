@@ -1,0 +1,58 @@
+repair each verified claim — gated, per-claim, disposition-aware. a repair mutates the tree,
+so it is the most dangerous stone: a bad fix can open a worse hole than the one it closed.
+
+.why = a redteam that only reports is a roadmap nobody walks. but a repair that runs blind is
+worse than the malady — an egress allowlist set too wide opens a path that looks narrower and is
+worse. so every repair is gated by its disposition, and no repair is trusted until the NEXT
+detect confirms it.
+
+read `.claims/3.verify.yield.md` — the sorted roadmap. walk it in order (phase 1 leaks first, by
+deadline; phase 2 infil + exfil, by blast radius). for each claim:
+
+---
+
+## 1. repair by disposition
+
+the disposition (set in verify) decides who repairs, and how:
+
+| disposition | the repair |
+|-------------|-----------|
+| **own-tree fix** | fix in the repo — close the channel (an egress allowlist, a log redactor, a scoped grant, an input guard) |
+| **redact** | remove the leaked value from HEAD, before the next push (deadline-driven) |
+| **third-party disclosure** | 🛑 **NEVER auto-repair.** the mechanism IS the payload; redaction cannot fix it. route to a PRIVATE channel — never an issue, never a commit |
+
+a repair runs ONLY inside `--mode apply`. plan mode stops at the roadmap.
+
+## 2. every CLOSED carries its proof
+
+⚠️ a claim marked repaired with no command + output behind it is a **claim, not a closure**. a
+closure was once written from a summary — the value was live three files away. so each repair
+records:
+- the command that closed it
+- that command's exact output
+
+## 3. the re-detect trust check — a repair is PENDING-REDETECT, never CLOSED
+
+a repair mutates the surface, so you cannot trust it yet. mark it **PENDING-REDETECT**, never
+CLOSED. it earns CLOSED only when the NEXT loop's detect confirms BOTH:
+- the claim's `(channel, mechanism)` key no longer matches → the hole is gone
+- no NEW claim opened at that key → the fix did not open a worse path
+
+the `(channel, mechanism)` key from detect doubles as the re-detect key. an unverified repair is
+a change that could be worse than the malady — so trust follows the re-detect, never the edit.
+
+## emit — the repair log
+
+```
+## repaired this loop (PENDING-REDETECT)
+1. {claim} — disposition: {own-tree fix} — key: {channel::mechanism}
+   - command: {the command that closed it}
+   - output: {that command's output}
+   - status: PENDING-REDETECT (next detect confirms)
+
+## routed to a private channel (NOT repaired here)
+- {third-party disclosure} — why redaction cannot fix it
+```
+
+emit into $route/.claims/4.repair.yield.md (gitignored — the repair log names each closed hole AND
+the fix command that proves what was vulnerable, so it never lands in the tracked route root)

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `rhx` that answers the one probe the redteam apply path makes
+#
+# .why  = `security.habitat.redteam --mode apply` probes `rhx route.bind.get` to learn
+#         whether a redteam route is already bound. the default suite PATH omits rhx, so
+#         that probe fails and apply halts on a probe-malfunction — a real critipath the
+#         suite covers separately. this stub answers the probe so apply reaches its
+#         scaffold + honest-handoff branch (no route bound), OR — when a test sets
+#         STUB_BOUND_ROUTE — its route-reuse branch (a route IS bound), the core apply
+#         deliverables.
+#
+# .note = deliberately dumb. it answers `route.bind.get` from STUB_BOUND_ROUTE (empty by
+#         default = no route bound; a path = that route is bound), answers `route.bind.set`
+#         per STUB_BIND_RC (0 = the bind took; non-zero = the bind did not take, so init's
+#         exit-1 failure tree runs), and belays loudly on every other call, so a skill that
+#         grows a NEW rhx call cannot silently get an empty answer and take a wrong path
+#         while a test claims it reached the scaffold (rule.forbid.failhide).
+######################################################################
+set -euo pipefail
+
+# route.bind.get — echo the bound route. a test that models a REAL bind sets
+# STUB_BIND_STATE_FILE; route.bind.set writes the bound path there and this reads it back,
+# so one apply run sees "none bound" BEFORE the scaffold and the fresh route AFTER (the
+# vision's primary --mode apply shape). absent that file, fall back to STUB_BOUND_ROUTE
+# (empty = none bound; a path = that route is bound) — the static shape every other case uses.
+if [[ "${1:-}" == "route.bind.get" ]]; then
+  if [[ -n "${STUB_BIND_STATE_FILE:-}" && -s "${STUB_BIND_STATE_FILE}" ]]; then
+    cat "$STUB_BIND_STATE_FILE"
+    exit 0
+  fi
+  [[ -n "${STUB_BOUND_ROUTE:-}" ]] && echo "$STUB_BOUND_ROUTE"
+  exit 0
+fi
+
+# route.bind.set — the real init bind boundary. default success (rc 0); a test that sets
+# STUB_BIND_RC to a non-zero value drives init's "bind did not take" failure tree (exit 1).
+# on success, when STUB_BIND_STATE_FILE is set, persist the bound --route value so a later
+# route.bind.get re-probe returns it — models real rhx bind persistence for the happy path.
+if [[ "${1:-}" == "route.bind.set" ]]; then
+  if [[ "${STUB_BIND_RC:-0}" != "0" ]]; then
+    echo "stub rhx: route.bind.set refused (STUB_BIND_RC=$STUB_BIND_RC)" >&2
+    exit "$STUB_BIND_RC"
+  fi
+  if [[ -n "${STUB_BIND_STATE_FILE:-}" ]]; then
+    shift
+    bind_route=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --route) bind_route="${2:-}"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    printf '%s\n' "$bind_route" > "$STUB_BIND_STATE_FILE"
+  fi
+  exit 0
+fi
+
+echo "stub rhx: unhandled call: $*" >&2
+exit 1
