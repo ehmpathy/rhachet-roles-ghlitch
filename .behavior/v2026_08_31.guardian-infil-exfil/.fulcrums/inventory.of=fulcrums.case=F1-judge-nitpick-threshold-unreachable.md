@@ -60,4 +60,6 @@ equally trivial. no caller, contract, or artifact depends on the value.
 
 ## verdict once ruled
 
-_(awaits wisher)_
+refused, by the director (seed S1). no mutate grant; `--allow-nitpicks` stays 7. the tally drops
+via per-concern absorption instead: a disputed concern sheds from the tally, cached lanes included.
+the sealed-file fixes stay caught as dreams.

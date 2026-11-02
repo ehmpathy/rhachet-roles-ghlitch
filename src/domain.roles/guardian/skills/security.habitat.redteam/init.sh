@@ -3,28 +3,35 @@
 # .what = init subcommand for security.habitat.redteam
 #
 # .why  = scaffolds a route with the ward-loop stones + guards, and a
-#         session-durable, GITIGNORED claims path — so a brain can walk
+#         session-durable, gitignored claims path — so a brain can walk
 #         ground → detect → verify → repair → promote → (loop | terminate).
 #
 # prereqs:
-#   - inside a git repository
+#   - inside a git repository (any subtree; the route lands at the repo root)
 #
 # guarantee:
-#   ✔ creates route at .behavior/v<date>.guardian-redteam.grain=<grain>[.scope=<token>]/
-#     (the slug folds the grain + a subtree scope token — see as_route_slug; init_help
+#   ✔ creates route at <repo root>/.behavior/v<date>.guardian-redteam.grain=<grain>[.scope=<token>]/
+#     (the slug folds the grain + a subtree scope token — see get_route_slug; init_help
 #     prints the concrete form)
 #   ✔ copies all .stone and .guard files
 #   ✔ stands up a gitignored claims path (live claims never publish)
 #   ✔ binds route to current branch
-#   ✔ fail-fast on any error
+#   ✔ a failed scaffold removes its partial route, so a retry is never blocked — and says so
+#     only when the removal took; a removal that fails names the leftover path
+#   - exit 0 = route scaffolded (and bound, unless --skip-route-bind)
+#   - exit 1 = malfunction (git, the install, a write, or the bind broke)
+#   - exit 2 = constraint (absent/invalid args, absent scope, not a repo, a route already stands)
 ######################################################################
 set -euo pipefail
 
 INIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$INIT_DIR/output.sh"
 
+INIT_CMD="$SKILL_NAME init"
+INIT_HINT="$(as_command_hint "$SKILL_NAME" init)"
+
 # parse arguments (passed through from the main skill, or invoked directly).
-# --scope/--grain are REQUIRED, never defaulted — a defaulted sweep surface is a
+# --scope/--grain are required, never defaulted — a defaulted sweep surface is a
 # forbidden config-default (rule.forbid.config-defaults); the parent skill always
 # supplies both, and a direct invocation must too.
 SCOPE=""
@@ -34,235 +41,233 @@ BUDGET="1"
 SKIP_ROUTE_BIND=""
 
 init_help() {
-  echo "🐈 heres the deal..."
-  echo ""
-  echo "🧿 security.habitat.redteam init — scaffold the ward-loop route"
+  print_cat_header "heres the deal..."
+  print_tree_start "$INIT_CMD — scaffold the ward-loop route"
   echo ""
   echo "usage:"
-  echo "  rhx security.habitat.redteam init --scope <path> --grain <grain> [--peers <n>] [--budget <n>] [--skip-route-bind]"
+  echo "  rhx $INIT_CMD --scope <path> --grain <grain> [--peers <n>] [--budget <n>] [--skip-route-bind]"
   echo ""
   echo "args:"
   echo "  --scope <path>      the habitat surface to sweep (required)"
   echo "  --grain <grain>     one of $(as_grain_hint) (required)"
-  echo "  --peers <n>         blind peers per grain-partition (default: 3)"
-  echo "  --budget <n>        the loop's spend allowance, drawn down per cycle (default: 1)"
+  echo "                      $GRAIN_GLOSS"
+  echo "  --peers <n>         blind peers per grain-partition, 1 to $COUNT_MAX (default: 3)"
+  echo "  --budget <n>        the loop's spend allowance, 1 to $COUNT_MAX cycles (default: 1 — one pass, no re-detect)"
   echo "  --skip-route-bind   scaffold the route but do not bind it to the branch"
   echo ""
   echo "what it does:"
-  echo "  1. creates route at .behavior/v<date>.guardian-redteam.grain=<grain>[.scope=<token>]/"
+  echo "  1. creates route at <repo root>/.behavior/v<date>.guardian-redteam.grain=<grain>[.scope=<token>]/"
   echo "     (the slug folds in the grain — and a scope token for a subtree — so two same-day sweeps get distinct routes)"
   echo "  2. copies the ward-loop .stone + .guard files"
   echo "  3. stands up a gitignored claims path (live claims never publish)"
   echo "  4. binds route to the current branch (unless --skip-route-bind)"
+  echo ""
+  echo "exit: 0 = scaffolded · 1 = malfunction · 2 = constraint"
+  print_disclaimer
   exit 0
 }
 
-# reject an absent value, or a flag-token where a value is required — the same
-# loud-fail shape the parent skill uses (consistent-skill-contracts).
+# orchestrator: bind the shared require_flag_val (output.sh; belays + exits on an absent value
+# or a flag-token where a value is required) to init's header and hint, as the parent skill does.
+# $1 = flag name, $2 = candidate value, $3 = the fix item.
 require_init_val() {
-  if [[ -z "$2" || "$2" == --* ]]; then
-    print_belay "absent value for $1" "security.habitat.redteam init"
-    exit 2
+  require_flag_val "$INIT_CMD" "$1" "$2" "$3" "$INIT_HINT"
+}
+
+# halt as a constraint (exit 2) / a malfunction (exit 1) under init's header — the shared pair
+# (belay_with / halt_with, output.sh) bound to it. $1 = message, then items.
+belay_init() {
+  belay_with "$INIT_CMD" "$@"
+}
+halt_init() {
+  halt_with "$INIT_CMD" "$@"
+}
+
+# halt as a malfunction after the route dir was made: remove the partial route first, so the
+# retry meets no clobber refusal over a half-built route. the item says what the removal did:
+# a clean start when it took, the leftover path and its cause when it did not.
+# $1 = the route this run made, $2 = message, then items.
+halt_init_scaffold() {
+  local route="$1"
+  halt_init "$2" "${@:3}" "$(del_route_dir_as_note "$route")"
+}
+
+# orchestrator: remove a partial route, and say what the removal did — a clean start when it
+# took, the leftover path and its cause when it did not.
+del_route_dir_as_note() {
+  local route="$1" said
+  said="$(del_route_dir "$route")" && { as_partial_route_removed_note; return 0; }
+  as_partial_route_removal_broke_note "$route" "$said"
+}
+
+# transformers: the note on a partial route's removal — a clean start, or the leftover and its cause.
+as_partial_route_removed_note() {
+  printf 'the partial route was removed; a retry starts clean'
+}
+as_partial_route_removal_broke_note() {
+  print_malfunction_cause 'the partial route could not be removed: %s (%s) — remove it before a retry' "$1" "$2"
+}
+
+# orchestrator: close the run on the exclusive mkdir's verdict — a route that already stands
+# belays (exit 2), a create that broke halts (exit 1); rc 0 returns.
+# $1 = the mkdir rc, $2 = its cause, $3 = the route.
+exit_on_route_dir_verdict() {
+  local rc="$1" said="$2" route="$3"
+  (( rc == 0 )) && return 0
+  (( rc == ROUTE_DIR_EXTANT )) && belay_init "a route for this grain + scope already stands today" \
+    "route: $route" "$(as_route_extant_fix "$route")"
+  halt_init "could not create the route dir: $route" "cause: $(as_qualified_cause "$said")" "$(as_route_write_fix "$said")"
+}
+
+# transformer: the fix for a route that already stands today — drive it (bound first, when a
+# skipped or failed bind left it unbound), or remove it, which loses what its .claims/ hold.
+as_route_extant_fix() {
+  printf 'fix: drive it (rhx route.drive — if unbound, rhx route.bind.set --route %s first), or remove the route dir, then re-run to scaffold fresh (the .claims/ it holds are lost)' "$1"
+}
+
+# guard: is the install sound for this scaffold? the one owner of the concept — the templates
+# dir stands, it held stones, and every required file landed. a fault halts (exit 1) and removes
+# the partial route; rc 0 returns. $1 = the templates dir, $2 = the route, $3 = the count copied.
+require_install_sound() {
+  local templates="$1" route="$2" copied="$3" absent
+  [[ -d "$templates" ]] || halt_init_scaffold "$route" "the skill install is broken" \
+    "the templates dir is absent: $templates" "$FIX_REINSTALL"
+  [[ "$copied" -eq 0 ]] && halt_init_scaffold "$route" "the skill install is broken" \
+    "no .stone/.guard templates found in $templates" "$FIX_REINSTALL"
+  # a count > 0 is no proof of a complete scaffold: confirm the whole required set landed
+  absent="$(get_route_absent_files "$route")"
+  [[ -n "$absent" ]] && halt_init_scaffold "$route" "the skill install is broken" \
+    "partial scaffold: $route" "$(as_absent_files_item "$absent")" "$FIX_REINSTALL"
+  return 0
+}
+
+# orchestrator: validate the request — the one sweep check the parent skill runs too
+# (get_sweep_request_fault).
+require_init_request_sound() {
+  local fault
+  fault="$(get_sweep_request_fault "$SCOPE" "$GRAIN" "$PEERS" "$BUDGET")" \
+    || belay_init "$(as_fault_message "$fault")" "$(as_fault_fix "$fault")" "$INIT_HINT"
+}
+
+# orchestrator: anchor at the repo root, where route.drive looks — the one anchor the parent
+# skill runs too: not-a-repo is a constraint (exit 2), any other git break a malfunction. then
+# name the scope from the root, and move there. sets SCOPE (root-relative) and ROUTE_PATH.
+set_init_anchor() {
+  local said
+  exit_unless_repo_root "$INIT_CMD"
+  said="$(get_scope_from_repo_root "$SCOPE" "$REPO_ROOT")" \
+    || halt_init "could not name the scope from the repo root" "cause: $said" "$FIX_SCOPE_ENTER"
+  SCOPE="$said"
+  cd "$REPO_ROOT"
+  # the route this sweep lands at today (get_route_slug carries the why of its name)
+  ROUTE_PATH="$(get_route_path "$GRAIN" "$SCOPE")" \
+    || halt_init "could not name today's route — the clock read broke" "cause: $ROUTE_PATH" "$FIX_TOOL_RETRY"
+}
+
+# orchestrator: refuse to rebind over a bound route. a scaffold that skips the bind touches no
+# bind, so it needs no probe.
+require_init_unbound() {
+  [[ "$SKIP_ROUTE_BIND" == "1" ]] && return 0
+  local probe_rc=0 bound
+  bound="$(get_bound_route)" || probe_rc=$?
+  exit_on_bound_probe_verdict "$INIT_CMD" "$probe_rc" "$bound" \
+    "could not probe the bound route — cannot check for a bound redteam route"
+  [[ -n "$bound" ]] && belay_init "one route binds at a time" \
+    "already bound to a $ROUTE_KIND route: $bound" \
+    "fix: drive it (rhx route.drive), or unbind (rhx route.bind.del) and remove the route dir, then re-run to scaffold fresh (the .claims/ it holds are lost)"
+  return 0
+}
+
+# orchestrator: create the route dir exclusively (the clobber guard and the create in one
+# step), then fill it — templates, install check, claims path, scope record. from the create on,
+# a failure removes the partial route (halt_init_scaffold).
+set_init_route() {
+  local templates="$INIT_DIR/templates" mkdir_rc=0 said copied
+  said="$(gen_route_dir_exclusive "$ROUTE_PATH")" || mkdir_rc=$?
+  exit_on_route_dir_verdict "$mkdir_rc" "$said" "$ROUTE_PATH"
+  copied="$(copy_route_templates "$templates" "$ROUTE_PATH")" \
+    || halt_init_scaffold "$ROUTE_PATH" "could not copy the route templates" "cause: $copied" \
+      "fix: check that the skill's templates/ are readable and .behavior/ is writable, then re-run"
+  require_install_sound "$templates" "$ROUTE_PATH" "$copied"
+  said="$(set_claims_dir "$ROUTE_PATH/.claims")" \
+    || halt_init_scaffold "$ROUTE_PATH" "could not stand up the gitignored claims path" "cause: $(as_qualified_cause "$said")" "$(as_route_write_fix "$said")"
+  said="$(set_scope_record "$ROUTE_PATH" "$SCOPE" "$GRAIN" "$PEERS" "$BUDGET")" \
+    || halt_init_scaffold "$ROUTE_PATH" "could not write the scope record" "cause: $(as_qualified_cause "$said")" "$(as_route_write_fix "$said")"
+}
+
+# guard: did the bind take (or was it skipped on request)? $1 = the bind's rc.
+is_init_bind_taken() {
+  (( $1 == 0 ))
+}
+
+# print the init render — the route, its claims dir, its stones, and the bind state — and close
+# the tree on the next step, or on a qualified malfunction when a requested bind did not take.
+# the scaffold stands either way. the stone list is derived from the route dir
+# (print_route_stones), so the render can never drift from what actually landed. renders only;
+# the exit belongs to exit_on_init_bind_verdict. $1 = the bind's rc, $2 = the bind state line.
+print_init_render() {
+  local bind_rc="$1" bind_state="$2" mascot="anchors away!" mark=" ✨"
+  is_init_bind_taken "$bind_rc" || { mascot="$(as_belay_mascot "$SEVERITY_MALFUNCTION")"; mark=""; }
+  print_cat_header "$mascot"
+  print_tree_start "$INIT_CMD --scope $SCOPE --grain $GRAIN"
+  print_tree_branch "route" "$ROUTE_PATH/$mark"
+  print_tree_branch "claims" "$ROUTE_PATH/.claims/ (gitignored — live claims never publish)"
+  print_tree_item "stones"
+  print_route_stones "$ROUTE_PATH" "   │  "
+  print_tree_item "$bind_state"
+  # clean run: the next command — the same next step the apply handoff names
+  if is_init_bind_taken "$bind_rc"; then
+    print_tree_item "$(as_route_next_step "$ROUTE_PATH" "$SKIP_ROUTE_BIND")" "$TREE_LAST"
+    print_disclaimer
+    return 0
   fi
+  # a requested bind did not take: the tree closes on a qualified malfunction, the cause mid-tree
+  print_tree_item "$(as_belay_close_line "$SEVERITY_MALFUNCTION" "route scaffolded, but the bind did not take — retry above")" "$TREE_LAST"
+  print_disclaimer
+}
+
+# orchestrator: close the run on the bind verdict — exit 0 when it took, exit 1 when a requested
+# bind did not (a malfunction of a stated guarantee, never faked as success). $1 = the bind's rc.
+exit_on_init_bind_verdict() {
+  is_init_bind_taken "$1" && exit 0
+  exit 1
+}
+
+# orchestrator: the scaffold, one named step per line. the bind state is captured here, so the
+# bind, the render, and the exit stay three steps a caller can take apart.
+run_init_scaffold() {
+  local bind_state bind_rc=0
+  require_init_request_sound
+  set_init_anchor
+  require_init_unbound
+  set_init_route
+  bind_state="$(set_route_bind_unless_skipped "$ROUTE_PATH" "$SKIP_ROUTE_BIND")" || bind_rc=1
+  print_init_render "$bind_rc" "$bind_state"
+  exit_on_init_bind_verdict "$bind_rc"
 }
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     help|--help|-h) init_help ;;
     --scope)
-      require_init_val --scope "${2:-}"
+      require_init_val --scope "${2:-}" "$FIX_SCOPE"
       SCOPE="$2"; shift 2 ;;
     --grain)
-      require_init_val --grain "${2:-}"
-      if ! is_valid_grain "$2"; then
-        print_belay "invalid grain: $2 — pass one of $(as_grain_hint)" "security.habitat.redteam init"; exit 2
-      fi
+      require_init_val --grain "${2:-}" "$(as_grain_fix)"
       GRAIN="$2"; shift 2 ;;
     --peers)
-      require_init_val --peers "${2:-}"
+      require_init_val --peers "${2:-}" "$FIX_PEERS"
       PEERS="$2"; shift 2 ;;
     --budget)
-      require_init_val --budget "${2:-}"
+      require_init_val --budget "${2:-}" "$FIX_BUDGET"
       BUDGET="$2"; shift 2 ;;
     --skip-route-bind) SKIP_ROUTE_BIND="1"; shift ;;
-    --skill|--repo|--role) shift; [[ $# -gt 0 && "$1" != --* ]] && shift ;;
-    *)
-      print_belay "unknown argument: $1 — see: rhx security.habitat.redteam help" "security.habitat.redteam init"
-      exit 2 ;;
+    --skill|--repo|--role) shift; is_passthrough_value "$@" && shift ;;
+    # a bare separator is dropped, as the sweep's own parse drops it
+    --) shift ;;
+    --*=*) belay_init "flag and value joined by '=': $1" "$(as_split_flag_fix "$1")" "$INIT_HINT" ;;
+    *) belay_init "unknown argument: $1" "fix: drop $1 (this command reads $FLAGS_READ_BY_INIT)" "$INIT_HINT" ;;
   esac
 done
 
-# --scope/--grain are required (never defaulted — rule.forbid.config-defaults)
-if [[ -z "$SCOPE" ]]; then
-  print_belay "absent required arg: --scope" "security.habitat.redteam init"
-  exit 2
-fi
-# the scope must be a real path — a direct init invocation validates existence too,
-# exactly as the parent skill does (security.habitat.redteam.sh). an init that
-# scaffolds a route + 0.scope.md for a surface that was never checked to exist is a
-# pit-of-failure: the sweep drives against a path that is not there.
-if [[ ! -e "$SCOPE" ]]; then
-  print_belay "scope not found: $SCOPE — pass a path that exists (a repo or a subtree)" "security.habitat.redteam init"
-  exit 2
-fi
-# canonicalize the surface so `.` and `./` (and `src/` vs `src`) land one route, not two,
-# and so a reuse request spelled either way matches the bound route (as_normalized_scope).
-SCOPE="$(as_normalized_scope "$SCOPE")"
-if [[ -z "$GRAIN" ]]; then
-  print_belay "absent required arg: --grain — pass one of $(as_grain_hint)" "security.habitat.redteam init"
-  exit 2
-fi
-
-# --peers/--budget default when the parent skill omits them, but a supplied value
-# must be a positive integer — a direct init invocation validates too (failfast),
-# via the one named guard shared with the parent orchestrator.
-if ! is_positive_integer "$PEERS"; then
-  print_belay "invalid --peers: $PEERS — pass a positive integer" "security.habitat.redteam init"
-  exit 2
-fi
-if ! is_positive_integer "$BUDGET"; then
-  print_belay "invalid --budget: $BUDGET — pass a positive integer" "security.habitat.redteam init"
-  exit 2
-fi
-
-# check we are in a git repo. capture stderr (never 2>/dev/null) so a genuine git break —
-# a corrupt repo, a permission error, a dubious-ownership refusal — is surfaced as a
-# malfunction (exit 1), never mislabeled "not a git repo" (exit 2, a constraint the operator
-# would chase by cd-ing around). only the fatal that NAMES "not a git repository" is the
-# real not-a-repo case; any other message git emits is a true break (rule.forbid.failhide —
-# the same failloud shape get_current_branch uses).
-# capture in a compound list (`|| GIT_PROBE_RC=$?`) so `set -e` does NOT abort on git's
-# non-zero exit before the classify below runs — a bare `VAR=$(cmd)` assignment under set -e
-# aborts the whole run (exit 128) on any git failure, which would defeat the whole point of
-# telling a real break apart from a plain not-a-repo.
-GIT_PROBE_RC=0
-GIT_PROBE_SAID="$(git rev-parse --git-dir 2>&1)" || GIT_PROBE_RC=$?
-if [[ "$GIT_PROBE_RC" -ne 0 ]]; then
-  if is_not_a_git_repo_error "$GIT_PROBE_SAID"; then
-    print_belay "not in a git repository — run this from within a repo" "security.habitat.redteam init"
-    exit 2
-  fi
-  print_belay "git malfunctioned while it probed the repo: $GIT_PROBE_SAID" "security.habitat.redteam init" "malfunction"
-  exit 1
-fi
-
-# compute the route slug (as_route_slug folds today's date, the grain, and a subtree
-# scope token into one collision-free name — its header carries the why).
-ROUTE_SLUG="$(as_route_slug "$GRAIN" "$SCOPE")"
-ROUTE_PATH=".behavior/${ROUTE_SLUG}"
-TEMPLATES_DIR="$INIT_DIR/templates"
-
-# refuse to clobber — idempotent + safe. a re-run must never rebind over an
-# already-bound redteam route (checked just below), and must never silently reuse a
-# route dir (the prior sweep's .claims/ would contaminate the new one). the dir-reuse
-# guard is ATOMIC at creation (the mkdir further down), never a check-then-act `-d`
-# test, so two concurrent inits — or an apply scaffold that runs beside a direct init —
-# cannot both pass the guard and overwrite each other's in-flight route
-# (rule.forbid.behavior-hazards). the rebind check fires regardless of --skip-route-bind.
-if [[ "${SKIP_ROUTE_BIND:-}" != "1" ]]; then
-  if ! BOUND_ROUTE="$(get_bound_route)"; then
-    print_belay "route.bind.get probe malfunctioned — cannot check for a bound redteam route" "security.habitat.redteam init" "malfunction"
-    exit 1
-  fi
-  if [[ -n "$BOUND_ROUTE" ]]; then
-    print_belay "already bound to a $ROUTE_KIND route: $BOUND_ROUTE — one route binds at a time; to run a DIFFERENT same-day sweep (another grain/scope), unbind first (rhx route.bind.del — non-destructive: the bound route dir + its .claims/ persist under their own distinct slug, resumable by a re-bind), then re-run init" "security.habitat.redteam init"
-    exit 2
-  fi
-fi
-
-# instantiate route. verify the templates dir actually holds stones/guards
-# BEFORE we report success — an absent/empty templates dir (a broken install)
-# must halt loud, never scaffold an empty route a brain cannot walk
-# (failfast + failloud).
-if [[ ! -d "$TEMPLATES_DIR" ]]; then
-  print_belay "the templates dir is absent: $TEMPLATES_DIR — the skill install is broken" "security.habitat.redteam init" "malfunction"
-  exit 1
-fi
-# create the route dir ATOMICALLY. `mkdir` without -p both creates the leaf AND is the
-# clobber guard in one syscall: if the dir already exists the mkdir fails, so a second
-# concurrent init cannot slip past a check-then-act `-d` test and overwrite the first's
-# in-flight route. the parent .behavior/ is made first (-p) — it is the shared, never the
-# contended, dir, so a non-atomic create there is safe. stderr is captured (never hidden)
-# so a genuine create malfunction surfaces rather than masquerade as a clobber.
-mkdir -p "$(dirname "$ROUTE_PATH")"
-MKDIR_SAID=""
-if ! MKDIR_SAID="$(mkdir "$ROUTE_PATH" 2>&1)"; then
-  if [[ -d "$ROUTE_PATH" ]]; then
-    print_belay "a redteam route for this grain+scope today already exists: $ROUTE_PATH — drive it (rhx route.drive) or remove it before a fresh init" "security.habitat.redteam init"
-    exit 2
-  fi
-  print_belay "could not create the route dir: $ROUTE_PATH ($MKDIR_SAID)" "security.habitat.redteam init" "malfunction"
-  exit 1
-fi
-STONES_COPIED="$(copy_route_templates "$TEMPLATES_DIR" "$ROUTE_PATH")"
-if [[ "$STONES_COPIED" -eq 0 ]]; then
-  print_belay "no .stone/.guard templates found in $TEMPLATES_DIR — the skill install is broken" "security.habitat.redteam init" "malfunction"
-  exit 1
-fi
-# a count > 0 is not proof of a COMPLETE scaffold — a partial copy (a bad glob, an
-# unreadable or absent template, a damaged install that drops some-but-not-all files)
-# copies some files, so the zero-check above passes. left unchecked, init would print
-# clean success, bind the route, and hand the operator off to `rhx route.drive` against
-# a route that lacks a stone/guard — a hidden-state hazard that fails the drive partway
-# for an invisible reason. verify the COMPLETE required set landed and halt loud (exit 1)
-# on any gap, the same loud-fail shape the zero-copy guard above uses (failfast + failloud).
-ABSENT_FILES="$(get_route_absent_files "$ROUTE_PATH")"
-if [[ -n "$ABSENT_FILES" ]]; then
-  print_belay "partial scaffold — the route lacks required files: $(as_oneline "$ABSENT_FILES") — the skill install is broken" "security.habitat.redteam init" "malfunction"
-  exit 1
-fi
-
-# stand up the gitignored claims path — the disposition gate's home.
-# a live claim is a hazard about THIS habitat; it must never be published
-# (the dispatch tool is itself an exfil channel). the ignore is a DEFAULT,
-# never the control — a `git add -f` walks past it, so the disposition gate
-# in the repair stone is the real guard.
-CLAIMS_DIR="$ROUTE_PATH/.claims"
-mkdir -p "$CLAIMS_DIR"
-# a self-ignored dir: all under .claims/ is ignored, except this .gitignore
-printf '%s\n' '*' '!.gitignore' > "$CLAIMS_DIR/.gitignore"
-
-# record the sweep parameters for the brain that walks the route (peers + budget
-# persisted here, never dropped — the ground stone sizes its partition by peers,
-# the promote stone draws the loop's spend from budget)
-set_scope_record "$ROUTE_PATH" "$SCOPE" "$GRAIN" "$PEERS" "$BUDGET"
-
-# bind route to branch. a bind is secondary — the scaffold already succeeded; so a bind
-# failure must not abort, but it must NOT be faked as success either, and its REAL cause
-# must surface (failhide / failloud). the bind i/o lives behind a named communicator
-# (set_route_bind) so this orchestrator reads as narrative.
-CURRENT_BRANCH="$(get_current_branch)"
-BIND_STATE="skipped (--skip-route-bind)"
-BIND_RC=0
-if [[ "${SKIP_ROUTE_BIND:-}" != "1" ]]; then
-  BIND_STATE="$(set_route_bind "$ROUTE_PATH" "$CURRENT_BRANCH")" || BIND_RC=1
-fi
-
-# output the vibes. the stone list is DERIVED from the route dir (print_route_stones),
-# so the render can never drift from what actually landed.
-print_cat_header "anchors away!"
-print_tree_start "security.habitat.redteam init --scope $SCOPE --grain $GRAIN"
-print_tree_branch "route" "$ROUTE_PATH/ ✨"
-print_tree_branch "claims" "$ROUTE_PATH/.claims/ (gitignored — live claims never publish)"
-if [[ "$BIND_RC" -eq 0 ]]; then
-  # clean run: the bind state is the tree's natural last item (zero exit, no prefix).
-  print_tree_item "stones"
-  print_route_stones "$ROUTE_PATH"
-  print_tree_item "$BIND_STATE" "true"
-  print_disclaimer
-else
-  # a requested bind did NOT take. the tree exits non-zero, so it closes on a
-  # `halted:` line (rule.require.consistent-skill-contracts). the NOT-bound cause is a
-  # mid-tree item; the close names the outcome.
-  print_tree_item "stones"
-  print_route_stones "$ROUTE_PATH"
-  print_tree_item "$BIND_STATE"
-  print_tree_item "halted: route scaffolded, but the bind did not take — retry above" "true"
-  print_disclaimer
-fi
-
-# a requested bind that did NOT take is a malfunction of a stated guarantee
-# (exit-code-semantics) — exit 1 so a direct caller / CI sees the route is not bound,
-# while the vibes above name the real cause. the parent apply path halts on ANY non-zero
-# init (it prints that output), so a bind-only failure never masquerades as a clean run.
-exit "$BIND_RC"
+run_init_scaffold

@@ -15,6 +15,12 @@ reviews:
         - leaks and infil/exfil interleaved before the end (the cheap irreversible leaks must not expire behind attacker-triggered items)
         - a third-party disclosure routed to a repair or an issue instead of a private channel
         - a disposition absent on any verified claim
+        - a leak's redact-vs-rotate split read from `git log --all` rather than `git log --remotes` after a fetch (`--all` cannot tell a remote commit from a local one: a local-only leak gets rotate it does not need, or a pushed one gets redact it cannot close)
+        - a leak re-hunt that reads `git log --all` with no `--exclude='refs/redteam-backup/*'` ahead of it (the repair's own backup ref still carries the value, so the claim could never CLOSE)
+        - a rotate claim sorted behind a next-run or next-push item in phase 1 (its value is already public — its exposure runs now)
+        - a rotate claim flipped CLOSED with no entry under its key in `.claims/rotate.proofs.md`, or left open when one stands
+        - a redact chosen after a fetch that failed (a stale `--remotes` cannot prove a value unpushed — read it as pushed, and rotate)
+        - a severity (critical|minor) absent on any verified claim (the promote stone's convergence test counts critical claims; an unrated claim escapes that count)
         - the roadmap written anywhere but the gitignored `.claims/` path (it names live claims — a driven + committed route would publish the map on the next push)
         - the roadmap emitted with no not-security-advice disclaimer (it is a recommendation surface a human acts on — rule.require.recommendation-disclaimer)
 

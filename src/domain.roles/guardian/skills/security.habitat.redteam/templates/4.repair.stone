@@ -18,10 +18,54 @@ the disposition (set in verify) decides who repairs, and how:
 | disposition | the repair |
 |-------------|-----------|
 | **own-tree fix** | fix in the repo — close the channel (an egress allowlist, a log redactor, a scoped grant, an input guard) |
-| **redact** | remove the leaked value from HEAD, before the next push (deadline-driven) |
+| **redact** | remove the leaked value from HEAD, AND rewrite each local, unpushed commit that carries it (`git log --exclude='refs/redteam-backup/*' --all -S '<value>'` names them), before the next push (deadline-driven) — valid only for a value no push has published yet (`git log --remotes -S '<value>'` names no commit, after a fetch) |
+| **rotate** | a leaked value already pushed (`git log --remotes -S '<value>'` names a commit, after a fetch — see `3.verify.stone` §2) — redaction clears HEAD, never history, so the value must be revoked or rotated at its issuer. 🛑 **a human runs it, never the agent**: a revoke reaches outside the habitat and can cut off a consumer that still runs on the value. draft the exact command (the issuer, the credential, each consumer it cuts off), hand it to the human, and hold the claim open until the human returns the command's output — that output is the proof |
 | **third-party disclosure** | 🛑 **NEVER auto-repair.** the mechanism IS the payload; redaction cannot fix it. route to a PRIVATE channel — never an issue, never a commit |
 
 a repair runs ONLY inside `--mode apply`. plan mode stops at the roadmap.
+
+### a history rewrite — backup first, never over uncommitted work
+
+a redact rewrites commits, and a rewrite can drop work no one pushed. so each rewrite passes
+the skill's gate first, on the branch it touches (checked out), never a hand-run `git branch` or
+`git update-ref`:
+
+```sh
+rhx security.habitat.redteam backup-before-rewrite
+```
+
+before the gate, commit this sweep's own edits — the HEAD redact and each own-tree fix — so the
+tree holds no work but the human's. the gate cannot tell the sweep's edits from a human's, and
+refuses both; an uncommitted own edit hands every rewrite to the human for no cause.
+
+a redact rewrites the checked-out branch alone. when the value also sits on another local
+branch, a tag, or a stash entry (`git log --exclude='refs/redteam-backup/*' --all -S '<value>'
+--format='%H %D'` names a commit HEAD does not reach, or `git stash list -p` shows it), that rest
+is the human's: log it under `## handed to a human to rewrite`, with each ref named.
+
+- exit 0 → the gate found no uncommitted work outside this skill's route dirs, and took a backup
+  ref at HEAD (`refs/redteam-backup/<branch>.<head-sha>`, read back). the rewrite may proceed on
+  that branch
+- exit 2 → uncommitted work stands, or no branch is checked out: do NOT rewrite. hand the rewrite
+  to the human (the drafted command, the branch, the commits it touches), log it under
+  `## handed to a human to rewrite`, and hold the claim open: promote counts it held on a human,
+  never still found
+- exit 1 → git broke: do NOT rewrite; report the cause
+
+🛑 a rewrite on a branch the gate did not back up in this repair is forbidden. a rewrite that
+touches more than the checked-out branch → hand the other branches to the human.
+record the gate's `backup:` and `restore:` lines in the repair log beside the rewrite command.
+
+the backup ref still carries the leaked value: that is what makes it an undo. so every leak
+re-hunt excludes `refs/redteam-backup/*` (`git log --exclude='refs/redteam-backup/*'
+--all -S '<value>'`), or the backup alone would hold the claim open forever. the ref sits
+outside `refs/heads/` and `refs/tags/`, so `git branch` never lists it and `git push --all` /
+`--tags` never send it. 🛑 never push a `refs/redteam-backup/` ref, and never push with
+`--mirror` or a `refs/*` refspec while one stands. the verdict names each backup for a human to
+delete (`git update-ref -d <backup>`) once the claim is CLOSED — the agent never deletes it.
+
+a fetch that fails (offline, a sandbox) cannot prove a value unpushed: read it as pushed, and
+rotate. redact only on a fetch that succeeded.
 
 ## 2. every CLOSED carries its proof
 
@@ -34,12 +78,26 @@ records:
 ## 3. the re-detect trust check — a repair is PENDING-REDETECT, never CLOSED
 
 a repair mutates the surface, so you cannot trust it yet. mark it **PENDING-REDETECT**, never
-CLOSED. it earns CLOSED only when the NEXT loop's detect confirms BOTH:
+CLOSED. the next loop's detect re-hunts its key and tags it REDETECT-ABSENT;
+verify flips it CLOSED only when that re-hunt confirms BOTH:
 - the claim's `(channel, mechanism)` key no longer matches → the hole is gone
 - no NEW claim opened at that key → the fix did not open a worse path
 
 the `(channel, mechanism)` key from detect doubles as the re-detect key. an unverified repair is
 a change that could be worse than the malady — so trust follows the re-detect, never the edit.
+
+⚠️ a leak's re-hunt reads history, not only the tree. a value absent from HEAD yet present in any
+commit (`git log --exclude='refs/redteam-backup/*' --all -S '<value>'`) stays open: a local commit ships it on the next push, and a
+pushed one is already public to whoever cloned or fetched it. a pushed leak CLOSES only on a rotate
+proof; a local one closes once the rewrite leaves no commit that carries it.
+
+## 4. every roadmap claim lands in the log — none may simply not appear
+
+walk the roadmap to its end. each claim `3.verify.yield.md` carries (phase 1, phase 2, and
+do-not-repair) lands in the log below under exactly one section: repaired, handed to a human (a
+rotate or a rewrite), routed to a private channel, or deferred with a stated reason. a claim the walk dropped is a
+verified hole that falls off the roadmap, and the loop can then converge with it still open.
+close the log with the count line, so the guard can tally it against the roadmap.
 
 ## emit — the repair log
 
@@ -48,10 +106,31 @@ a change that could be worse than the malady — so trust follows the re-detect,
 1. {claim} — disposition: {own-tree fix} — key: {channel::mechanism}
    - command: {the command that closed it}
    - output: {that command's output}
+   - backup: {the refs/redteam-backup/ ref taken before a rewrite, or `none — no rewrite`}
    - status: PENDING-REDETECT (next detect confirms)
 
+## handed to a human to revoke or rotate (NOT run here)
+- {claim} — key: {channel::mechanism}
+  - drafted command: {the revoke or rotate command, for the human to run}
+  - cuts off: {each consumer that runs on the value}
+  - status: open until the human records the command's output under this key in `.claims/rotate.proofs.md`
+
+## handed to a human to rewrite (the backup-before-rewrite gate exited 2 — NOT run here)
+- {claim} — key: {channel::mechanism}
+  - gate said: {the gate's refusal line — the uncommitted path, or no branch checked out}
+  - drafted rewrite: {the rewrite command, the branch, the commits it touches}
+  - status: open until the human clears the refusal and the gate exits 0
+
 ## routed to a private channel (NOT repaired here)
-- {third-party disclosure} — why redaction cannot fix it
+- {third-party disclosure} — key: {channel::mechanism} — why redaction cannot fix it
+
+## surface added (the next detect must hunt it)
+- {the new channel or file a repair made — an allowlist, a proxy config, a guard} — {the repair that added it}
+
+## deferred (NOT repaired this loop)
+- {claim} — key: {channel::mechanism} — why: {the stated reason, e.g. the budget ran out}
+
+roadmap claims: {N} · logged: {N}
 ```
 
 emit into $route/.claims/4.repair.yield.md (gitignored — the repair log names each closed hole AND
