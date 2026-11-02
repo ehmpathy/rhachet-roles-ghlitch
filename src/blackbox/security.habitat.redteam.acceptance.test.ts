@@ -82,7 +82,8 @@ const RHX_REFUSAL_BANNER: string = [
 /**
  * .what = a git habitat with the guardian and the bhrain driver installed, all committed
  * .why  = each given starts from the state a consumer meets after install: a clean tree
- * .note = branch null stays on main; a branch name checks out that feature branch, where a
+ * .note = the base branch is pinned to main whatever the host's default; branch null stays on
+ *         main; a branch name checks out that feature branch, where a
  *         real route bind is permitted (rhx route.bind.set refuses a protected branch)
  */
 const genInstalledHabitat = (input: {
@@ -106,6 +107,9 @@ const genInstalledHabitat = (input: {
     'git add -A && git -c user.name=Test -c user.email=human@example.com commit -q -m init',
     { cwd: dir },
   );
+
+  // pin the base branch to main: a host's init.defaultBranch (master on some ci runners) must not leak into a render
+  execSync('git branch -M main', { cwd: dir });
   if (input.branch)
     execSync(`git checkout -q -b ${input.branch}`, { cwd: dir });
   return { dir, initOutput };
