@@ -46,7 +46,7 @@ if [[ "${1:-}" == "route.bind.get" ]]; then
   count=$(( count + 1 ))
   printf '%s\n' "$count" > "$count_file"
   if [[ "$count" == "${STUB_BIND_GET_FAIL_ON:-}" ]]; then
-    echo "stub rhx: route.bind.get refused (call $count)" >&2
+    echo "stub rhx: route.bind.get refused" >&2
     exit 1
   fi
   [[ "$count" == "${STUB_BIND_GET_EMPTY_ON:-}" ]] && exit 0
@@ -69,7 +69,10 @@ fi
 # whose bind landed last: that path persists instead, so the read-back sees the winner.
 if [[ "${1:-}" == "route.bind.set" ]]; then
   if [[ "${STUB_BIND_RC:-0}" != "0" ]]; then
-    echo "stub rhx: route.bind.set refused (STUB_BIND_RC=$STUB_BIND_RC)" >&2
+    # STUB_BIND_SAID, when set, is the refusal text verbatim (e.g. the real protected-branch
+    # ConstraintError, with its run banner and color codes), so a case can pin how init reads it
+    [[ -n "${STUB_BIND_SAID:-}" ]] && { printf '%b\n' "$STUB_BIND_SAID"; exit "$STUB_BIND_RC"; }
+    echo "stub rhx: route.bind.set refused" >&2
     exit "$STUB_BIND_RC"
   fi
   shift
@@ -90,7 +93,7 @@ fi
 if [[ "${1:-}" == "route.stone.set" && -n "${STUB_REWIND_LOG:-}" ]]; then
   printf 'argv: %s\n' "$*" >> "$STUB_REWIND_LOG"
   if [[ "${STUB_REWIND_RC:-0}" != "0" ]]; then
-    echo "stub rhx: route.stone.set refused (STUB_REWIND_RC=$STUB_REWIND_RC)" >&2
+    echo "stub rhx: route.stone.set refused" >&2
     exit "$STUB_REWIND_RC"
   fi
   rewind_route=""
@@ -114,7 +117,7 @@ if [[ "${1:-}" == "radio.task.push" && -n "${STUB_RADIO_LOG:-}" ]]; then
     printf 'body: %s\n' "$(cat)"
   } >> "$STUB_RADIO_LOG"
   if [[ "${STUB_RADIO_RC:-0}" != "0" ]]; then
-    echo "stub rhx: radio.task.push refused (STUB_RADIO_RC=$STUB_RADIO_RC)" >&2
+    echo "stub rhx: radio.task.push refused" >&2
     exit "$STUB_RADIO_RC"
   fi
   exit 0

@@ -463,6 +463,17 @@ describe('render.contract', () => {
         '',
       ].join('\n'),
     );
+    // a declared count that reads zero is no clean file: the whole file would drop unseen
+    const fileUnread = join(
+      genTempDir({ slug: 'render-contract-unread' }),
+      'unread.snap',
+    );
+    writeFileSync(
+      fileUnread,
+      ['// Jest Snapshot v1', '', 'exports [`spaced key 1`] = `"x"`;', ''].join(
+        '\n',
+      ),
+    );
 
     when('[t0] the audit reads it', () => {
       then('it fails loud with the parsed and declared counts', async () => {
@@ -483,22 +494,8 @@ describe('render.contract', () => {
     });
 
     when(
-      '[t1] a file with content declares no entry the audit can read',
+      '[t1] the audit reads a file with content that declares no entry it can read',
       () => {
-        // a declared count that reads zero is no clean file: the whole file would drop unseen
-        const fileUnread = join(
-          genTempDir({ slug: 'render-contract-unread' }),
-          'unread.snap',
-        );
-        writeFileSync(
-          fileUnread,
-          [
-            '// Jest Snapshot v1',
-            '',
-            'exports [`spaced key 1`] = `"x"`;',
-            '',
-          ].join('\n'),
-        );
         then('it fails loud rather than grade zero renders', async () => {
           const error = await getError(async () =>
             getAllRendersRecorded({ file: fileUnread }),
@@ -582,6 +579,24 @@ describe('render.contract', () => {
         '   └─ authorized via local unlimited grant',
       ],
     });
+    // the init bind failure once rendered `anchors away!` over a halted close
+    const successOverHalt = asRender({
+      lines: [
+        '🐈 anchors away!',
+        '',
+        '🧿 security.habitat.redteam init --scope . --grain leak',
+        '   ├─ route: .behavior/v<date>.guardian-redteam.grain=leak/',
+        '   └─ halted: 💥 MalfunctionError: route scaffolded, but the bind did not take',
+      ],
+    });
+    const failureOverHalt = asRender({
+      lines: [
+        '🐈 wet paws...',
+        '',
+        '🧿 security.habitat.redteam init --scope . --grain leak',
+        '   └─ halted: 💥 MalfunctionError: route scaffolded, but the bind did not take',
+      ],
+    });
 
     when('[t0] a guardian render opens on 🧿 with no mascot', () => {
       then('it is a ghlitch render, so the audit reads it', () => {
@@ -607,25 +622,7 @@ describe('render.contract', () => {
       },
     );
 
-    when('[t2] a success mascot fronts a halted tree', () => {
-      // the init bind failure once rendered `anchors away!` over a halted close
-      const successOverHalt = asRender({
-        lines: [
-          '🐈 anchors away!',
-          '',
-          '🧿 security.habitat.redteam init --scope . --grain leak',
-          '   ├─ route: .behavior/v<date>.guardian-redteam.grain=leak/',
-          '   └─ halted: 💥 MalfunctionError: route scaffolded, but the bind did not take',
-        ],
-      });
-      const failureOverHalt = asRender({
-        lines: [
-          '🐈 wet paws...',
-          '',
-          '🧿 security.habitat.redteam init --scope . --grain leak',
-          '   └─ halted: 💥 MalfunctionError: route scaffolded, but the bind did not take',
-        ],
-      });
+    when('[t2] the mascot selector reads a halted tree', () => {
       then('the success mascot is named as over a failure', () => {
         expect(getSuccessMascotsOverFailure(successOverHalt)).toEqual([
           'synthetic.snap :: synthetic 1 :: 🐈 anchors away!',

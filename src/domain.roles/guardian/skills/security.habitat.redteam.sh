@@ -61,6 +61,15 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # in one place (print_disclaimer), sourced by init.sh too.
 source "$SELF_DIR/$SKILL/output.sh"
 
+# print one help option row: the flag, its sense, and its note, each in a fixed column. a row
+# with no note ends on its sense, so no line ends in pad space.
+# $1 = the flag (empty for a continuation row), $2 = the sense, $3 = the note.
+print_help_option() {
+  local flag="$1" sense="$2" note="$3"
+  [[ -z "$note" ]] && { printf '  %-18s %s\n' "$flag" "$sense"; return 0; }
+  printf '  %-18s %-52s %s\n' "$flag" "$sense" "$note"
+}
+
 show_help() {
   print_cat_header "heres the deal..."
   print_tree_start "$SKILL — hunt a habitat the way an adversary would"
@@ -79,20 +88,21 @@ show_help() {
   echo "  <each open key, one per line, written out in full>"
   echo "  KEYS"
   echo ""
+  # one printf shape for both option blocks, so the flag, sense, and note columns align whatever
+  # the flag length or COUNT_MAX renders as
   echo "options:"
-  echo "  --scope   habitat surface to sweep (a repo, a subtree)   (required)"
-  echo "  --grain   infil | exfil | leak | all                     (required)"
-  echo "            $GRAIN_GLOSS"
-  echo "  --peers   blind peers per grain-partition, 1 to $COUNT_MAX     (default: 3; apply to a bound route: its own;"
-  echo "            fixed once 1.ground cuts the slices)"
-  echo "  --budget  loop spend allowance, 1 to $COUNT_MAX cycles         (default: 1 — one pass, no re-detect; apply to a bound route: its own)"
-  echo "  --mode    plan | apply                                   (required, except for init)"
-  echo "  --skip-route-bind   scaffold without a branch bind (apply + init only)"
+  print_help_option '--scope' 'habitat surface to sweep (a repo, a subtree)' '(required)'
+  print_help_option '--grain' 'infil | exfil | leak | all' '(required)'
+  print_help_option '' "$GRAIN_GLOSS" ''
+  print_help_option '--peers' "blind peers per grain-partition, 1 to $COUNT_MAX" '(default: 3; apply to a bound route: its own; fixed once 1.ground cuts the slices)'
+  print_help_option '--budget' "loop spend allowance, 1 to $COUNT_MAX cycles" '(default: 1 — one pass, no re-detect; apply to a bound route: its own)'
+  print_help_option '--mode' 'plan | apply' '(required, except for init)'
+  print_help_option '--skip-route-bind' 'scaffold without a branch bind' '(apply + init only)'
   echo ""
   echo "gate options (each gate reads only its own; any other flag belays):"
-  echo "  --title   dispatch-lesson: the lesson's title, '<class>: <fix>'   (required)"
-  echo "  --route   rewind-detect: the route dir under .behavior/       (required)"
-  echo "  --cycle   rewind-detect: the cycle just walked, 1 to $COUNT_MAX   (required)"
+  print_help_option '--title' "dispatch-lesson: the lesson's title, '<class>: <fix>'" '(required)'
+  print_help_option '--route' 'rewind-detect: the route dir under .behavior/' '(required)'
+  print_help_option '--cycle' "rewind-detect: the cycle just walked, 1 to $COUNT_MAX" '(required)'
   echo ""
   echo "exit: 0 = done · 1 = malfunction · 2 = constraint"
   print_disclaimer
@@ -149,7 +159,7 @@ require_init_sh() {
   local cmd="$1"
   INIT_SH="$SELF_DIR/$SKILL/init.sh"
   [[ -x "$INIT_SH" ]] || halt_with "$cmd" "the skill install is broken" \
-    "the route scaffold (init.sh) is absent or not executable: $INIT_SH" "$FIX_REINSTALL"
+    "cause: $(as_qualified_cause "the route scaffold (init.sh) is absent or not executable: $INIT_SH")" "$FIX_REINSTALL"
 }
 
 # belay on a flag this command does not read: a dropped flag reads as obeyed, so it never drops
@@ -296,7 +306,7 @@ run_rewind_detect_gate() {
 
   # the rewind writes into a route, so it earns the same anchor every other write does: the
   # repo root, then one route dir under .behavior/ that stands on disk
-  exit_unless_repo_root "$SKILL rewind-detect"
+  exit_unless_repo_root "$SKILL rewind-detect" "$HINT"
   cd "$REPO_ROOT"
   ROUTE="$(as_normalized_route_path "$ROUTE")"
   is_route_dir_path "$ROUTE" || belay_with "$SKILL rewind-detect" "not a route under .behavior/: $ROUTE" "$FIX_ROUTE" "$HINT"
@@ -318,20 +328,20 @@ run_backup_before_rewrite_gate() {
   local header="$SKILL backup-before-rewrite" branch head uncommitted backup held said rc=0
   (( ${#GIVEN_FLAGS[@]} == 0 )) || belay_with "$header" "flag not read by this command: ${GIVEN_FLAGS[*]}" \
     "fix: drop ${GIVEN_FLAGS[*]} (this command reads no flag; it backs up the checked-out branch)" "$HINT"
-  exit_unless_repo_root "$header"
+  exit_unless_repo_root "$header" "$HINT"
   cd "$REPO_ROOT"
 
   # the backup names the branch the rewrite touches; a detached HEAD names none
-  branch="$(get_current_branch)" || halt_with "$header" "could not read the current branch" "cause: $branch" "$FIX_TOOL_RETRY"
+  branch="$(get_current_branch)" || halt_with "$header" "could not read the current branch" "cause: $(as_qualified_cause "$branch")" "$FIX_TOOL_RETRY"
   is_branch_detached "$branch" && belay_with "$header" "no branch is checked out (a detached HEAD)" \
     "fix: check out the branch whose commits the rewrite touches, then re-run" "$HINT"
   head="$(get_ref_commit HEAD)" || rc=$?
   (( rc == REF_ABSENT )) && belay_with "$header" "the branch holds no commit, so no rewrite is owed" \
     "fix: skip the rewrite; redact the value in the tree alone" "$HINT"
-  (( rc != 0 )) && halt_with "$header" "could not read HEAD" "cause: $head" "$FIX_TOOL_RETRY"
+  (( rc != 0 )) && halt_with "$header" "could not read HEAD" "cause: $(as_qualified_cause "$head")" "$FIX_TOOL_RETRY"
 
   # a rewrite over uncommitted work can drop it, so that rewrite is the human's call
-  uncommitted="$(get_tree_uncommitted)" || halt_with "$header" "could not read the tree's status" "cause: $uncommitted" "$FIX_TOOL_RETRY"
+  uncommitted="$(get_tree_uncommitted)" || halt_with "$header" "could not read the tree's status" "cause: $(as_qualified_cause "$uncommitted")" "$FIX_TOOL_RETRY"
   [[ -n "$uncommitted" ]] && belay_with "$header" "the tree holds uncommitted work; a rewrite over it can drop it" \
     "$(as_uncommitted_item "$uncommitted")" \
     "fix: do not rewrite — hand the rewrite to the human (the drafted command, the branch, the commits), and hold the claim open" "$HINT"
@@ -341,11 +351,16 @@ run_backup_before_rewrite_gate() {
   rc=0
   held="$(get_ref_commit "$backup")" || rc=$?
   (( rc == REF_ABSENT )) && { said="$(set_backup_ref "$backup" "$head")" \
-    || halt_with "$header" "could not create the backup ref $backup" "cause: $said" "$FIX_TOOL_RETRY"; }
-  (( rc != 0 && rc != REF_ABSENT )) && halt_with "$header" "could not read the backup ref $backup" "cause: $held" "$FIX_TOOL_RETRY"
-  held="$(get_ref_commit "$backup")" || held=""
+    || halt_with "$header" "could not create the backup ref $backup" "cause: $(as_qualified_cause "$said")" "$FIX_TOOL_RETRY"; }
+  (( rc != 0 && rc != REF_ABSENT )) && halt_with "$header" "could not read the backup ref $backup" "cause: $(as_qualified_cause "$held")" "$FIX_TOOL_RETRY"
+  # the read-back branches on its rc like the first read: a git break is a tool break, never "no commit"
+  rc=0
+  held="$(get_ref_commit "$backup")" || rc=$?
+  (( rc != 0 && rc != REF_ABSENT )) && halt_with "$header" "could not read back the backup ref $backup" "cause: $(as_qualified_cause "$held")" "$FIX_TOOL_RETRY"
+  (( rc == REF_ABSENT )) && held="no commit"
   [[ "$held" == "$head" ]] || halt_with "$header" "the backup ref does not read back at HEAD, so no rewrite" \
-    "backup: $backup holds ${held:-no commit}" "$FIX_TOOL_RETRY"
+    "cause: $(as_qualified_cause "the backup ref $backup holds $held, where HEAD is ${head:0:12}")" \
+    "fix: check git update-ref (the repo's refs are writable, no hook rewrites them), then re-run"
 
   print_gate_verdict "$header" 0 "backed up — the rewrite may proceed on $branch" \
     "branch: $branch at ${head:0:12}" "backup: $backup" "restore: git reset --hard $backup"
@@ -419,7 +434,7 @@ is_plan_with_skipped_bind "$MODE" "$SKIP_ROUTE_BIND" && belay_with "$RUN_CMD" \
 
 # anchor at the repo root, where route.drive looks: plan and apply both name the surface from
 # the root, so a plan from a subtree prices the same surface its apply would sweep
-exit_unless_repo_root "$RUN_CMD"
+exit_unless_repo_root "$RUN_CMD" "$HINT"
 SCOPE_SAID="$(get_scope_from_repo_root "$SCOPE" "$REPO_ROOT")" || halt_with "$RUN_CMD" "could not name the scope from the repo root" \
   "cause: $SCOPE_SAID" "$FIX_SCOPE_ENTER"
 SCOPE="$SCOPE_SAID"
@@ -474,8 +489,9 @@ require_sweep_live_or_reopened() {
   is_route_reopened "$reopen_rc" && return 0
   # the reopen compares against the recorded budget, so a damaged record halts on its own name,
   # never as an arithmetic error and a nonsense remedy
-  are_positive_counts "$have_peers" "$have_budget" || halt_with "$RUN_CMD" "the bound route's scope record holds an invalid count" \
-    "recorded: peers=$have_peers budget=$have_budget" "fix: correct $route/0.scope.md, or unbind and re-run to scaffold fresh"
+  # a flag cannot repair it here: the reopen reads the recorded budget, so the record itself is the fix
+  are_positive_counts "$have_peers" "$have_budget" || halt_with "$RUN_CMD" "the bound route's scope record holds an invalid count, so its ended sweep cannot reopen" \
+    "recorded: peers=$have_peers budget=$have_budget" "fix: set '- peers:' and '- budget:' to counts from 1 to $COUNT_MAX in $route/0.scope.md, then re-run"
   is_budget_raised "$budget" "$have_budget" || belay_with "$RUN_CMD" "$(as_sweep_finished_verdict "$decision")" \
     "route: $route" "$(as_sweep_finished_fix "$decision" "$have_budget")" "$HINT"
   printf -v "$note_var" '%s' "$(as_sweep_reopen_note "$decision")"
@@ -504,7 +520,7 @@ run_apply_reuse() {
   PEERS="$(as_effective_count "$PEERS_GIVEN" "$PEERS" "$HAVE_PEERS")"
   BUDGET="$(as_effective_count "$BUDGET_GIVEN" "$BUDGET" "$HAVE_BUDGET")"
   are_positive_counts "$PEERS" "$BUDGET" || halt_with "$RUN_CMD" "the bound route's scope record holds an invalid count" \
-    "recorded: peers=$HAVE_PEERS budget=$HAVE_BUDGET" "fix: pass --peers and --budget to set both, or fix $route/0.scope.md"
+    "recorded: peers=$HAVE_PEERS budget=$HAVE_BUDGET" "fix: pass --peers and --budget to set both, or set them to counts from 1 to $COUNT_MAX in $route/0.scope.md, then re-run"
 
   # a sweep its promote already ended drives naught on a re-run; only a raised budget reopens it
   local reopen_note=""

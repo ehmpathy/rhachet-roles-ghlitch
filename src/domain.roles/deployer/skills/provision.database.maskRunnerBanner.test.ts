@@ -154,4 +154,45 @@ describe('maskRunnerBanner', () => {
       );
     });
   });
+
+  given('[case4] npm warns about config keys it does not know', () => {
+    // npm 11 prints these for the fixture's pnpm-only .npmrc keys; an older npm, or pnpm,
+    // prints none, so a host with the warn and a host without must land on one set of bytes.
+    // these are the real bytes of a framed npm 11 run: after the warns, npm opens its banner
+    // with a blank above the header
+    const WARNS_THEN_BANNER = [
+      'npm warn Unknown project config "verify-deps-before-run". See `npm help npmrc` for supported config options.',
+      'npm warn Unknown project config "confirm-modules-purge". See `npm help npmrc` for supported config options.',
+      '',
+      ...BANNER_NPM,
+    ];
+    // a skill line that names npm's warn mid-sentence: the skill's own words, never chrome
+    const stdoutSkillLine = '   └─ hint: npm warn Unknown config is harmless';
+
+    when(
+      '[t0] the warns precede the npm banner, inside the bucket frame',
+      () => {
+        then('the output equals the same run with no warn at all', () => {
+          expect(maskRunnerBanner(asFramed(WARNS_THEN_BANNER))).toEqual(
+            maskRunnerBanner(asFramed(BANNER_NPM)),
+          );
+        });
+
+        then('not one warn line survives', () => {
+          expect(maskRunnerBanner(asFramed(WARNS_THEN_BANNER))).not.toContain(
+            'npm warn',
+          );
+        });
+      },
+    );
+
+    when('[t1] a skill line that names npm warn mid-sentence is masked', () => {
+      then(
+        'it survives: only a line that opens with the warn is chrome',
+        () => {
+          expect(maskRunnerBanner(stdoutSkillLine)).toEqual(stdoutSkillLine);
+        },
+      );
+    });
+  });
 });

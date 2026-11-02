@@ -58,6 +58,14 @@ const asLineContent = (line: string): string =>
  */
 const isLineEmpty = (line: string): boolean => asLineContent(line) === '';
 
+/**
+ * .what = true when a line is npm's warn about a config key it does not know
+ * .why  = npm 11 prints `npm warn Unknown project config "<key>"` (or `env config`) for each
+ *         pnpm-only key it reads. the line names the host's config, never the skill's output
+ */
+const isNpmConfigWarn = (content: string): boolean =>
+  /^npm warn Unknown (project|env|user|global) config "/.test(content);
+
 export const maskRunnerBanner = (stdout: string): string => {
   const lines = stdout.split('\n');
   const content = lines.map(asLineContent);
@@ -86,6 +94,19 @@ export const maskRunnerBanner = (stdout: string): string => {
 
     // pnpm's whole banner is this one line, and it carries no envelope
     if (/^\$ \S/.test(content[at] ?? '')) dropped.add(at);
+
+    // npm's config warn is runner chrome too: whether it prints depends on the host's npm
+    // major and on which config layers name a key it does not know (the fixture's own
+    // pnpm keys in .npmrc, a host-wide pnpm env)
+    if (isNpmConfigWarn(content[at] ?? '')) {
+      dropped.add(at);
+      // once aught has printed, npm opens its banner with a blank above the header. that
+      // blank exists only because the warn came first, so it goes with the warn
+      const isBlankThenNpmHeader =
+        isLineEmpty(lines[at + 1] ?? 'x') &&
+        /^> \S+@\S+\s/.test(content[at + 2] ?? '');
+      if (isBlankThenNpmHeader) dropped.add(at + 1);
+    }
   }
 
   return lines.filter((_, at) => !dropped.has(at)).join('\n');

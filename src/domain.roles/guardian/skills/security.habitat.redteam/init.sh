@@ -105,7 +105,8 @@ as_partial_route_removed_note() {
   printf 'the partial route was removed; a retry starts clean'
 }
 as_partial_route_removal_broke_note() {
-  print_malfunction_cause 'the partial route could not be removed: %s (%s) — remove it before a retry' "$1" "$2"
+  # labelled `cleanup:`, as each peer halt item is labelled `cause:`, so the eye has a label to scan for
+  printf 'cleanup: %s' "$(print_malfunction_cause 'the partial route could not be removed: %s; said: %s — remove it before a retry' "$1" "$2")"
 }
 
 # orchestrator: close the run on the exclusive mkdir's verdict — a route that already stands
@@ -131,9 +132,9 @@ as_route_extant_fix() {
 require_install_sound() {
   local templates="$1" route="$2" copied="$3" absent
   [[ -d "$templates" ]] || halt_init_scaffold "$route" "the skill install is broken" \
-    "the templates dir is absent: $templates" "$FIX_REINSTALL"
+    "cause: $(as_qualified_cause "the templates dir is absent: $templates")" "$FIX_REINSTALL"
   [[ "$copied" -eq 0 ]] && halt_init_scaffold "$route" "the skill install is broken" \
-    "no .stone/.guard templates found in $templates" "$FIX_REINSTALL"
+    "cause: $(as_qualified_cause "no .stone/.guard templates found in $templates")" "$FIX_REINSTALL"
   # a count > 0 is no proof of a complete scaffold: confirm the whole required set landed
   absent="$(get_route_absent_files "$route")"
   [[ -n "$absent" ]] && halt_init_scaffold "$route" "the skill install is broken" \
@@ -154,7 +155,7 @@ require_init_request_sound() {
 # name the scope from the root, and move there. sets SCOPE (root-relative) and ROUTE_PATH.
 set_init_anchor() {
   local said
-  exit_unless_repo_root "$INIT_CMD"
+  exit_unless_repo_root "$INIT_CMD" "$INIT_HINT"
   said="$(get_scope_from_repo_root "$SCOPE" "$REPO_ROOT")" \
     || halt_init "could not name the scope from the repo root" "cause: $said" "$FIX_SCOPE_ENTER"
   SCOPE="$said"
@@ -201,36 +202,42 @@ is_init_bind_taken() {
 }
 
 # print the init render — the route, its claims dir, its stones, and the bind state — and close
-# the tree on the next step, or on a qualified malfunction when a requested bind did not take.
-# the scaffold stands either way. the stone list is derived from the route dir
-# (print_route_stones), so the render can never drift from what actually landed. renders only;
-# the exit belongs to exit_on_init_bind_verdict. $1 = the bind's rc, $2 = the bind state line.
+# the tree on the next step, or on a qualified error when a requested bind did not take: a
+# constraint (rc 2, e.g. a protected branch) or a malfunction (any other rc). the scaffold stands
+# either way. the stone list is derived from the route dir (print_route_stones), so the render can
+# never drift from what actually landed. renders only; the exit belongs to
+# exit_on_init_bind_verdict. $1 = the bind's rc, $2 = the bind state line.
 print_init_render() {
-  local bind_rc="$1" bind_state="$2" mascot="anchors away!" mark=" ✨"
-  is_init_bind_taken "$bind_rc" || { mascot="$(as_belay_mascot "$SEVERITY_MALFUNCTION")"; mark=""; }
+  local bind_rc="$1" bind_state="$2" mascot="anchors away!" mark=" ✨" severity
+  severity="$(as_severity_from_exit "$bind_rc")"
+  is_init_bind_taken "$bind_rc" || { mascot="$(as_belay_mascot "$severity")"; mark=""; }
   print_cat_header "$mascot"
   print_tree_start "$INIT_CMD --scope $SCOPE --grain $GRAIN"
   print_tree_branch "route" "$ROUTE_PATH/$mark"
   print_tree_branch "claims" "$ROUTE_PATH/.claims/ (gitignored — live claims never publish)"
   print_tree_item "stones"
   print_route_stones "$ROUTE_PATH" "   │  "
-  print_tree_item "$bind_state"
-  # clean run: the next command — the same next step the apply handoff names
+  # clean run: the bind state, then the next command — the same next step the apply handoff names
   if is_init_bind_taken "$bind_rc"; then
+    print_tree_item "$bind_state"
     print_tree_item "$(as_route_next_step "$ROUTE_PATH" "$SKIP_ROUTE_BIND")" "$TREE_LAST"
     print_disclaimer
     return 0
   fi
-  # a requested bind did not take: the tree closes on a qualified malfunction, the cause mid-tree
-  print_tree_item "$(as_belay_close_line "$SEVERITY_MALFUNCTION" "route scaffolded, but the bind did not take — retry above")" "$TREE_LAST"
+  # a requested bind did not take: the diagnosis sits under its `cause:` label, the remedy is its
+  # own `fix:` item, and the tree closes on the qualified class the bind's rc names
+  print_tree_item "cause: $(as_verdict_diagnosis "$bind_state")"
+  print_tree_item "$(as_verdict_remedy "$bind_state")"
+  print_tree_item "$(as_belay_close_line "$severity" "route scaffolded, but the bind did not take")" "$TREE_LAST"
   print_disclaimer
 }
 
-# orchestrator: close the run on the bind verdict — exit 0 when it took, exit 1 when a requested
-# bind did not (a malfunction of a stated guarantee, never faked as success). $1 = the bind's rc.
+# orchestrator: close the run on the bind verdict — exit 0 when it took; when a requested bind did
+# not, exit 2 for a constraint the caller fixes, else 1 (a malfunction of a stated guarantee, never
+# faked as success). $1 = the bind's rc.
 exit_on_init_bind_verdict() {
   is_init_bind_taken "$1" && exit 0
-  exit 1
+  exit "$(as_exit_from_severity "$(as_severity_from_exit "$1")")"
 }
 
 # orchestrator: the scaffold, one named step per line. the bind state is captured here, so the
@@ -241,7 +248,7 @@ run_init_scaffold() {
   set_init_anchor
   require_init_unbound
   set_init_route
-  bind_state="$(set_route_bind_unless_skipped "$ROUTE_PATH" "$SKIP_ROUTE_BIND")" || bind_rc=1
+  bind_state="$(set_route_bind_unless_skipped "$ROUTE_PATH" "$SKIP_ROUTE_BIND")" || bind_rc=$?
   print_init_render "$bind_rc" "$bind_state"
   exit_on_init_bind_verdict "$bind_rc"
 }

@@ -46,6 +46,18 @@ import {
  *         habitat; `PATH_WITHOUT_RHX` holds the help/plan/init/belay paths hermetic, and a
  *         guardian-local stub `rhx` answers the one `route.bind.get` probe the apply path
  *         makes, so apply reaches its scaffold + honest-handoff branch with no bound route.
+ *
+ * .note = the stub stands only for contracts this skill calls and does not own; each owner
+ *         proves its own contract with real calls:
+ *         - `rhx radio.task.push --via gh.issues` → ehmpathy/rhachet-roles-bhuild
+ *           `src/contract/cli/radioTaskPush.integration.test.ts` (real cli, gh.issues auth + gate)
+ *         - `rhx route.bind.get|set` → ehmpathy/rhachet-roles-bhrain
+ *           `src/domain.operations/route/bind/getRouteBindByBranch.integration.test.ts`,
+ *           `src/domain.operations/route/bind/setRouteBind.integration.test.ts`
+ *         - `rhx route.stone.set` → ehmpathy/rhachet-roles-bhrain
+ *           `src/domain.operations/route/stepRouteStoneSet.integration.test.ts`
+ *         this suite clamps what this skill owns: the argv it sends, and its reaction to each
+ *         answer (bound, unbound, refused, read-back drift).
  */
 
 const SKILL = 'security.habitat.redteam.sh';
@@ -69,6 +81,14 @@ const setHabitatBranchMain = (input: { dir: string }): void => {
 };
 
 /**
+ * .what = the `halted:` close line of a render (empty when the render holds none)
+ * .why  = a remedy belongs in the `fix:` item, never in the close; a named cut lets a clamp
+ *         assert on the close alone
+ */
+const asHaltedLine = (input: { stdout: string }): string =>
+  input.stdout.split('\n').find((line) => line.includes('halted:')) ?? '';
+
+/**
  * .what = a cycle record on disk, under `<dir>/rec/`, with the body given
  * .why  = a record-read clamp needs a known record; a named builder keeps the arrangement
  *         out of the shell expression under test, so each scene reads "stage, then run"
@@ -85,21 +105,26 @@ const genCycleRecordFile = (input: {
 };
 
 /**
- * .what = mask a real mkdir's "File exists" text to one vendor-neutral form
- * .why  = GNU renders `mkdir: cannot create directory 'X': File exists`, BSD renders
- *         `mkdir: X: File exists`; LC_ALL=C pins the locale, never the vendor, so a snapshot
- *         of either form would redden on the other host for no change in the skill
+ * .what = the ward-loop gate subcommands the skill's help page names
+ * .why  = each gate owes every documented help spelling a test; one list keeps the three in step
  */
-const asMkdirExistsMasked = (input: { out: string }): string =>
+const GATE_SUBCOMMANDS = [
+  'dispatch-lesson',
+  'rewind-detect',
+  'backup-before-rewrite',
+] as const;
+
+/**
+ * .what = mask a real mkdir refusal to one vendor-neutral form, whatever its reason
+ * .why  = GNU renders `mkdir: cannot create directory 'X': <reason>`, BSD renders
+ *         `mkdir: X: <reason>`; LC_ALL=C pins the locale, never the vendor, so a snapshot
+ *         of either form would redden on the other host for no change in the skill. the
+ *         reason (`File exists`, `No such file or directory`) stays: it is the diagnosis
+ */
+const asMkdirVendorMasked = (input: { out: string }): string =>
   input.out
-    .replace(
-      /mkdir: cannot create directory '([^']*)': File exists/g,
-      'mkdir: [$1]: File exists',
-    )
-    .replace(
-      /mkdir: ([^[\s][^\s]*?): File exists/g,
-      'mkdir: [$1]: File exists',
-    );
+    .replace(/mkdir: cannot create directory '([^']*)': /g, 'mkdir: [$1]: ')
+    .replace(/mkdir: ([^[\s][^\s]*?): (?=[A-Z])/g, 'mkdir: [$1]: ');
 
 /**
  * .what = a temp git habitat on a branch named `main`, whatever the host's git default
@@ -206,6 +231,8 @@ describe('security.habitat.redteam (contract renders)', () => {
         long: run('--help'),
         short: run('-h'),
         initViaMain: run('init --help'),
+        initHelpWord: run('init help'),
+        initHelpShort: run('init -h'),
         initDirect: runGuardianSkill(
           { skill: INIT, args: '--help', cwd: dir },
           { env: { PATH: PATH_WITHOUT_RHX } },
@@ -218,6 +245,20 @@ describe('security.habitat.redteam (contract renders)', () => {
       };
     });
 
+    when('[t4] the grain gloss is read', () => {
+      then(
+        'exfil names any outbound channel, never only an attacker-driven one',
+        () => {
+          // self-exfil (the habitat's own channel, no infiltrator) is exfil too; a gloss that
+          // says "attacker" teaches the blind spot the exfil grain exists to close
+          expect(scene.bare.stdout).toContain(
+            'exfil = what can leave, by any outbound channel',
+          );
+          expect(scene.bare.stdout).not.toContain('attacker can pull out');
+        },
+      );
+    });
+
     when('[t2] help is asked of the init subcommand', () => {
       then('it renders the init page, the one an init hint points to', () => {
         expect(scene.initViaMain.exitCode).toBe(0);
@@ -225,6 +266,12 @@ describe('security.habitat.redteam (contract renders)', () => {
         expect(scene.initViaMain.stdout).toContain(
           '🧿 security.habitat.redteam init — scaffold the ward-loop route',
         );
+      });
+      then('init help and init -h render the same init page (exit 0)', () => {
+        expect(scene.initHelpWord.exitCode).toBe(0);
+        expect(scene.initHelpShort.exitCode).toBe(0);
+        expect(scene.initHelpWord.stdout).toEqual(scene.initDirect.stdout);
+        expect(scene.initHelpShort.stdout).toEqual(scene.initDirect.stdout);
       });
     });
 
@@ -391,7 +438,7 @@ describe('security.habitat.redteam (contract renders)', () => {
 
       then('it emits one partition and only the exfil prompt', () => {
         // a count of one reads singular, never `1 partition(s)`
-        expect(scene.exfil.stdout).toContain('(1 partition, disjoint');
+        expect(scene.exfil.stdout).toContain('(1 grain-partition, disjoint');
         expect(scene.exfil.stdout).toContain('budget: 1 loop cycle —');
         expect(scene.exfil.stdout).toContain('exfil — "what leaves this slice');
         expect(scene.exfil.stdout).not.toContain('infil — "what reaches in');
@@ -504,7 +551,7 @@ describe('security.habitat.redteam (contract renders)', () => {
       });
     });
 
-    when('[t8] an unknown argument is passed', () => {
+    when('[t8] an unknown or a joined --flag=value argument is passed', () => {
       then('it is a constraint (exit 2) and matches snapshot', () => {
         expect(scene.unknownArg.exitCode).toBe(2);
         expect(scene.unknownArg.stdout).toContain('unknown argument: --bogus');
@@ -527,32 +574,37 @@ describe('security.habitat.redteam (contract renders)', () => {
       );
     });
 
-    when('[t9] a flag stands where --scope value should be', () => {
-      // require_val must belay about --scope, never let --grain be eaten as its value.
-      then('it belays about --scope, not about --grain', () => {
-        expect(scene.flagEatsFlag.exitCode).toBe(2);
-        expect(scene.flagEatsFlag.stdout).toContain('absent value for --scope');
-        expect(scene.flagEatsFlag.stdout).not.toContain('grain');
-      });
-
-      then('the belay matches snapshot', () => {
-        expect(scene.flagEatsFlag.stdout).toContain(
-          'blocked: ✋ ConstraintError',
-        );
-        expect(scene.flagEatsFlag.stdout).toMatchSnapshot();
-      });
-
-      then(
-        'a flag where the --grain value should be belays about --grain',
-        () => {
-          expect(scene.grainValueAbsent.exitCode).toBe(2);
-          expect(scene.grainValueAbsent.stdout).toContain(
-            'absent value for --grain',
+    when(
+      '[t9] a flag stands where a --scope or --grain value should be',
+      () => {
+        // require_val must belay about --scope, never let --grain be eaten as its value.
+        then('it belays about --scope, not about --grain', () => {
+          expect(scene.flagEatsFlag.exitCode).toBe(2);
+          expect(scene.flagEatsFlag.stdout).toContain(
+            'absent value for --scope',
           );
-          expect(scene.grainValueAbsent.stdout).toMatchSnapshot();
-        },
-      );
-    });
+          expect(scene.flagEatsFlag.stdout).not.toContain('grain');
+        });
+
+        then('the belay matches snapshot', () => {
+          expect(scene.flagEatsFlag.stdout).toContain(
+            'blocked: ✋ ConstraintError',
+          );
+          expect(scene.flagEatsFlag.stdout).toMatchSnapshot();
+        });
+
+        then(
+          'a flag where the --grain value should be belays about --grain',
+          () => {
+            expect(scene.grainValueAbsent.exitCode).toBe(2);
+            expect(scene.grainValueAbsent.stdout).toContain(
+              'absent value for --grain',
+            );
+            expect(scene.grainValueAbsent.stdout).toMatchSnapshot();
+          },
+        );
+      },
+    );
 
     when('[t10] init is given a --mode', () => {
       then('it belays (exit 2): init always scaffolds', () => {
@@ -978,44 +1030,55 @@ describe('security.habitat.redteam (contract renders)', () => {
       });
     });
 
-    when('[t1] an unknown argument is passed to init', () => {
-      // an unknown flag must belay, consistent with the parent, never be swallowed silently
-      // into a scaffold under the default grain.
-      then('it belays (exit 2), never scaffolds under a wrong default', () => {
-        expect(scene.unknownArg.exitCode).toBe(2);
-        expect(scene.unknownArg.stdout).toContain('unknown argument: --bogus');
-        // snap the init belay render too, so a drift in what an operator sees on a
-        // direct-invocation block reddens like the main-skill belays (case3).
-        expect(scene.unknownArg.stdout).toMatchSnapshot();
-      });
-
-      then('a --flag=value token names the slip and its fix (exit 2)', () => {
-        expect(scene.joinedFlag.exitCode).toBe(2);
-        expect(scene.joinedFlag.stdout).toContain(
-          'fix: pass the value as its own word: --grain all',
+    when(
+      '[t1] an unknown argument or an rhx passthrough flag reaches init',
+      () => {
+        // an unknown flag must belay, consistent with the parent, never be swallowed silently
+        // into a scaffold under the default grain.
+        then(
+          'it belays (exit 2), never scaffolds under a wrong default',
+          () => {
+            expect(scene.unknownArg.exitCode).toBe(2);
+            expect(scene.unknownArg.stdout).toContain(
+              'unknown argument: --bogus',
+            );
+            // snap the init belay render too, so a drift in what an operator sees on a
+            // direct-invocation block reddens like the main-skill belays (case3).
+            expect(scene.unknownArg.stdout).toMatchSnapshot();
+          },
         );
-        expect(scene.joinedFlag.stdout).not.toContain('unknown argument');
-        expect(scene.joinedFlag.stdout).toMatchSnapshot();
-      });
 
-      then('the rhx passthrough prefix is skipped, and init scaffolds', () => {
-        expect(scene.viaRhx.exitCode).toBe(0);
-        expect(scene.viaRhx.stdout).not.toContain('unknown argument');
-      });
+        then('a --flag=value token names the slip and its fix (exit 2)', () => {
+          expect(scene.joinedFlag.exitCode).toBe(2);
+          expect(scene.joinedFlag.stdout).toContain(
+            'fix: pass the value as its own word: --grain all',
+          );
+          expect(scene.joinedFlag.stdout).not.toContain('unknown argument');
+          expect(scene.joinedFlag.stdout).toMatchSnapshot();
+        });
 
-      then('a passthrough flag that ends the argv never aborts init', () => {
-        expect(scene.viaRhxFinal.exitCode).toBe(0);
-        expect(scene.viaRhxFinal.stdout).not.toContain('unknown argument');
-      });
-
-      then('a passthrough flag right before --scope never eats it', () => {
-        expect(scene.viaRhxFlagNext.exitCode).toBe(0);
-        expect(scene.viaRhxFlagNext.stdout).not.toContain('unknown argument');
-        expect(scene.viaRhxFlagNext.stdout).not.toContain(
-          'absent value for --scope',
+        then(
+          'the rhx passthrough prefix is skipped, and init scaffolds',
+          () => {
+            expect(scene.viaRhx.exitCode).toBe(0);
+            expect(scene.viaRhx.stdout).not.toContain('unknown argument');
+          },
         );
-      });
-    });
+
+        then('a passthrough flag that ends the argv never aborts init', () => {
+          expect(scene.viaRhxFinal.exitCode).toBe(0);
+          expect(scene.viaRhxFinal.stdout).not.toContain('unknown argument');
+        });
+
+        then('a passthrough flag right before --scope never eats it', () => {
+          expect(scene.viaRhxFlagNext.exitCode).toBe(0);
+          expect(scene.viaRhxFlagNext.stdout).not.toContain('unknown argument');
+          expect(scene.viaRhxFlagNext.stdout).not.toContain(
+            'absent value for --scope',
+          );
+        });
+      },
+    );
 
     when('[t2] --grain is given no value', () => {
       // --scope/--grain must never take $2 unguarded, or a flag becomes the value.
@@ -1070,7 +1133,7 @@ describe('security.habitat.redteam (contract renders)', () => {
       });
     });
 
-    when('[t7] a route for today already exists', () => {
+    when('[t7] init runs twice for one route on one day', () => {
       then('the first scaffold succeeds', () => {
         expect(scene.first.exitCode).toBe(0);
       });
@@ -1269,7 +1332,15 @@ describe('security.habitat.redteam (contract renders)', () => {
         );
       });
 
-      when('[t0.1] the request scope differs from the bound route', () => {
+      when('[t1] the request grain matches the bound route', () => {
+        then('it reuses the route and hands off (exit 0)', () => {
+          expect(scene.match.exitCode).toBe(0);
+          expect(scene.match.stdout).toContain('reused the bound route');
+          expect(maskRouteDate(scene.match.stdout)).toMatchSnapshot();
+        });
+      });
+
+      when('[t2] the request scope differs from the bound route', () => {
         // the other half of the guard: one grain, two scopes, still two sweeps
         then('it belays (exit 2) and names both scopes', () => {
           expect(scene.scopeMismatch.exitCode).toBe(2);
@@ -1286,15 +1357,7 @@ describe('security.habitat.redteam (contract renders)', () => {
         });
       });
 
-      when('[t1] the request grain matches the bound route', () => {
-        then('it reuses the route and hands off (exit 0)', () => {
-          expect(scene.match.exitCode).toBe(0);
-          expect(scene.match.stdout).toContain('reused the bound route');
-          expect(maskRouteDate(scene.match.stdout)).toMatchSnapshot();
-        });
-      });
-
-      when("[t2] the bound route's scope record cannot be read", () => {
+      when("[t3] the bound route's scope record cannot be read", () => {
         // assert_bound_route_matches_request has a malfunction branch — a bound route whose
         // 0.scope.md is absent/garbled cannot be compared, so it must halt (exit 1), never
         // fall through to a wrong-sweep drive on an unreadable record.
@@ -1309,7 +1372,7 @@ describe('security.habitat.redteam (contract renders)', () => {
         });
       });
 
-      when('[t3] the bind persists but its route dir is gone from disk', () => {
+      when('[t4] the bind persists but its route dir is gone from disk', () => {
         // is_route_on_disk guards the reuse handoff: a bind string can outlive its route
         // dir, so apply must halt (exit 1) rather than promise a drive with no route to
         // walk (rule.forbid.failhide). the scaffold branch re-probes; this closes the
@@ -1473,7 +1536,23 @@ describe('security.habitat.redteam (contract renders)', () => {
             },
           },
         );
-        return { bindOk, bindFail };
+        // the real route.bind.set refuses a protected branch as a ConstraintError, under its run
+        // banner and in color; init must relay it as the caller's fix (exit 2), in plain text
+        const protectedDir = setupHabitat({
+          slug: 'redteam-init-bind-protected',
+        });
+        const bindProtected = runGuardianSkill(
+          { skill: INIT, args: '--scope . --grain all', cwd: protectedDir },
+          {
+            env: {
+              PATH: genGuardianStubBinPath(),
+              STUB_BIND_RC: '2',
+              STUB_BIND_SAID:
+                '\\n🪨 run solid skill repo=bhrain/role=driver/skill=route.bind.set\\n\\n└─ ✋ blocked by constraints\\n   └─ \\e[31m✋ ConstraintError: cannot bind route on protected branch\\n\\n      branch: main\\e[0m',
+            },
+          },
+        );
+        return { bindOk, bindFail, bindProtected };
       });
 
       when('[t0] the bind takes', () => {
@@ -1492,6 +1571,34 @@ describe('security.habitat.redteam (contract renders)', () => {
           expect(maskRouteDate(scene.bindFail.stdout)).toMatchSnapshot();
         });
       });
+
+      when(
+        '[t2] the bind is refused as a constraint (a protected branch)',
+        () => {
+          then(
+            'init belays (exit 2), relays the refusal in plain text, and names the fix',
+            () => {
+              expect(scene.bindProtected.exitCode).toBe(2);
+              expect(scene.bindProtected.stdout).toContain(
+                'cause: ✋ ConstraintError: not bound: cannot bind route on protected branch; branch: main\n',
+              );
+              expect(scene.bindProtected.stdout).toContain(
+                '├─ fix: clear what route.bind.set names (on a protected branch, check out a feature branch)',
+              );
+              expect(scene.bindProtected.stdout).toContain(
+                '└─ blocked: ✋ ConstraintError: route scaffolded, but the bind did not take\n',
+              );
+              expect(scene.bindProtected.stdout).not.toContain(
+                'run solid skill',
+              );
+              expect(scene.bindProtected.stdout).not.toContain('\u001b[');
+              expect(
+                maskRouteDate(scene.bindProtected.stdout),
+              ).toMatchSnapshot();
+            },
+          );
+        },
+      );
     },
   );
 
@@ -2143,6 +2250,14 @@ describe('security.habitat.redteam (contract renders)', () => {
             // 2.detect). the verdict must say so, or a human reads "converged" as "clean".
             expect(scene.promoteStone).toContain('scope limit');
             expect(scene.promoteStone).toContain('aggregate map');
+
+            // ground hands the same blind spot forward, so detect knows to flag a suspected map
+            expect(scene.groundStone).toContain(
+              '**carried forward for detect:**',
+            );
+            expect(scene.groundStone).toContain(
+              'aggregate-map blind spot — no blind slice sees a whole-corpus map',
+            );
           },
         );
       });
@@ -2600,37 +2715,42 @@ describe('security.habitat.redteam (contract renders)', () => {
       );
     });
 
-    when('[t2] apply runs with --skip-route-bind', () => {
-      then(
-        'it scaffolds unbound and leaves the foreign bind alone (exit 0)',
-        () => {
-          expect(scene.skip.exitCode).toBe(0);
-          expect(scene.skip.stdout).toContain('scaffolded, not bound');
-        },
-      );
-      then(
-        'the handoff names the foreign bind it left alone, before the bind it asks for',
-        () => {
-          // the next step binds the route, which would replace the foreign route the flag kept
-          expect(scene.skip.stdout).toContain('⚠️ left the bind alone:');
-          expect(scene.skip.stdout).toContain(
-            'a bind here replaces it, so finish or unbind it (rhx route.bind.del) first',
-          );
-          expect(maskRouteDate(scene.skip.stdout)).toMatchSnapshot();
-        },
-      );
-      then(
-        'a re-probe that breaks warns that a foreign route may stand, never a silent pass',
-        () => {
-          // the operator skipped the bind to keep a foreign route; this warn is their only signal
-          expect(scene.skipNoteBroken.exitCode).toBe(0);
-          expect(scene.skipNoteBroken.stdout).toContain(
-            '⚠️ could not re-read the branch bind, so a foreign route may stand:',
-          );
-          expect(maskRouteDate(scene.skipNoteBroken.stdout)).toMatchSnapshot();
-        },
-      );
-    });
+    when(
+      '[t2] apply runs with --skip-route-bind, and its re-probe holds or breaks',
+      () => {
+        then(
+          'it scaffolds unbound and leaves the foreign bind alone (exit 0)',
+          () => {
+            expect(scene.skip.exitCode).toBe(0);
+            expect(scene.skip.stdout).toContain('scaffolded, not bound');
+          },
+        );
+        then(
+          'the handoff names the foreign bind it left alone, before the bind it asks for',
+          () => {
+            // the next step binds the route, which would replace the foreign route the flag kept
+            expect(scene.skip.stdout).toContain('⚠️ left the bind alone:');
+            expect(scene.skip.stdout).toContain(
+              'a bind here replaces it, so finish or unbind it (rhx route.bind.del) first',
+            );
+            expect(maskRouteDate(scene.skip.stdout)).toMatchSnapshot();
+          },
+        );
+        then(
+          'a re-probe that breaks warns that a foreign route may stand, never a silent pass',
+          () => {
+            // the operator skipped the bind to keep a foreign route; this warn is their only signal
+            expect(scene.skipNoteBroken.exitCode).toBe(0);
+            expect(scene.skipNoteBroken.stdout).toContain(
+              '⚠️ could not re-read the branch bind, so a foreign route may stand:',
+            );
+            expect(
+              maskRouteDate(scene.skipNoteBroken.stdout),
+            ).toMatchSnapshot();
+          },
+        );
+      },
+    );
   });
 
   given('[case20] the live-claim scanner reads a drafted lesson body', () => {
@@ -3069,7 +3189,7 @@ describe('security.habitat.redteam (contract renders)', () => {
       then('it halts as a malfunction (exit 1) and names the winner', () => {
         expect(scene.exitCode).toBe(1);
         expect(scene.stdout).toContain(
-          `not bound: the branch reads back bound to ${WINNER} (a concurrent bind won)`,
+          `not bound: the branch reads back bound to ${WINNER}; a concurrent bind won`,
         );
         expect(scene.stdout).not.toContain('bound to branch');
       });
@@ -3686,7 +3806,7 @@ describe('security.habitat.redteam (contract renders)', () => {
               'File exists',
             );
             expect(
-              asMkdirExistsMasked({ out: scene.recordUnopenable.first.stdout }),
+              asMkdirVendorMasked({ out: scene.recordUnopenable.first.stdout }),
             ).toMatchSnapshot();
           },
         );
@@ -3695,6 +3815,10 @@ describe('security.habitat.redteam (contract renders)', () => {
           expect(scene.recordReadBroke.first.status).toBe(1);
           expect(scene.recordReadBroke.first.stdout).toContain(
             'not rewound: could not read the cycle record',
+          );
+          // the leaf cause rides in, so the operator can tell a tool break from an absent file
+          expect(scene.recordReadBroke.first.stdout).toContain(
+            'has_cycle_line: grep broke (rc=2)',
           );
           expect(scene.recordReadBroke.rewinds).toEqual('');
           expect(scene.recordReadBroke.first.stdout).toMatchSnapshot();
@@ -3707,9 +3831,13 @@ describe('security.habitat.redteam (contract renders)', () => {
             expect(scene.lockStale.first.stdout).toContain(
               'held by pid <gone>, which is gone',
             );
+            // the remedy sits in the fix item; the halted close stays the diagnosis alone
             expect(scene.lockStale.first.stdout).toContain(
-              'if no drive runs, remove it: rm -r',
+              'fix: if no drive runs, remove the lock by hand (rm -r <route>/.claims/0.cycle.md.lock), then re-run',
             );
+            expect(
+              asHaltedLine({ stdout: scene.lockStale.first.stdout }),
+            ).not.toContain('rm -r');
             expect(scene.lockStale.rewinds).toEqual('');
             expect(scene.lockStale.first.stdout).toMatchSnapshot();
           },
@@ -3724,7 +3852,7 @@ describe('security.habitat.redteam (contract renders)', () => {
           },
           {
             key: 'lockUnreadable',
-            says: 'holder unreadable (',
+            says: 'holder unreadable, said: ',
           },
           {
             key: 'releaseBroke',
@@ -3752,7 +3880,8 @@ describe('security.habitat.redteam (contract renders)', () => {
           },
           {
             key: 'afterAbsent',
-            says: 'carried key(s) absent from cycle 1 after the rewind',
+            // a real count label, and the keys joined by `; ` so no reader takes two keys for one
+            says: '2 carried keys absent from cycle 1 after the rewind: infil::launch-flag-control-channel; exfil::egress-without-allowlist',
           },
         ] as const;
         LOCK_CASES.map((thisCase) =>
@@ -3761,6 +3890,10 @@ describe('security.habitat.redteam (contract renders)', () => {
             expect(run.first.status).toBe(1);
             expect(run.first.stdout).toContain(thisCase.says);
             expect(run.first.stdout).toContain('halted: 💥 MalfunctionError');
+            // a remedy never rides inside the close: the fix item carries it
+            expect(asHaltedLine({ stdout: run.first.stdout })).not.toContain(
+              'rm -r',
+            );
             expect(run.first.stdout).toMatchSnapshot();
           }),
         );
@@ -3788,13 +3921,26 @@ describe('security.habitat.redteam (contract renders)', () => {
             );
             // a live holder gets the wait remedy; a removal would let a second writer in
             expect(scene.lockLive.first.stdout).toContain(
-              'do not remove it; wait for that drive to end, then re-run',
+              'fix: do not remove <route>/.claims/0.cycle.md.lock; wait for the drive that holds it to end, then re-run',
             );
             expect(scene.lockLive.first.stdout).not.toContain('rm -r');
             expect(scene.lockLive.rewinds).toEqual('');
             expect(
               scene.lockLive.first.stdout.replace(/pid \d+/g, 'pid <pid>'),
             ).toMatchSnapshot();
+          },
+        );
+
+        then(
+          'a release that breaks names the lock path whole in its fix',
+          () => {
+            // the cause's `; said:` separator must never bleed into the path the fix hands over
+            expect(scene.releaseBroke.first.stdout).toContain(
+              'fix: if no drive runs, remove the lock by hand (rm -r <route>/.claims/0.cycle.md.lock), then re-run',
+            );
+            expect(scene.rewindLockReleaseBroke.first.stdout).toContain(
+              'fix: if no drive runs, remove the lock by hand (rm -r <route>/.rewind-detect.lock), then re-run',
+            );
           },
         );
 
@@ -4270,29 +4416,26 @@ describe('security.habitat.redteam (contract renders)', () => {
               expect(run.stdout).toContain('🐈 wet paws...');
               expect(run.stdout).toContain(thisCase.says);
               expect(
-                asMkdirExistsMasked({ out: run.masked }),
+                asMkdirVendorMasked({ out: run.masked }),
               ).toMatchSnapshot();
             },
           ),
         );
       });
 
-      when(
-        '[t1.1] the route dir create meets a file where a dir must go',
-        () => {
-          then(
-            'the fix names the collision, never a permissions check that cannot clear it',
-            () => {
-              expect(scene.mkdirBroken.stdout).toContain(
-                'fix: a file stands where the route path needs a dir — move or remove it',
-              );
-              expect(scene.mkdirBroken.stdout).not.toContain(
-                'permissions, free space',
-              );
-            },
-          );
-        },
-      );
+      when('[t3] the route dir create meets a file where a dir must go', () => {
+        then(
+          'the fix names the collision, never a permissions check that cannot clear it',
+          () => {
+            expect(scene.mkdirBroken.stdout).toContain(
+              'fix: a file stands where the route path needs a dir — move or remove it',
+            );
+            expect(scene.mkdirBroken.stdout).not.toContain(
+              'permissions, free space',
+            );
+          },
+        );
+      });
 
       when('[t2] a scaffold fails after its route dir was made', () => {
         then('the partial route is removed, so a retry starts clean', () => {
@@ -4319,8 +4462,9 @@ describe('security.habitat.redteam (contract renders)', () => {
           'a removal that fails names the leftover route, never claims a clean retry',
           () => {
             expect(scene.cpAndRmBroken.routesLeft).toHaveLength(1);
+            // labelled, as every halt item is: the eye scans for the label, never a bare class
             expect(scene.cpAndRmBroken.stdout).toContain(
-              'the partial route could not be removed',
+              'cleanup: 💥 MalfunctionError: the partial route could not be removed',
             );
             expect(scene.cpAndRmBroken.stdout).toContain(
               'remove it before a retry',
@@ -5011,21 +5155,6 @@ describe('security.habitat.redteam (halt renders)', () => {
           );
         },
       );
-
-      then(
-        'the invalid-count halt clears once both counts are passed (exit 0, adopted)',
-        () => {
-          expect(scene.invalidCountFixed.exitCode).toBe(0);
-          expect(scene.invalidCountFixed.stdout).toContain(
-            'peers=3 budget=2 adopted (was peers=0 budget=1)',
-          );
-          expect(scene.invalidCountFixed.record).toContain('- peers: 3');
-          expect(scene.invalidCountFixed.record).toContain('- budget: 2');
-          expect(
-            maskRouteDate(scene.invalidCountFixed.stdout),
-          ).toMatchSnapshot();
-        },
-      );
     });
 
     when(
@@ -5046,6 +5175,18 @@ describe('security.habitat.redteam (halt renders)', () => {
         );
       },
     );
+
+    when('[t2] the invalid counts are passed fresh after the halt', () => {
+      then('the halt clears and both counts are adopted (exit 0)', () => {
+        expect(scene.invalidCountFixed.exitCode).toBe(0);
+        expect(scene.invalidCountFixed.stdout).toContain(
+          'peers=3 budget=2 adopted; was peers=0 budget=1)',
+        );
+        expect(scene.invalidCountFixed.record).toContain('- peers: 3');
+        expect(scene.invalidCountFixed.record).toContain('- budget: 2');
+        expect(maskRouteDate(scene.invalidCountFixed.stdout)).toMatchSnapshot();
+      });
+    });
   });
 
   given('[case31] init reads its bind back, and the read-back fails', () => {
@@ -5088,7 +5229,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       then('init halts (exit 1) and names the read-back failure', () => {
         expect(scene.readbackFailed.exitCode).toBe(1);
         expect(scene.readbackFailed.stdout).toContain(
-          'not bound: read-back failed: stub rhx: route.bind.get refused (call 2)',
+          'not bound: read-back failed; said: stub rhx: route.bind.get refused',
         );
         expect(scene.readbackFailed.stdout).not.toContain('bound to branch');
         expect(scene.readbackFailed.masked).toMatchSnapshot();
@@ -5099,10 +5240,10 @@ describe('security.habitat.redteam (halt renders)', () => {
       then('init halts (exit 1) and says to retry the bind', () => {
         expect(scene.notPersisted.exitCode).toBe(1);
         expect(scene.notPersisted.stdout).toContain(
-          'not bound: the bind did not persist (the branch reads back bound to no route)',
+          'not bound: the bind did not persist; the branch reads back bound to no route',
         );
         expect(scene.notPersisted.stdout).toContain(
-          'retry: rhx route.bind.set --route',
+          'fix: retry rhx route.bind.set --route',
         );
         expect(scene.notPersisted.masked).toMatchSnapshot();
       });
@@ -5112,7 +5253,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       then('the bind returns 1 and names the parse break', () => {
         expect(scene.unparseable.status).toBe(1);
         expect(scene.unparseable.stdout).toContain(
-          'not bound: read-back unparseable: grep: simulated break',
+          'not bound: read-back unparseable; said: grep: simulated break',
         );
         expect(scene.unparseable.stdout).toMatchSnapshot();
       });
@@ -5586,6 +5727,76 @@ describe('security.habitat.redteam (halt renders)', () => {
       // the gate reads no flag; one given belays, never drops
       const foreignFlag = runGate({ dir: cleanDir, args: '--route x' });
 
+      // the gate's help page: the skill page, which names the gate and the stone that runs it
+      const help = runGate({ dir: cleanDir, args: '--help' });
+
+      // each malfunction arm: a real git on PATH that breaks at the one call the arm reads
+      const runGateOnGitBroke = (input: {
+        slug: string;
+        failOn: string;
+        exitCode: number;
+        failOnCall?: number;
+      }) =>
+        runGuardianSkill(
+          {
+            skill: SKILL,
+            args: 'backup-before-rewrite',
+            cwd: genHabitatWithCommit({ slug: input.slug }),
+          },
+          {
+            env: {
+              PATH: `${genBrokenToolBin({ tool: 'git', exitCode: input.exitCode, failOn: input.failOn, failOnCall: input.failOnCall })}:${PATH_WITHOUT_RHX}`,
+            },
+          },
+        );
+      // outside a repo, and a git that breaks on the repo probe itself: the gate's first arm
+      const notARepo = runGate({
+        dir: genTempDir({ slug: 'redteam-backup-not-a-repo' }),
+      });
+      const probeBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-probe-broke',
+        failOn: 'rev-parse --git-dir',
+        exitCode: 128,
+      });
+      const branchBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-branch-broke',
+        failOn: 'HEAD',
+        exitCode: 128,
+      });
+      const headBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-head-broke',
+        failOn: 'HEAD^{commit}',
+        exitCode: 128,
+      });
+      const statusBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-status-broke',
+        failOn: 'status',
+        exitCode: 128,
+      });
+      const backupReadBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-read-broke',
+        failOn: 'refs/redteam-backup',
+        exitCode: 128,
+      });
+      // the first read finds no ref and the create lands; only the read-back after it breaks
+      const backupReadBackBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-read-back-broke',
+        failOn: '--quiet refs/redteam-backup',
+        failOnCall: 2,
+        exitCode: 128,
+      });
+      const backupWriteBroke = runGateOnGitBroke({
+        slug: 'redteam-backup-write-broke',
+        failOn: 'update-ref',
+        exitCode: 1,
+      });
+      // an update-ref that reports success yet writes no ref: the read-back is checked, never trusted
+      const backupUnheld = runGateOnGitBroke({
+        slug: 'redteam-backup-unheld',
+        failOn: 'update-ref',
+        exitCode: 0,
+      });
+
       // a full redact cycle: leak committed, backup taken, the leak commit rewritten away. the
       // stones' re-hunt form must find the value gone, though the backup still carries it
       const redactDir = genHabitatWithCommit({ slug: 'redteam-backup-redact' });
@@ -5619,6 +5830,16 @@ describe('security.habitat.redteam (halt renders)', () => {
         detached,
         unborn,
         foreignFlag,
+        help,
+        notARepo,
+        probeBroke,
+        branchBroke,
+        headBroke,
+        statusBroke,
+        backupReadBroke,
+        backupReadBackBroke,
+        backupWriteBroke,
+        backupUnheld,
         redactGate,
         reHuntAll,
         reHuntStones,
@@ -5669,8 +5890,10 @@ describe('security.habitat.redteam (halt renders)', () => {
             'the tree holds uncommitted work; a rewrite over it can drop it',
           );
           expect(scene.dirty.stdout).toContain(
-            'uncommitted outside the redteam route: 1 path(s)',
+            'uncommitted outside the redteam route: 1 path, first: work.ts',
           );
+          // the human reads the path, never git's porcelain status code
+          expect(scene.dirty.stdout).not.toContain('?? work.ts');
           expect(scene.dirty.stdout).toContain('hand the rewrite to the human');
           expect(scene.dirtyBackups).toEqual([]);
           expect(scene.dirty.stdout).toMatchSnapshot();
@@ -5681,7 +5904,7 @@ describe('security.habitat.redteam (halt renders)', () => {
         () => {
           expect(scene.otherRoute.exitCode).toBe(2);
           expect(scene.otherRoute.stdout).toContain(
-            'uncommitted outside the redteam route: 1 path(s), first: ?? .behavior/v2026_01_01.other-feature/0.wish.md',
+            'uncommitted outside the redteam route: 1 path, first: .behavior/v2026_01_01.other-feature/0.wish.md',
           );
           expect(scene.otherRouteBackups).toEqual([]);
         },
@@ -5693,6 +5916,10 @@ describe('security.habitat.redteam (halt renders)', () => {
         "the gate passes (exit 0): the drive's own records never block a rewrite",
         () => {
           expect(scene.routeOnly.exitCode).toBe(0);
+          expect(scene.routeOnly.stdout).toContain(
+            'backed up — the rewrite may proceed on main',
+          );
+          expect(maskSha(scene.routeOnly.stdout)).toMatchSnapshot();
         },
       );
     });
@@ -5703,11 +5930,92 @@ describe('security.habitat.redteam (halt renders)', () => {
         expect(scene.detached.stdout).toContain(
           'no branch is checked out (a detached HEAD)',
         );
+        expect(scene.detached.stdout).toContain(
+          'fix: check out the branch whose commits the rewrite touches, then re-run',
+        );
+        expect(scene.detached.stdout).toMatchSnapshot();
       });
       then('an unborn branch belays (exit 2): no commit, no rewrite', () => {
         expect(scene.unborn.exitCode).toBe(2);
         expect(scene.unborn.stdout).toContain('the branch holds no commit');
+        expect(scene.unborn.stdout).toContain(
+          'fix: skip the rewrite; redact the value in the tree alone',
+        );
+        expect(scene.unborn.stdout).toMatchSnapshot();
       });
+    });
+
+    when('[t6] git breaks at one call the gate reads', () => {
+      const GIT_BROKE_CASES = [
+        {
+          key: 'probeBroke',
+          says: 'git malfunctioned while it probed the repo',
+        },
+        { key: 'branchBroke', says: 'could not read the current branch' },
+        { key: 'headBroke', says: 'could not read HEAD' },
+        { key: 'statusBroke', says: "could not read the tree's status" },
+        {
+          key: 'backupReadBroke',
+          says: 'could not read the backup ref refs/redteam-backup/main.',
+        },
+        {
+          // a break on the read-back is a tool break, never misread as a ref that holds no commit
+          key: 'backupReadBackBroke',
+          says: 'could not read back the backup ref refs/redteam-backup/main.',
+        },
+        {
+          key: 'backupWriteBroke',
+          says: 'could not create the backup ref refs/redteam-backup/main.',
+        },
+        {
+          key: 'backupUnheld',
+          says: 'the backup ref does not read back at HEAD, so no rewrite',
+        },
+      ] as const;
+      GIT_BROKE_CASES.map((thisCase) =>
+        then(
+          `${thisCase.key}: halts (exit 1), named, no rewrite allowed, snapped`,
+          () => {
+            const run = scene[thisCase.key];
+            expect(run.exitCode).toBe(1);
+            expect(run.stdout).toContain(thisCase.says);
+            // the cause opens on its qualified class, as every halt's cause does
+            expect(run.stdout).toContain('cause: 💥 MalfunctionError: ');
+            expect(run.stdout).toContain('halted: 💥 MalfunctionError');
+            expect(run.stdout).not.toContain('the rewrite may proceed');
+            expect(maskSha(run.stdout)).toMatchSnapshot();
+          },
+        ),
+      );
+    });
+
+    when('[t7] the gate is asked for --help', () => {
+      then('it renders the skill page, which names the gate (exit 0)', () => {
+        expect(scene.help.exitCode).toBe(0);
+        expect(scene.help.stdout).toContain(
+          'rhx security.habitat.redteam backup-before-rewrite',
+        );
+        expect(scene.help.stdout).toMatchSnapshot();
+      });
+    });
+
+    when('[t8] the gate runs outside a git repo', () => {
+      then(
+        'it belays (exit 2), names the repo it needs, and takes no backup',
+        () => {
+          expect(scene.notARepo.exitCode).toBe(2);
+          expect(scene.notARepo.stdout).toContain(
+            '🧿 security.habitat.redteam backup-before-rewrite',
+          );
+          expect(scene.notARepo.stdout).toContain(
+            'fix: run this from within a repo',
+          );
+          expect(scene.notARepo.stdout).toContain(
+            'blocked: ✋ ConstraintError: not in a git repository',
+          );
+          expect(scene.notARepo.stdout).toMatchSnapshot();
+        },
+      );
     });
 
     when(
@@ -5735,6 +6043,7 @@ describe('security.habitat.redteam (halt renders)', () => {
         expect(scene.foreignFlag.stdout).toContain(
           'flag not read by this command: --route',
         );
+        expect(scene.foreignFlag.stdout).toMatchSnapshot();
       });
     });
   });
@@ -5849,6 +6158,14 @@ describe('security.habitat.redteam (halt renders)', () => {
         ),
         dispatchHelp: run('dispatch-lesson --help'),
         rewindHelp: run('rewind-detect --help'),
+        // every documented help spelling, per gate: `help`, `--help`, `-h`, after the subcommand
+        gateHelpSpellings: GATE_SUBCOMMANDS.flatMap((gate) =>
+          ['help', '--help', '-h'].map((spell) => ({
+            gate,
+            spell,
+            run: run(`${gate} ${spell}`),
+          })),
+        ),
         help: run('help'),
       };
     });
@@ -5899,6 +6216,20 @@ describe('security.habitat.redteam (halt renders)', () => {
         expect(scene.dispatchHelp.stdout).toEqual(scene.help.stdout);
         expect(scene.rewindHelp.stdout).toEqual(scene.help.stdout);
       });
+      then(
+        'every help spelling of every gate renders that same page (exit 0)',
+        () => {
+          expect(scene.gateHelpSpellings).toHaveLength(9);
+          scene.gateHelpSpellings.map(({ gate, spell, run }) => {
+            expect({ gate, spell, exitCode: run.exitCode }).toEqual({
+              gate,
+              spell,
+              exitCode: 0,
+            });
+            expect(run.stdout).toEqual(scene.help.stdout);
+          });
+        },
+      );
     });
 
     when('[t3] a plan runs', () => {
@@ -6022,16 +6353,21 @@ describe('security.habitat.redteam (halt renders)', () => {
         expect(scene.plan.stdout).toContain(
           "cycle 2 re-detects cycle 1's repairs; cycle 2's repairs stay PENDING-REDETECT",
         );
+        expect(scene.plan.stdout).toMatchSnapshot();
       });
     });
 
     when('[t1] the out-of-order fix is read per record size', () => {
       then('an empty record allows only cycle 1', () => {
-        expect(scene.fixAfterNone.stdout).toEqual('pass 1');
+        expect(scene.fixAfterNone.stdout).toEqual('pass --cycle 1');
       });
       then('a record of N allows N (a retry) or N + 1', () => {
-        expect(scene.fixAfterOne.stdout).toEqual('pass 1 (a retry) or 2');
-        expect(scene.fixAfterTwo.stdout).toEqual('pass 2 (a retry) or 3');
+        expect(scene.fixAfterOne.stdout).toEqual(
+          'pass --cycle 1 (a retry) or --cycle 2',
+        );
+        expect(scene.fixAfterTwo.stdout).toEqual(
+          'pass --cycle 2 (a retry) or --cycle 3',
+        );
       });
     });
   });
@@ -6317,7 +6653,7 @@ describe('security.habitat.redteam (halt renders)', () => {
           writeFileSync(join(lock, 'holder'), '1');
           const run = runSourcedBash({
             expression:
-              'label="$(get_lock_holder_label "$LOCK")"; rc=$?; printf "%s\\n%s\\n%s" "$rc" "$label" "$(as_lock_wait_remedy "$LOCK" "$rc")"',
+              'label="$(get_lock_holder_label "$LOCK")"; rc=$?; printf "rc=%s\\n%s\\n%s" "$rc" "$label" "$(as_lock_left_fix "could not take the lock $LOCK within ~5s; $label")"',
             stdin: '',
             env: { PATH: PATH_WITHOUT_RHX, LOCK: lock },
           });
@@ -6525,7 +6861,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       };
     });
 
-    when('[t0.2] a grain or stone has no recorded prompt or purpose', () => {
+    when('[t0] a grain or stone has no recorded prompt or purpose', () => {
       then('each renders a loud placeholder, never a dropped line', () => {
         expect(scene.grainPromptAbsent.stdout).toEqual(
           '(no prompt recorded for grain supply)',
@@ -6536,7 +6872,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       });
     });
 
-    when('[t0] grep breaks under a route extractor', () => {
+    when('[t1] grep breaks under a route extractor', () => {
       then(
         'each extractor fails (rc 1) with a named cause, never "no route"',
         () => {
@@ -6571,7 +6907,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       );
     });
 
-    when('[t0.2] a stdin read or a carry read-back breaks', () => {
+    when('[t2] a stdin read or a carry read-back breaks', () => {
       then(
         'the lesson gate halts (rc 1), never "the lesson body is empty"',
         () => {
@@ -6605,7 +6941,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       });
     });
 
-    when('[t0.1] a cycle-record read or a lock create breaks', () => {
+    when('[t3] a cycle-record read or a lock create breaks', () => {
       then(
         'each surfaces its break (rc 1), never "absent" or a time-out',
         () => {
@@ -6688,10 +7024,16 @@ describe('security.habitat.redteam (halt renders)', () => {
             'held by pid 1, which this shell cannot signal',
           );
           expect(scene.holderUnsignalable.stdout).toContain(
-            'do not remove it; wait for that drive to end, then re-run',
+            'fix: do not remove <dir>/held.lock; wait for the drive that holds it to end, then re-run',
           );
           expect(scene.holderUnsignalable.stdout).not.toContain('rm -r');
-          expect(scene.holderUnsignalable.stdout.split('\n')[0]).toEqual('3');
+          expect(scene.holderUnsignalable.stdout.split('\n')[0]).toEqual(
+            'rc=3',
+          );
+          // the pid is named once: kill's own `(1) - ` echo of it is cut
+          expect(scene.holderUnsignalable.stdout).toContain(
+            'cannot signal; said: kill: Operation not permitted',
+          );
         },
       );
 
@@ -6743,7 +7085,7 @@ describe('security.habitat.redteam (halt renders)', () => {
     });
 
     when(
-      '[t0.2] a route dir stands with no stones, or a scope sits outside the repo',
+      '[t4] a route dir stands with no stones, or a scope sits outside the repo',
       () => {
         then('the stoneless dir is no route on disk', () => {
           expect(scene.stonelessRoute.status).toBe(1);
@@ -6816,7 +7158,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       },
     );
 
-    when('[t1] a scope record field is absent or its read breaks', () => {
+    when('[t5] a scope record field is absent or its read breaks', () => {
       then('each verdict is named, never an empty value', () => {
         // each fault returns its own verdict, so the caller names a fitted remedy
         expect(scene.fieldAbsent.status).toBe(2);
@@ -6826,7 +7168,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       });
     });
 
-    when('[t2] a count is checked at its bounds', () => {
+    when('[t6] a count is checked at its bounds', () => {
       COUNT_CASES.map((thisCase, index) =>
         then(
           `${thisCase.value} is ${thisCase.valid ? 'valid' : 'invalid'}`,
@@ -6839,7 +7181,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       );
     });
 
-    when('[tleaf] each leaf failure render is read whole', () => {
+    when('[t7] each leaf failure render is read whole', () => {
       // a cause an operator reads inside a belay is pinned whole, so its class prefix, path, and
       // trailer cannot drift green behind a substring assert
       // each leaf pins its verdict code beside its bytes, so a drifted verdict reddens on the
@@ -6863,19 +7205,22 @@ describe('security.habitat.redteam (halt renders)', () => {
           () => {
             expect(scene[key].status).toBe(status);
             expect(scene[key].stdout).not.toEqual('');
-            // the temp habitat each scene runs in is host-specific; mask it up to `.behavior/`
+            // the temp habitat each scene runs in is host-specific; mask it up to `.behavior/`,
+            // and mask mkdir's vendor phrase, which differs between GNU and BSD
             expect(
-              scene[key].stdout
-                .split(scene.lockedDir)
-                .join('<dir>')
-                .replace(/\/\S*?\/(?=\.behavior\/)/g, '<habitat>/'),
+              asMkdirVendorMasked({
+                out: scene[key].stdout
+                  .split(scene.lockedDir)
+                  .join('<dir>')
+                  .replace(/\/\S*?\/(?=\.behavior\/)/g, '<habitat>/'),
+              }),
             ).toMatchSnapshot();
           },
         ),
       );
     });
 
-    when('[t3] a removal aims outside .behavior/', () => {
+    when('[t8] a removal aims outside .behavior/', () => {
       then('it refuses and removes naught', () => {
         expect(scene.delOutside.status).toBe(1);
         expect(scene.delOutside.stdout).toContain(
@@ -6899,7 +7244,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       );
     });
 
-    when('[t4] the scope exists but cannot be entered', () => {
+    when('[t9] the scope exists but cannot be entered', () => {
       then('plan and init each halt (exit 1) with the cause and a fix', () => {
         expect(scene.lockedPlan.exitCode).toBe(1);
         expect(scene.lockedPlan.stdout).toContain(
@@ -6917,7 +7262,7 @@ describe('security.habitat.redteam (halt renders)', () => {
       });
     });
 
-    when('[t5] git breaks on the branch read before a bind', () => {
+    when('[t10] git breaks on the branch read before a bind', () => {
       then('init halts (exit 1) as not bound, with the cause', () => {
         expect(scene.branchReadBroke.exitCode).toBe(1);
         expect(scene.branchReadBroke.stdout).toContain(
@@ -7297,7 +7642,7 @@ describe('security.habitat.redteam (halt renders)', () => {
               expect(scene.recordAfterGroundedBudget).toContain('- peers: 6');
               expect(scene.recordAfterGroundedBudget).toContain('- budget: 7');
               expect(scene.groundedBudget.stdout).toContain(
-                'peers=6 budget=7 adopted (was peers=6 budget=5)',
+                'peers=6 budget=7 adopted; was peers=6 budget=5)',
               );
               expect(
                 maskRouteDate(scene.groundedBudget.stdout),
@@ -7329,7 +7674,7 @@ describe('security.habitat.redteam (halt renders)', () => {
           expect(scene.recordAfterPriced).toContain('- peers: 6');
           expect(scene.recordAfterPriced).toContain('- budget: 5');
           expect(scene.priced.stdout).toContain(
-            'peers=6 budget=5 adopted (was peers=6 budget=3)',
+            'peers=6 budget=5 adopted; was peers=6 budget=3)',
           );
           expect(scene.drafts).toEqual([]);
         });

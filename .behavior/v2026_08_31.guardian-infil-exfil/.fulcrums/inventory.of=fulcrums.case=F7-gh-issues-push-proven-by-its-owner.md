@@ -21,6 +21,23 @@ and the fail-toward-dirty grep break; [case21] proves a dirty title or body send
 clean one goes out with `--idem findsert`. the vision now names the github write as an external
 contract and points at its owner.
 
+the owner proofs, by path (cited in the suite header too):
+- `radio.task.push --via gh.issues` → ehmpathy/rhachet-roles-bhuild
+  `src/contract/cli/radioTaskPush.integration.test.ts` — the real cli under an isolated HOME;
+  gh.issues auth failures held as `upstream:auth` (exit 2), and the `radio.uses` gate
+- `route.bind.get|set` → ehmpathy/rhachet-roles-bhrain
+  `src/domain.operations/route/bind/getRouteBindByBranch.integration.test.ts`,
+  `setRouteBind.integration.test.ts`
+- `route.stone.set` → ehmpathy/rhachet-roles-bhrain
+  `src/domain.operations/route/stepRouteStoneSet.integration.test.ts`
+
+the owner's real-cli test stops at auth: it proves the gate, the held record, and the auth
+refusal, and it opens no live issue. no test anywhere opens a live github issue through
+`radio.task.push`. that gap is the decision this fulcrum reserves, not an oversight: a live write
+is a public issue on a shared repo, posted on every run, which a reader of that repo sees as spam.
+the only safe shape is a sandbox repo with a scoped key and a cleanup, and that belongs to the
+dispatcher role that owns the push, not to the guardian that calls it.
+
 ## rework
 
 clean. a real-call case is one more `given`, with a sandbox repo and its keyrack key; no code

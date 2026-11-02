@@ -33,7 +33,8 @@ HANDOFF_UNBOUND="unbound"
 # bound already, so the flag had naught to skip; named, never dropped in silence. $1 = the flag.
 as_skip_bind_moot_note() {
   [[ -z "$1" ]] && return 0
-  printf '%s' " (--skip-route-bind had no effect: this route was bound already)"
+  # a `; ` clause, never a paren: the state line it joins already sits inside one
+  printf '%s' "; --skip-route-bind had no effect: this route was bound already"
 }
 
 # print cat mascot + phrase
@@ -211,7 +212,7 @@ as_reuse_state() {
   local peers="$1" budget="$2" have_peers="$3" have_budget="$4" skip_bind="$5"
   is_scope_record_kept "$peers" "$budget" "$have_peers" "$have_budget" \
     && { printf 'reused the bound route; peers=%s budget=%s kept from its record%s' "$peers" "$budget" "$(as_skip_bind_moot_note "$skip_bind")"; return 0; }
-  printf 'reused the bound route; peers=%s budget=%s adopted (was peers=%s budget=%s)%s' \
+  printf 'reused the bound route; peers=%s budget=%s adopted; was peers=%s budget=%s%s' \
     "$peers" "$budget" "$have_peers" "$have_budget" "$(as_skip_bind_moot_note "$skip_bind")"
 }
 
@@ -459,7 +460,7 @@ GRAIN_LIST=(infil exfil leak)
 
 # what each grain hunts, in one line, for the help pages: an operator picks a grain from this,
 # never from a source read or a spent plan
-GRAIN_GLOSS="infil = what reaches in · exfil = what an attacker can pull out · leak = what your own next push publishes · all = the three"
+GRAIN_GLOSS="infil = what reaches in · exfil = what can leave, by any outbound channel · leak = what your own next push publishes · all = the three"
 
 # the one source of the route-kind token. the slug builder (get_route_slug), the bound-route
 # matcher (extract_redteam_route_path), and init.sh's "already bound" belay all interpolate
@@ -790,9 +791,11 @@ extract_redteam_route_path() {
   # verdict, so rc>=2 surfaces as a malfunction (return 1), never as "no route". the capture
   # sits in a compound list (`|| rc=$?`) so `set -e` does not abort on grep's benign rc=1.
   local matched rc=0
-  matched="$(grep -o "\.behavior/[^ ]*${ROUTE_KIND}[^ ]*")" || rc=$?
+  # stderr folds into the capture so the tool's words ride inside the named cause, never ahead
+  # of it on a bare line; a clean grep -o on this pattern writes no stderr.
+  matched="$(grep -o "\.behavior/[^ ]*${ROUTE_KIND}[^ ]*" 2>&1)" || rc=$?
   if (( rc >= 2 )); then
-    as_tool_broke_cause extract_redteam_route_path grep "$rc" "" "" >&2
+    as_tool_broke_cause extract_redteam_route_path grep "$rc" "" "$matched" >&2
     return 1
   fi
   as_first_line "$matched"
@@ -881,9 +884,9 @@ print_gate_verdict() {
 # so get_bound_route can tell "no route bound" from "a different route is bound".
 extract_any_route_path() {
   local matched rc=0
-  matched="$(grep -o '\.behavior/[^ ]*')" || rc=$?
+  matched="$(grep -o '\.behavior/[^ ]*' 2>&1)" || rc=$?
   if (( rc >= 2 )); then
-    as_tool_broke_cause extract_any_route_path grep "$rc" "" "" >&2
+    as_tool_broke_cause extract_any_route_path grep "$rc" "" "$matched" >&2
     return 1
   fi
   as_first_line "$matched"
@@ -1087,14 +1090,16 @@ get_cycle_block() {
 }
 
 # transformer: the one shape every leaf's tool-break cause takes —
-# `💥 MalfunctionError: <fn>: <tool> broke (rc=N)[ on <file>][: <detail>]`.
+# `💥 MalfunctionError: <fn>: <tool> broke (rc=N)[ on <file>][; said: <detail>]`.
+# the `said:` label marks where the leaf's words end and the tool's own begin, so a reader never
+# parses the two as one run-on sentence.
 # $1 = the leaf, $2 = the tool, $3 = its rc, $4 = the file it read (may be empty), $5 = the
 # tool's own words (may be empty).
 as_tool_broke_cause() {
   local fn="$1" tool="$2" rc="$3" file="$4" detail="$5"
   printf '%s: %s: %s broke (rc=%s)' "$(as_error_class "$SEVERITY_MALFUNCTION")" "$fn" "$tool" "$rc"
   [[ -n "$file" ]] && printf ' on %s' "$file"
-  [[ -n "$detail" ]] && printf ': %s' "$(as_oneline "$detail")"
+  [[ -n "$detail" ]] && printf '; said: %s' "$(as_oneline "$detail")"
   printf '\n'
 }
 
@@ -1102,11 +1107,11 @@ as_tool_broke_cause() {
 # break (the cause on stderr, named for the leaf that asked). $1 = the line, $2 = the text,
 # $3 = the leaf, $4 = the file the text came from.
 has_exact_line() {
-  local line="$1" text="$2" fn="$3" file="$4" rc=0
-  grep -qxF -- "$line" <<< "$text" || rc=$?
+  local line="$1" text="$2" fn="$3" file="$4" said rc=0
+  said="$(grep -qxF -- "$line" <<< "$text" 2>&1)" || rc=$?
   (( rc == 0 )) && return 0
   (( rc == 1 )) && return "$CYCLE_BLOCK_ABSENT"
-  as_tool_broke_cause "$fn" grep "$rc" "$file" "" >&2
+  as_tool_broke_cause "$fn" grep "$rc" "$file" "$said" >&2
   return 1
 }
 
@@ -1194,13 +1199,16 @@ as_holder_unrecorded_label() {
   printf 'holder unrecorded'
 }
 as_holder_unreadable_label() {
-  printf 'holder unreadable (%s)' "$(as_oneline "$1")"
+  printf 'holder unreadable, said: %s' "$(as_oneline "$1")"
 }
 as_holder_live_label() {
   printf 'held by pid %s, which still runs' "$1"
 }
+# the line names the pid once: kill's own `(<pid>) - ` echo of it is cut from the said clause
 as_holder_unsignalable_label() {
-  printf 'held by pid %s, which this shell cannot signal (%s) — it may still run' "$1" "$(as_shell_cause "$(as_oneline "$2")")"
+  local pid="$1" said
+  said="$(as_shell_cause "$(as_oneline "$2")")"
+  printf 'held by pid %s, which this shell cannot signal; said: %s — it may still run' "$pid" "${said/"($pid) - "/}"
 }
 as_holder_gone_label() {
   printf 'held by pid %s, which is gone — an interrupted write left it' "$1"
@@ -1228,19 +1236,30 @@ is_process_signaled() {
 LOCK_HOLDER_UNSIGNALABLE=3
 LOCK_HOLDER_LIVE=4
 
-# guard: may the holder still run — a live holder, or one this shell cannot signal? either way
-# the lock is not stale, so its removal would let a second writer in.
-# $1 = get_lock_holder_label's return.
-is_lock_holder_maybe_live() {
-  (( $1 == LOCK_HOLDER_LIVE || $1 == LOCK_HOLDER_UNSIGNALABLE ))
+# transformer: the lock a cause names as left behind — a take that timed out, or a release that
+# broke. stdout = the lock path; return 1 when the cause names no lock.
+get_lock_left_path() {
+  # the path ends at the first space, colon, or semicolon — the separators each cause uses after it
+  [[ "$1" =~ could\ not\ (take|release)\ the\ lock\ ([^\ :\;]+) ]] || return 1
+  printf '%s' "${BASH_REMATCH[2]}"
 }
 
-# transformer: the remedy for a lock not taken in time. a holder that may still run is never
-# offered for removal. $1 = the lock, $2 = get_lock_holder_label's rc.
-as_lock_wait_remedy() {
-  local lock="$1" holder_rc="$2"
-  is_lock_holder_maybe_live "$holder_rc" && { printf 'do not remove it; wait for that drive to end, then re-run'; return 0; }
-  printf 'if no drive runs, remove it: rm -r %s' "$lock"
+# guard: does a cause name a lock holder that may still run (as_holder_live_label or
+# as_holder_unsignalable_label)? such a lock is never offered for removal.
+is_lock_holder_named_live() {
+  [[ "$1" == *"which still runs"* || "$1" == *"it may still run"* ]]
+}
+
+# transformer: the `fix:` item for a cause that leaves a lock behind — a holder that may still run
+# is never offered for removal. the remedy lives here, in the fix item, never spliced into the
+# cause, so a halt's close stays the diagnosis alone. return 1 (no stdout) when the cause names
+# no lock. $1 = the cause.
+as_lock_left_fix() {
+  local cause="$1" lock
+  lock="$(get_lock_left_path "$cause")" || return 1
+  is_lock_holder_named_live "$cause" \
+    && { printf 'fix: do not remove %s; wait for the drive that holds it to end, then re-run' "$lock"; return 0; }
+  printf 'fix: if no drive runs, remove the lock by hand (rm -r %s), then re-run' "$lock"
 }
 
 # guard: does a kill message say the pid is gone (no such process)? under LC_ALL=C both bash's
@@ -1352,10 +1371,12 @@ gen_cycle_record_lock() {
     said="$(wait_lock_gap "$try")" \
       || { print_malfunction_cause 'could not wait the lock backoff for %s: %s' "$lock" "$said"; return 1; }
   done
-  local holder_label holder_rc=0
-  holder_label="$(get_lock_holder_label "$lock")" || holder_rc=$?
-  print_malfunction_cause 'could not take the lock %s within %s (%s) — %s' \
-    "$lock" "$LOCK_WAIT_LABEL" "$holder_label" "$(as_lock_wait_remedy "$lock" "$holder_rc")"
+  # the label alone names the holder; its rc (live or not) is read back from the label by
+  # as_lock_left_fix, where the remedy renders
+  local holder_label
+  holder_label="$(get_lock_holder_label "$lock")" || true
+  print_malfunction_cause 'could not take the lock %s within %s; %s' \
+    "$lock" "$LOCK_WAIT_LABEL" "$holder_label"
   return 1
 }
 
@@ -1364,7 +1385,7 @@ gen_cycle_record_lock() {
 del_cycle_record_lock() {
   local lock="$1" said
   said="$(LC_ALL=C rm -r -- "$lock" 2>&1)" && return 0
-  print_malfunction_cause 'could not release the lock %s: %s — remove it by hand: rm -r %s' "$lock" "$(as_oneline "$said")" "$lock"
+  print_malfunction_cause 'could not release the lock %s; said: %s' "$lock" "$(as_oneline "$said")"
   return 1
 }
 
@@ -1512,8 +1533,15 @@ set_cycle_carry_confirmed() {
 
 # transformer: the verdict for carried keys the cycle's block does not hold.
 # $1 = the cycle, $2 = before|after (the rewind), $3 = the absent keys, one per line.
+# the keys join with `; `: an open key set needs a delimiter a reader cannot mistake for a space
+# inside one key.
 as_carry_absent_verdict() {
-  printf 'carried key(s) absent from cycle %s %s the rewind: %s' "$1" "$2" "$(as_oneline "$3")"
+  local cycle="$1" when="$2" keys=() key
+  while IFS= read -r key; do [[ -n "$key" ]] && keys+=("$key"); done <<< "$3"
+  local IFS=';'
+  local joined="${keys[*]}"
+  printf '%s absent from cycle %s %s the rewind: %s' \
+    "$(as_count_label "${#keys[@]}" 'carried key')" "$cycle" "$when" "${joined//;/; }"
 }
 
 # guard: has a loop spent its budget at this cycle? the budget counts cycles, so the cycle
@@ -1534,17 +1562,41 @@ is_budget_spent() {
 #   call re-confirms its carry and returns 0, wherever the record has since advanced, so a
 #   retry reflex cannot re-dispatch the peers.
 rewind_detect_with_cycle_carry() {
-  local route="$1" cycle="$2" verdict rc=0
-  verdict="$(set_detect_rewound_with_cycle_carry "$route" "$cycle")" || rc=$?
-  print_gate_verdict "$SKILL_NAME rewind-detect --route $route --cycle $cycle" "$rc" "$verdict" "$(as_rewind_fix "$rc")"
+  local route="$1" cycle="$2" said verdict remedy rc=0
+  said="$(set_detect_rewound_with_cycle_carry "$route" "$cycle")" || rc=$?
+  verdict="$(as_verdict_diagnosis "$said")"
+  remedy="$(as_verdict_remedy "$said")"
+  print_gate_verdict "$SKILL_NAME rewind-detect --route $route --cycle $cycle" "$rc" "$verdict" \
+    "$(as_rewind_fix "$rc" "$verdict" "$remedy")" "$(as_rewind_hint "$rc")"
   return "$rc"
 }
 
-# transformer: the fix item a rewind verdict closes on — a malfunction (rc 1) names the retry
-# path; a constraint's verdict already names its own fix, and a success needs none (empty = no item).
+# transformers: a verdict is its diagnosis (line 1), then an optional remedy (line 2, a `fix:`
+# item). the close holds the diagnosis alone; the remedy renders as its own item.
+as_verdict_diagnosis() {
+  printf '%s' "${1%%$'\n'*}"
+}
+as_verdict_remedy() {
+  [[ "$1" == *$'\n'* ]] || return 0
+  printf '%s' "${1#*$'\n'}"
+}
+
+# transformer: the fix item a rewind verdict closes on — a lock left behind names that lock's
+# remedy; else the verdict's own remedy; else a malfunction names the retry path; a success
+# needs none (empty = no item). $1 = rc, $2 = the diagnosis, $3 = the verdict's own remedy.
 as_rewind_fix() {
-  (( $1 == 1 )) || return 0
-  printf '%s' "$FIX_REWIND_RETRY"
+  local rc="$1" verdict="$2" remedy="$3"
+  (( rc == 0 )) && return 0
+  (( rc == 1 )) && as_lock_left_fix "$verdict" && return 0
+  [[ -n "$remedy" ]] && { printf '%s' "$remedy"; return 0; }
+  (( rc == 1 )) && printf '%s' "$FIX_REWIND_RETRY"
+  return 0
+}
+
+# transformer: a constraint names where the gate's contract lives, as every belay does
+as_rewind_hint() {
+  (( $1 == 2 )) || return 0
+  printf 'hint: rhx %s help' "$SKILL_NAME"
 }
 
 # orchestrator: the rewind itself. stdin, args, and return = as rewind_detect_with_cycle_carry;
@@ -1583,17 +1635,22 @@ set_detect_rewound_with_cycle_carry() {
 }
 
 # transformers: the rewind gate's verdicts, one per outcome, so the two orchestrators above and
-# below say which verdict they give, never how its words are spliced. each prints one line.
+# below say which verdict they give, never how its words are spliced. each prints its diagnosis
+# on one line, then, where it owns one, its remedy on a second (as_verdict_remedy).
 as_rewind_stdin_broke_verdict() {
-  echo "not rewound: the carried keys could not be read from stdin, so none were carried — $FIX_STDIN_REREAD"
+  echo "not rewound: the carried keys could not be read from stdin, so none were carried"
+  echo "$FIX_STDIN_REREAD"
 }
 as_rewind_budget_unread_verdict() {
   local cause="$1" field_rc="$2" route="$3"
-  echo "not rewound: could not read the budget: $(as_unclassed_cause "$cause") — $(as_scope_record_fix "$field_rc" "$route" budget)"
+  echo "not rewound: could not read the budget: $(as_unclassed_cause "$cause")"
+  as_scope_record_fix "$field_rc" "$route" budget
+  echo
 }
 as_rewind_budget_invalid_verdict() {
   local allowance="$1" route="$2"
-  echo "not rewound: the scope record's budget is no positive integer: '$allowance' — fix: set '- budget: <n>' in $route/0.scope.md"
+  echo "not rewound: the scope record's budget is no positive integer: '$allowance'"
+  echo "fix: set '- budget: <n>' in $route/0.scope.md, then re-run"
 }
 as_not_rewound_verdict() {
   echo "not rewound: $(as_unclassed_cause "$1")"
@@ -1603,10 +1660,13 @@ as_rewind_broke_verdict() {
 }
 as_verdict_then_release_broke() {
   local verdict="$1" cause="$2"
-  echo "$verdict; then $(as_unclassed_cause "$cause")"
+  echo "$(as_verdict_diagnosis "$verdict"); then $(as_unclassed_cause "$cause")"
 }
+# $1 = the record, $2 = the leaf's cause (may be empty)
 as_cycle_record_unread_verdict() {
-  echo "not rewound: could not read the cycle record $1"
+  local record="$1" cause="$2"
+  [[ -z "$cause" ]] && { echo "not rewound: could not read the cycle record $record"; return 0; }
+  echo "not rewound: could not read the cycle record $record: $(as_unclassed_cause "$(as_oneline "$cause")")"
 }
 as_already_rewound_carry_lost_verdict() {
   echo "already rewound, but $(as_unclassed_cause "$1")"
@@ -1642,17 +1702,19 @@ as_rewind_lock() {
 # set_detect_rewound_with_cycle_carry.
 set_detect_rewound_once() {
   local route="$1" cycle="$2" allowance="$3" keys="$4"
-  local record="$route/.claims/0.cycle.md" walked cause rewound_rc=0
-  has_cycle_line "$record" "$cycle" "$CYCLE_REWOUND_LINE" || rewound_rc=$?
-  is_cycle_read_broke "$rewound_rc" && { as_cycle_record_unread_verdict "$record"; return 1; }
+  local record="$route/.claims/0.cycle.md" walked cause probe_said rewound_rc=0
+  # the probe's leaf cause (its stderr) rides into the verdict, so a read break names its tool
+  probe_said="$(has_cycle_line "$record" "$cycle" "$CYCLE_REWOUND_LINE" 2>&1)" || rewound_rc=$?
+  is_cycle_read_broke "$rewound_rc" && { as_cycle_record_unread_verdict "$record" "$probe_said"; return 1; }
   if is_cycle_entry_held "$rewound_rc"; then
     cause="$(set_cycle_carry_confirmed "$route" "$cycle" "$allowance" "$keys" after)" \
       || { as_already_rewound_carry_lost_verdict "$cause"; return 1; }
     as_already_rewound_verdict "$cycle" "$allowance" "$record"
     return 0
   fi
-  walked="$(get_cycle_count "$record")" \
-    || { as_cycle_record_unread_verdict "$record"; return 1; }
+  # a clean count writes no stderr, so the capture holds the count, or on a break the cause
+  walked="$(get_cycle_count "$record" 2>&1)" \
+    || { as_cycle_record_unread_verdict "$record" "$walked"; return 1; }
   if ! is_cycle_in_order "$cycle" "$walked"; then
     as_cycle_order_verdict "$cycle" "$walked"
     return 2
@@ -1691,22 +1753,24 @@ is_cycle_in_order() {
 # it allows. $1 = the cycle passed, $2 = the blocks the record holds.
 as_cycle_order_verdict() {
   local cycle="$1" walked="$2"
-  echo "not rewound: cycle $cycle is out of order — the record holds $(as_count_label "$walked" cycle); $(as_cycle_order_fix "$walked")"
+  echo "not rewound: cycle $cycle is out of order — the record holds $(as_count_label "$walked" cycle)"
+  echo "fix: $(as_cycle_order_fix "$walked")"
 }
 
 # transformer: the verdict for a spent budget — terminate, and the resume command that runs as
 # printed. $1 = the cycle, $2 = the allowance, $3 = the scope, $4 = the grain, $5 = the route.
 as_budget_spent_verdict() {
   local cycle="$1" allowance="$2" scope="$3" grain="$4" route="$5"
-  echo "not rewound: budget spent — cycle $cycle of $allowance; terminate, and escalate \"add budget\" only if a critical claim stays open — the resume: rhx $SKILL_NAME --scope $scope --grain $grain --mode apply --budget <more than $allowance>, then this same rewind-detect --route $route --cycle $cycle"
+  echo "not rewound: budget spent — cycle $cycle of $allowance; terminate, and escalate \"add budget\" only if a critical claim stays open"
+  echo "fix: to resume, rhx $SKILL_NAME --scope $scope --grain $grain --mode apply --budget <more than $allowance>, then this same rewind-detect --route $route --cycle $cycle"
 }
 
 # transformer: the fix for an out-of-order cycle — the cycle numbers is_cycle_in_order allows.
 # an empty record allows only cycle 1; a record of N blocks allows N (a retry) or N + 1.
 as_cycle_order_fix() {
   local walked="$1"
-  (( walked == 0 )) && { printf 'pass 1'; return 0; }
-  printf 'pass %s (a retry) or %s' "$walked" "$(( walked + 1 ))"
+  (( walked == 0 )) && { printf 'pass --cycle 1'; return 0; }
+  printf 'pass --cycle %s (a retry) or --cycle %s' "$walked" "$(( walked + 1 ))"
 }
 
 # the named verdicts of get_bound_route's return code (0 = a redteam route or none bound)
@@ -1793,12 +1857,12 @@ as_foreign_bind_unread_note() {
 # orchestrator: set REPO_ROOT, or close the run — belay (exit 2) outside a repo, halt (exit 1)
 # when git itself breaks. the one anchor every entry point runs, so the parent skill, its gates,
 # and init.sh never drift apart. called in the entry point's own shell, so its exit ends the run.
-# $1 = the command header.
+# $1 = the command header, $2 = its help hint (a constraint belay carries one, as every other does).
 exit_unless_repo_root() {
-  local command="$1" probe_rc=0 probe_said
+  local command="$1" hint="$2" probe_rc=0 probe_said
   probe_said="$(get_git_repo_probe)" || probe_rc=$?
   is_git_probe_not_a_repo "$probe_rc" && {
-    print_belay "not in a git repository" "$command" "$SEVERITY_CONSTRAINT" "fix: run this from within a repo"
+    print_belay "not in a git repository" "$command" "$SEVERITY_CONSTRAINT" "fix: run this from within a repo" "$hint"
     exit 2
   }
   is_git_probe_broke "$probe_rc" && {
@@ -1907,10 +1971,13 @@ as_backup_ref() {
 }
 
 # transformer: a count of uncommitted paths, for the refusal's item. $1 = porcelain lines.
+# porcelain v1 opens each line with a fixed 3-char status (`XY `); the human reads the path alone.
 as_uncommitted_item() {
   local -a lines
   mapfile -t lines <<< "$1"
-  printf 'uncommitted outside the redteam route: %s path(s), first: %s' "${#lines[@]}" "${lines[0]}"
+  local noun='paths'
+  (( ${#lines[@]} == 1 )) && noun='path'
+  printf 'uncommitted outside the redteam route: %s %s, first: %s' "${#lines[@]}" "$noun" "${lines[0]:3}"
 }
 
 # communicator: create a ref at a commit, create-only (the empty old value refuses an extant ref).
@@ -1941,39 +2008,42 @@ set_file_atomically() {
   said="$( { cat > "$draft" && mv -f -- "$draft" "$path"; } 2>&1)" && return 0
   said="$(as_shell_cause "$(as_oneline "$said")")"
   cleanup="$(LC_ALL=C rm -f -- "$draft" 2>&1)" \
-    || { printf '%s; could not remove the draft %s: %s' "$said" "$draft" "$(as_shell_cause "$(as_oneline "$cleanup")")"; return 1; }
-  printf '%s' "$said"
+    || { print_malfunction_cause 'set_file_atomically: could not write %s; said: %s; then could not remove the draft %s; said: %s' \
+      "$path" "$said" "$draft" "$(as_shell_cause "$(as_oneline "$cleanup")")"; return 1; }
+  print_malfunction_cause 'set_file_atomically: could not write %s; said: %s' "$path" "$said"
   return 1
 }
 
 # transformer: the 0.scope.md body for a sweep's parameters.
+# .note = builtins only (printf), never `cat <<EOF`: the render pipes into set_file_atomically,
+#   so a broken cat here would add a second, unchecked cause beside the write's own.
 as_scope_record() {
   local scope="$1" grain="$2" peers="$3" budget="$4"
-  cat <<EOF
-# 0.scope — the sweep parameters
-
-- scope: $scope
-- grain: $grain
-- peers: $peers
-- budget: $budget
-
-the ward loop reads this habitat through three grains:
-- infil  — inbound channels (ways in)
-- exfil  — outbound channels (ways out, every exit)
-- leak   — exposed values (already out)
-
-- peers  — blind peers per grain-partition (the ground stone sizes its slices by this)
-- budget — the loop's spend allowance (the promote stone draws it down per cycle)
-
-claims live in \`.claims/\` (gitignored). live claims never publish — the
-dispatch tool is itself an exfil channel. only fullsun-safe lessons (a
-generalized class, never a live claim) leave via the promote stone.
-EOF
+  printf '%s\n' \
+    '# 0.scope — the sweep parameters' \
+    '' \
+    "- scope: $scope" \
+    "- grain: $grain" \
+    "- peers: $peers" \
+    "- budget: $budget" \
+    '' \
+    'the ward loop reads this habitat through three grains:' \
+    '- infil  — inbound channels (ways in)' \
+    '- exfil  — outbound channels (ways out, every exit)' \
+    '- leak   — exposed values (already out)' \
+    '' \
+    '- peers  — blind peers per grain-partition (the ground stone sizes its slices by this)' \
+    "- budget — the loop's spend allowance (the promote stone draws it down per cycle)" \
+    '' \
+    'claims live in `.claims/` (gitignored). live claims never publish — the' \
+    'dispatch tool is itself an exfil channel. only fullsun-safe lessons (a' \
+    'generalized class, never a live claim) leave via the promote stone.'
 }
 
 # orchestrator: bind the route to the current branch, then read the bind back.
-# stdout = "bound to branch <b>" on success, or "not bound: <cause> — retry: ..."
-# on failure; return 1 on failure so the caller can set its exit code honestly.
+# stdout = "bound to branch <b>" on success, or a two-line "not bound" verdict (the diagnosis,
+# then its `fix:` line) on failure; return 2 when rhx refused the bind as a constraint (e.g. a protected branch), else
+# 1 on failure, so the caller can set its exit code honestly.
 # .why the read-back = the probe→bind window is check-then-act: two concurrent inits on one
 #   branch both see "none bound", both bind, and the loser would report success while a later
 #   route.drive drives the other route. the read-back turns that silent loser into a loud one.
@@ -1981,7 +2051,7 @@ set_route_bind() {
   local route="$1" branch="$2"
   local bind_out said readback
   bind_out="$(set_route_bind_via_rhx "$route")" \
-    || { as_bind_refused_cause "$route" "$bind_out"; return 1; }
+    || { as_bind_refused_cause "$route" "$bind_out"; return "$(as_exit_from_severity "$(as_severity_of_tool_said "$bind_out")")"; }
   said="$(get_route_bind_via_rhx)" \
     || { as_readback_failed_cause "$said"; return 1; }
   readback="$(get_route_from_bind_readback "$said")" \
@@ -1993,29 +2063,65 @@ set_route_bind() {
   as_bound_state "$branch"
 }
 
-# transformer: rhx refused the bind. $1 = the route, $2 = rhx's output.
+# transformer: rhx refused the bind. $1 = the route, $2 = rhx's output. a refusal rhx names as a
+# ConstraintError (a protected branch, say) is the caller's to fix, so it closes as one; any other
+# refusal is a malfunction to retry. either way the cause is rhx's words, its color codes and run
+# banner stripped, so the line reads as plain text.
 as_bind_refused_cause() {
-  as_not_bound_cause "$(as_oneline "$2")" "retry: rhx route.bind.set --route $1"
+  local route="$1" said
+  said="$(as_tool_said_plain "$2")"
+  [[ "$(as_severity_of_tool_said "$2")" == "$SEVERITY_CONSTRAINT" ]] && {
+    # the class leads this line already, so rhx's own lead-in up to its class is dropped
+    said="${said#*ConstraintError: }"
+    printf '%s: not bound: %s\nfix: clear what route.bind.set names (on a protected branch, check out a feature branch), then rhx route.bind.set --route %s' \
+      "$(as_error_class "$SEVERITY_CONSTRAINT")" "$said" "$route"
+    return 0
+  }
+  as_not_bound_cause "$said" "retry rhx route.bind.set --route $route"
+}
+
+# transformer: the severity a tool's output names — a ConstraintError it raised is the caller's
+# to fix; aught else reads as a malfunction. $1 = the tool's combined output.
+as_severity_of_tool_said() {
+  [[ "$1" == *"ConstraintError"* ]] && { printf '%s' "$SEVERITY_CONSTRAINT"; return 0; }
+  printf '%s' "$SEVERITY_MALFUNCTION"
+}
+
+# transformer: a tool's output as one plain line — terminal color codes dropped, the rhx run
+# banner (`🪨 run solid skill ...`) dropped, tree glyphs dropped (they would read as stray marks
+# once the lines join), runs of space squeezed, then each kept line joined with `; ` so a
+# fragment boundary stays visible.
+as_tool_said_plain() {
+  local text="$1" esc=$'\e' line joined="" words
+  text="$(printf '%s' "$text" | LC_ALL=C sed -E "s/${esc}\\[[0-9;]*[A-Za-z]//g")"
+  while IFS= read -r line; do
+    [[ "$line" == *"run solid skill"* ]] && continue
+    line="${line//├─/}"; line="${line//└─/}"; line="${line//│/}"
+    read -r -a words <<< "$line"
+    (( ${#words[@]} == 0 )) && continue
+    joined="${joined:+$joined; }${words[*]}"
+  done <<< "$text"
+  printf '%s' "$joined"
 }
 
 # transformer: the bind read-back broke. $1 = rhx's output.
 as_readback_failed_cause() {
-  as_not_bound_cause "read-back failed: $(as_oneline "$1")" "check: rhx route.bind.get"
+  as_not_bound_cause "read-back failed; said: $(as_tool_said_plain "$1")" "check rhx route.bind.get, then re-run"
 }
 
 # transformer: the bind read-back named no parseable route. $1 = the extractor's cause.
 as_readback_unparseable_cause() {
-  as_not_bound_cause "read-back unparseable: $(as_oneline "$1")" "check: rhx route.bind.get"
+  as_not_bound_cause "read-back unparseable; said: $(as_tool_said_plain "$1")" "check rhx route.bind.get, then re-run"
 }
 
 # transformer: the bind reads back as no route at all. $1 = the route.
 as_bind_not_persisted_cause() {
-  as_not_bound_cause "the bind did not persist (the branch reads back bound to no route)" "retry: rhx route.bind.set --route $1"
+  as_not_bound_cause "the bind did not persist; the branch reads back bound to no route" "retry rhx route.bind.set --route $1"
 }
 
 # transformer: another bind won the race. $1 = this route, $2 = the route the branch reads back.
 as_concurrent_bind_won_cause() {
-  as_not_bound_cause "the branch reads back bound to $2 (a concurrent bind won)" "this route stands orphaned at $1: remove it, or drive the winner — check: rhx route.bind.get"
+  as_not_bound_cause "the branch reads back bound to $2; a concurrent bind won" "this route stands orphaned at $1: remove it, or drive the winner (rhx route.bind.get names it)"
 }
 
 # transformer: the bind state line for a bound route. $1 = the branch.
@@ -2047,10 +2153,11 @@ is_same_route_path() {
   [[ "$(as_normalized_route_path "$1")" == "$(as_normalized_route_path "$2")" ]]
 }
 
-# transformer: a "not bound" cause — the qualified class, what failed, then its remedy, one line.
+# transformer: a "not bound" verdict — line 1 the diagnosis (the qualified class, what failed),
+# line 2 its remedy as a `fix:` item, so a render keeps the cause and the fix apart.
 as_not_bound_cause() {
   local what="$1" remedy="$2"
-  printf '%s: not bound: %s — %s' "$(as_error_class "$SEVERITY_MALFUNCTION")" "$what" "$remedy"
+  printf '%s: not bound: %s\nfix: %s' "$(as_error_class "$SEVERITY_MALFUNCTION")" "$what" "$remedy"
 }
 
 # orchestrator: bind a route to the current branch. stdout + return = as set_route_bind;
@@ -2166,7 +2273,7 @@ get_route_scope_field() {
   [[ -f "$scope_file" ]] || { print_malfunction_cause 'no scope record at %s' "$scope_file"; return "$SCOPE_RECORD_ABSENT"; }
   line="$(grep -m1 "^- ${field}: " "$scope_file" 2>&1)" || rc=$?
   (( rc == 1 )) && { print_malfunction_cause 'the scope record %s lacks its %s field' "$scope_file" "$field"; return "$SCOPE_FIELD_ABSENT"; }
-  (( rc >= 2 )) && { print_malfunction_cause 'grep broke (rc=%s) on %s: %s' "$rc" "$scope_file" "$(as_oneline "$line")"; return "$SCOPE_READ_BROKE"; }
+  (( rc >= 2 )) && { as_tool_broke_cause get_route_scope_field grep "$rc" "$scope_file" "$line"; return "$SCOPE_READ_BROKE"; }
   as_scope_field_value "$line" "$field"
 }
 
@@ -2198,7 +2305,7 @@ get_route_promote_decision() {
   [[ -e "$yield" ]] || return 0
   line="$(grep -m1 '^- decision: ' -- "$yield" 2>&1)" || rc=$?
   (( rc == 1 )) && return 0
-  (( rc >= 2 )) && { print_malfunction_cause 'grep broke (rc=%s) on %s: %s' "$rc" "$yield" "$(as_oneline "$line")"; return "$PROMOTE_READ_BROKE"; }
+  (( rc >= 2 )) && { as_tool_broke_cause get_route_promote_decision grep "$rc" "$yield" "$line"; return "$PROMOTE_READ_BROKE"; }
   as_scope_field_value "$line" decision
 }
 
@@ -2439,7 +2546,7 @@ print_plan() {
   local -a grains=("$@")
   print_tree_start "$command --scope $scope --grain $grain --peers $peers --budget $budget"
   print_tree_branch "scope" "$scope"
-  print_tree_branch "grains" "$(as_grain_list_text "${grains[@]}")  ($(as_count_label "${#grains[@]}" partition), disjoint by grain-surface)"
+  print_tree_branch "grains" "$(as_grain_list_text "${grains[@]}")  ($(as_count_label "${#grains[@]}" grain-partition), disjoint by grain-surface)"
   print_tree_branch "peers" "$peers per grain-partition  ⇒ $peer_total blind peers total"
   print_tree_branch "budget" "$(as_count_label "$budget" "loop cycle") — each draws one detect → verify → repair pass"
   print_tree_branch "re-detect" "$(as_budget_reach "$budget")"
@@ -2447,9 +2554,9 @@ print_plan() {
   print_tree_branch "a bound route" "apply keeps its recorded peers + budget for any flag this request omits; a new --peers is refused once 1.ground cuts the slices"
   print_tree_branch "the ward loop" "ground → detect → verify → repair → promote → (loop | terminate)"
   print_tree_branch "publishes" "$(as_publish_disclosure)"
-  print_tree_branch "issuer acts" "$(as_issuer_act_disclosure)"
+  print_tree_branch "defers" "$(as_issuer_act_disclosure)"
   print_tree_branch "rewrites" "$(as_history_rewrite_disclosure)"
-  print_tree_branch "per-peer slices" "$peers per grain, cut by 1.ground at drive time into .claims/1.ground.yield.md — its guard grades them, and the drive goes on to 2.detect with no pause; this plan is your read before the spend"
+  print_tree_branch "per-peer slices" "$peers per grain-partition, cut by 1.ground at drive time into .claims/1.ground.yield.md — its guard grades them, and the drive goes on to 2.detect with no pause; this plan is your read before the spend"
   print_tree_branch "scope limit" "blind peers cannot see the aggregate map (a leak only the whole published set forms); a clean verdict does not clear it — review the whole corpus for that class apart"
   local prompts="per-grain prompts (each peer is blind to the others' slice + theory)"
   [[ -z "$next" ]] && { print_tree_item "$prompts" "$TREE_LAST"; print_grain_prompts "      " "${grains[@]}"; return 0; }
@@ -2552,7 +2659,7 @@ print_apply_handoff() {
   print_tree_item "$(as_tree_item_with_children "the ward loop runs through the route stones (blind peers are agent work)" \
     "   │  " "$(as_ward_loop_stone_lines)")"
   print_tree_branch "publishes" "$(as_publish_disclosure)"
-  print_tree_branch "issuer acts" "$(as_issuer_act_disclosure)"
+  print_tree_branch "defers" "$(as_issuer_act_disclosure)"
   print_tree_branch "rewrites" "$(as_history_rewrite_disclosure)"
   print_tree_spacer
   # the next step is the one init renders too (as_route_next_step), so the two never drift

@@ -246,19 +246,27 @@ export const genGuardianStubBinPath = (): string =>
  * .note = with neither filter, every call breaks: the empty `failOn` text matches any argv.
  *         that is the whole-tool break (git, grep, cp) most cases want; pass a filter to keep
  *         the tool alive for its other calls
+ * .note = `failOnCall` breaks only the Nth argv match (1-based): two reads that share their
+ *         argv (a read, then its read-back) can each be broken alone
  */
 export const genBrokenToolBin = (input: {
   tool: string;
   exitCode: number;
   failOn?: string;
   failOnStdin?: string;
+  failOnCall?: number;
 }): string => {
   const bin = join(genTempDir({ slug: `broken-${input.tool}` }), 'bin');
   mkdirSync(bin, { recursive: true });
   const realTool = getRealToolPath({ tool: input.tool });
+
+  // seed the call count, so the ordinal stub reads a real file and a broken read fails loud
+  if (input.failOnCall !== undefined) writeFileSync(join(bin, '.calls'), '0');
+
+  // stage the stub
   writeFileSync(
     join(bin, input.tool),
-    asBrokenToolStub({ ...input, realTool }),
+    asBrokenToolStub({ ...input, realTool, countFile: join(bin, '.calls') }),
   );
   chmodSync(join(bin, input.tool), 0o755);
   return bin;
@@ -294,7 +302,18 @@ const asBrokenToolStub = (input: {
   exitCode: number;
   failOn?: string;
   failOnStdin?: string;
+  failOnCall?: number;
+  countFile: string;
 }): string => {
+  if (input.failOnCall !== undefined)
+    return asBrokenToolOnCallExecutable({
+      tool: input.tool,
+      realTool: input.realTool,
+      exitCode: input.exitCode,
+      failOn: input.failOn ?? '',
+      failOnCall: input.failOnCall,
+      countFile: input.countFile,
+    });
   if (input.failOnStdin !== undefined)
     return asBrokenToolOnStdinExecutable({
       tool: input.tool,
@@ -365,6 +384,30 @@ const asBrokenToolExecutable = (input: {
   [
     '#!/bin/sh',
     `case "$*" in *${asShellQuoted(input.failOn)}*) echo ${asShellQuoted(`${input.tool}: simulated break`)} >&2; exit ${input.exitCode} ;; esac`,
+    `exec ${asShellQuoted(input.realTool)} "$@"`,
+    '',
+  ].join('\n');
+
+/**
+ * .what = the ordinal broken-tool stub: the Nth call whose argv holds `failOn` breaks with
+ *         `exitCode`; every other call, matched or not, runs the real tool
+ * .note = the count lives in a file beside the stub, so each spawned call reads the last one's
+ */
+const asBrokenToolOnCallExecutable = (input: {
+  tool: string;
+  realTool: string;
+  exitCode: number;
+  failOn: string;
+  failOnCall: number;
+  countFile: string;
+}): string =>
+  [
+    '#!/bin/sh',
+    `case "$*" in *${asShellQuoted(input.failOn)}*)`,
+    `  calls=$(( $(cat ${asShellQuoted(input.countFile)}) + 1 ))`,
+    `  echo "$calls" > ${asShellQuoted(input.countFile)}`,
+    `  [ "$calls" -eq ${input.failOnCall} ] && { echo ${asShellQuoted(`${input.tool}: simulated break`)} >&2; exit ${input.exitCode}; } ;;`,
+    'esac',
     `exec ${asShellQuoted(input.realTool)} "$@"`,
     '',
   ].join('\n');

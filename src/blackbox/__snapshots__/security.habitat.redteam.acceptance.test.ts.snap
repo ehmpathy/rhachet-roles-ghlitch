@@ -1,0 +1,272 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`security.habitat.redteam given: [case1] the guardian role installed via rhachet init when: [t1] the human asks for help then: it names every command and grain (exit 0) 1`] = `
+"🐈 heres the deal...
+
+🧿 security.habitat.redteam — hunt a habitat the way an adversary would
+
+   the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+
+usage:
+  rhx security.habitat.redteam init --scope <path> --grain <grain> [--peers <n>] [--budget <n>] [--skip-route-bind]
+  rhx security.habitat.redteam --scope <path> --grain <grain> [--peers <n>] [--budget <n>] --mode plan
+  rhx security.habitat.redteam --scope <path> --grain <grain> [--peers <n>] [--budget <n>] [--skip-route-bind] --mode apply
+
+ward-loop gates (the stones invoke these; never the raw command they guard):
+  rhx security.habitat.redteam backup-before-rewrite                     (4.repair, before each history rewrite)
+  printf '%s' "$body" | rhx security.habitat.redteam dispatch-lesson --title <title>
+  rhx security.habitat.redteam rewind-detect --route <route> --cycle <n> <<'KEYS'
+  <each open key, one per line, written out in full>
+  KEYS
+
+options:
+  --scope            habitat surface to sweep (a repo, a subtree)         (required)
+  --grain            infil | exfil | leak | all                           (required)
+                     infil = what reaches in · exfil = what can leave, by any outbound channel · leak = what your own next push publishes · all = the three
+  --peers            blind peers per grain-partition, 1 to 9999           (default: 3; apply to a bound route: its own; fixed once 1.ground cuts the slices)
+  --budget           loop spend allowance, 1 to 9999 cycles               (default: 1 — one pass, no re-detect; apply to a bound route: its own)
+  --mode             plan | apply                                         (required, except for init)
+  --skip-route-bind  scaffold without a branch bind                       (apply + init only)
+
+gate options (each gate reads only its own; any other flag belays):
+  --title            dispatch-lesson: the lesson's title, '<class>: <fix>' (required)
+  --route            rewind-detect: the route dir under .behavior/        (required)
+  --cycle            rewind-detect: the cycle just walked, 1 to 9999      (required)
+
+exit: 0 = done · 1 = malfunction · 2 = constraint
+
+⚠️ informational only — not professional security advice, not exhaustive; consult a qualified security professional for your own habitat
+"
+`;
+
+exports[`security.habitat.redteam given: [case1] the guardian role installed via rhachet init when: [t2] the human plans a sweep then: it names the spend and the outward acts, and stops (exit 0) 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --mode plan --scope . --grain leak --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: leak  (1 grain-partition, disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle — each draws one detect → verify → repair pass
+   ├─ re-detect: none — one pass; its repairs stay PENDING-REDETECT and cannot converge (pass --budget 2 or more to re-detect them)
+   ├─ projected: 3 peers × 1 cycle = up to 3 peer-dispatch runs
+   ├─ a bound route: apply keeps its recorded peers + budget for any flag this request omits; a new --peers is refused once 1.ground cuts the slices
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   ├─ publishes: 5.promote opens a public gh issue on ehmpathy/rhachet-roles-ghlitch per fullsun-safe lesson (a generalized class, never a live claim); each push runs the dispatch-lesson scan gate first, and live claims stay in .claims/
+   ├─ defers: 4.repair never revokes or rotates a credential at its issuer — it drafts the command for a human to run, and the claim stays open until the human returns its output
+   ├─ rewrites: 4.repair edits the tree and rewrites each local unpushed commit that carries a leaked value — each rewrite passes rhx security.habitat.redteam backup-before-rewrite first, which takes a backup ref (refs/redteam-backup/<branch>.<head-sha>, never pushed by --all) and refuses the rewrite when the tree holds uncommitted work
+   ├─ per-peer slices: 3 per grain-partition, cut by 1.ground at drive time into .claims/1.ground.yield.md — its guard grades them, and the drive goes on to 2.detect with no pause; this plan is your read before the spend
+   ├─ scope limit: blind peers cannot see the aggregate map (a leak only the whole published set forms); a clean verdict does not clear it — review the whole corpus for that class apart
+   ├─ per-grain prompts (each peer is blind to the others' slice + theory)
+   │  ├─ leak  — "what value on this slice is already exposed, or forms a map with others?"
+   │  └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+   └─ next: spend it: rhx security.habitat.redteam --scope . --grain leak --peers 3 --budget 1 --mode apply
+
+⚠️ informational only — not professional security advice, not exhaustive; consult a qualified security professional for your own habitat
+"
+`;
+
+exports[`security.habitat.redteam given: [case1] the guardian role installed via rhachet init when: [t3] the human passes a grain the skill does not know then: it belays (exit 2) and names the valid grains 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass one of infil,exfil,leak,all
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: invalid grain: bogus
+"
+`;
+
+exports[`security.habitat.redteam given: [case1] the guardian role installed via rhachet init when: [t4] the human omits --scope then: it belays (exit 2) and names the absent flag 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass the surface to sweep (a repo or a subtree)
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: absent required arg: --scope
+"
+`;
+
+exports[`security.habitat.redteam given: [case1] the guardian role installed via rhachet init when: [t5] the human joins a flag to its value with = then: it belays (exit 2) and names the spaced form 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam
+   ├─ fix: pass the value as its own word: --grain leak
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: flag and value joined by '=': --grain=leak
+"
+`;
+
+exports[`security.habitat.redteam given: [case2] an installed habitat with no route yet when: [t0] the human scaffolds a route with no bind then: the route and its stones land (exit 0) 1`] = `
+"🐈 anchors away!
+
+🧿 security.habitat.redteam init --scope . --grain leak
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=leak/ ✨
+   ├─ claims: .behavior/v<date>.guardian-redteam.grain=leak/.claims/ (gitignored — live claims never publish)
+   ├─ stones
+   │  ├─ 1.ground.stone / .guard
+   │  ├─ 2.detect.stone / .guard
+   │  ├─ 3.verify.stone / .guard
+   │  ├─ 4.repair.stone / .guard
+   │  └─ 5.promote.stone / .guard
+   ├─ skipped (--skip-route-bind)
+   └─ next: bind it, then drive it: rhx route.bind.set --route .behavior/v<date>.guardian-redteam.grain=leak; rhx route.drive
+
+⚠️ informational only — not professional security advice, not exhaustive; consult a qualified security professional for your own habitat
+"
+`;
+
+exports[`security.habitat.redteam given: [case3] an installed habitat on main, with no route bound when: [t0] the human applies a sweep on the protected branch then: the real bind refuses it, and the skill belays (exit 2) with a feature-branch fix 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --mode apply --scope . --grain infil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: infil  (1 grain-partition, disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle — each draws one detect → verify → repair pass
+   ├─ re-detect: none — one pass; its repairs stay PENDING-REDETECT and cannot converge (pass --budget 2 or more to re-detect them)
+   ├─ projected: 3 peers × 1 cycle = up to 3 peer-dispatch runs
+   ├─ a bound route: apply keeps its recorded peers + budget for any flag this request omits; a new --peers is refused once 1.ground cuts the slices
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   ├─ publishes: 5.promote opens a public gh issue on ehmpathy/rhachet-roles-ghlitch per fullsun-safe lesson (a generalized class, never a live claim); each push runs the dispatch-lesson scan gate first, and live claims stay in .claims/
+   ├─ defers: 4.repair never revokes or rotates a credential at its issuer — it drafts the command for a human to run, and the claim stays open until the human returns its output
+   ├─ rewrites: 4.repair edits the tree and rewrites each local unpushed commit that carries a leaked value — each rewrite passes rhx security.habitat.redteam backup-before-rewrite first, which takes a backup ref (refs/redteam-backup/<branch>.<head-sha>, never pushed by --all) and refuses the rewrite when the tree holds uncommitted work
+   ├─ per-peer slices: 3 per grain-partition, cut by 1.ground at drive time into .claims/1.ground.yield.md — its guard grades them, and the drive goes on to 2.detect with no pause; this plan is your read before the spend
+   ├─ scope limit: blind peers cannot see the aggregate map (a leak only the whole published set forms); a clean verdict does not clear it — review the whole corpus for that class apart
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ infil — "what reaches in to this slice, from where, with what power?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 belay that...
+
+🧿 security.habitat.redteam --mode apply
+   ├─ init said
+   │  🐈 belay that...
+   │
+   │  🧿 security.habitat.redteam init --scope . --grain infil
+   │     ├─ route: .behavior/v<date>.guardian-redteam.grain=infil/
+   │     ├─ claims: .behavior/v<date>.guardian-redteam.grain=infil/.claims/ (gitignored — live claims never publish)
+   │     ├─ stones
+   │     │  ├─ 1.ground.stone / .guard
+   │     │  ├─ 2.detect.stone / .guard
+   │     │  ├─ 3.verify.stone / .guard
+   │     │  ├─ 4.repair.stone / .guard
+   │     │  └─ 5.promote.stone / .guard
+   │     ├─ cause: ✋ ConstraintError: not bound: cannot bind route on protected branch; branch: main
+   │     ├─ fix: clear what route.bind.set names (on a protected branch, check out a feature branch), then rhx route.bind.set --route .behavior/v<date>.guardian-redteam.grain=infil
+   │     └─ blocked: ✋ ConstraintError: route scaffolded, but the bind did not take
+   │
+   │  ⚠️ informational only — not professional security advice, not exhaustive; consult a qualified security professional for your own habitat
+   └─ blocked: ✋ ConstraintError: the scaffold did not land clean
+"
+`;
+
+exports[`security.habitat.redteam given: [case4] an installed habitat on a feature branch, with no route bound when: [t0] the human applies a sweep, which binds its route then: the route is scaffolded and bound through the real bind contract (exit 0) 1`] = `
+"🐈 chartin course...
+
+🧿 security.habitat.redteam --mode apply --scope . --grain infil --peers 3 --budget 1
+   ├─ scope: .
+   ├─ grains: infil  (1 grain-partition, disjoint by grain-surface)
+   ├─ peers: 3 per grain-partition  ⇒ 3 blind peers total
+   ├─ budget: 1 loop cycle — each draws one detect → verify → repair pass
+   ├─ re-detect: none — one pass; its repairs stay PENDING-REDETECT and cannot converge (pass --budget 2 or more to re-detect them)
+   ├─ projected: 3 peers × 1 cycle = up to 3 peer-dispatch runs
+   ├─ a bound route: apply keeps its recorded peers + budget for any flag this request omits; a new --peers is refused once 1.ground cuts the slices
+   ├─ the ward loop: ground → detect → verify → repair → promote → (loop | terminate)
+   ├─ publishes: 5.promote opens a public gh issue on ehmpathy/rhachet-roles-ghlitch per fullsun-safe lesson (a generalized class, never a live claim); each push runs the dispatch-lesson scan gate first, and live claims stay in .claims/
+   ├─ defers: 4.repair never revokes or rotates a credential at its issuer — it drafts the command for a human to run, and the claim stays open until the human returns its output
+   ├─ rewrites: 4.repair edits the tree and rewrites each local unpushed commit that carries a leaked value — each rewrite passes rhx security.habitat.redteam backup-before-rewrite first, which takes a backup ref (refs/redteam-backup/<branch>.<head-sha>, never pushed by --all) and refuses the rewrite when the tree holds uncommitted work
+   ├─ per-peer slices: 3 per grain-partition, cut by 1.ground at drive time into .claims/1.ground.yield.md — its guard grades them, and the drive goes on to 2.detect with no pause; this plan is your read before the spend
+   ├─ scope limit: blind peers cannot see the aggregate map (a leak only the whole published set forms); a clean verdict does not clear it — review the whole corpus for that class apart
+   └─ per-grain prompts (each peer is blind to the others' slice + theory)
+      ├─ infil — "what reaches in to this slice, from where, with what power?"
+      └─ each claim = a chain (entry/exit → mechanism → blast radius|audience), keyed on channel+mechanism
+
+🐈 anchors away!
+
+🧿 security.habitat.redteam --mode apply
+   ├─ route: .behavior/v<date>.guardian-redteam.grain=infil (scaffolded + bound a fresh route)
+   ├─ the ward loop runs through the route stones (blind peers are agent work)
+   │  ├─ 1.ground   — map the focus-surface per grain
+   │  ├─ 2.detect   — dispatch blind peers, fan claims in (keyed channel+mechanism)
+   │  ├─ 3.verify   — confirm vs tree, classify, sort by permanence trigger
+   │  ├─ 4.repair   — gated, disposition-aware, PENDING-REDETECT until confirmed
+   │  └─ 5.promote  — teach the kin (fullsun-safe), then loop or terminate
+   ├─ publishes: 5.promote opens a public gh issue on ehmpathy/rhachet-roles-ghlitch per fullsun-safe lesson (a generalized class, never a live claim); each push runs the dispatch-lesson scan gate first, and live claims stay in .claims/
+   ├─ defers: 4.repair never revokes or rotates a credential at its issuer — it drafts the command for a human to run, and the claim stays open until the human returns its output
+   ├─ rewrites: 4.repair edits the tree and rewrites each local unpushed commit that carries a leaked value — each rewrite passes rhx security.habitat.redteam backup-before-rewrite first, which takes a backup ref (refs/redteam-backup/<branch>.<head-sha>, never pushed by --all) and refuses the rewrite when the tree holds uncommitted work
+   │
+   └─ next: drive it: rhx route.drive
+
+⚠️ informational only — not professional security advice, not exhaustive; consult a qualified security professional for your own habitat
+"
+`;
+
+exports[`security.habitat.redteam given: [case5] an installed habitat whose redteam route stands uncommitted when: [t0] 4.repair runs the backup gate then: it takes a backup ref and lets the rewrite proceed (exit 0) 1`] = `
+"🐈 smooth sailin!
+
+🧿 security.habitat.redteam backup-before-rewrite
+   ├─ branch: main at <sha12>
+   ├─ backup: refs/redteam-backup/main.<sha12>
+   ├─ restore: git reset --hard refs/redteam-backup/main.<sha12>
+   └─ backed up — the rewrite may proceed on main
+"
+`;
+
+exports[`security.habitat.redteam given: [case5] an installed habitat whose redteam route stands uncommitted when: [t1] work outside the route stands uncommitted then: it refuses (exit 2), names the path, and takes no backup ref 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam backup-before-rewrite
+   ├─ uncommitted outside the redteam route: 1 path, first: seed.txt
+   ├─ fix: do not rewrite — hand the rewrite to the human (the drafted command, the branch, the commits), and hold the claim open
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: the tree holds uncommitted work; a rewrite over it can drop it
+"
+`;
+
+exports[`security.habitat.redteam given: [case6] a bound route with a budget of one cycle when: [t0] 5.promote asks to rewind after cycle 1 then: it refuses as spent (exit 2), rewinds naught, and names the resume 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam rewind-detect --route .behavior/v<date>.guardian-redteam.grain=leak --cycle 1
+   ├─ fix: to resume, rhx security.habitat.redteam --scope . --grain leak --mode apply --budget <more than 1>, then this same rewind-detect --route .behavior/v<date>.guardian-redteam.grain=leak --cycle 1
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: not rewound: budget spent — cycle 1 of 1; terminate, and escalate "add budget" only if a critical claim stays open
+"
+`;
+
+exports[`security.habitat.redteam given: [case6] a bound route with a budget of one cycle when: [t1] a cycle number skips ahead of the record then: it refuses as out of order (exit 2) and names the cycle to pass 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam rewind-detect --route .behavior/v<date>.guardian-redteam.grain=leak --cycle 3
+   ├─ fix: pass --cycle 1
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: not rewound: cycle 3 is out of order — the record holds 0 cycles
+"
+`;
+
+exports[`security.habitat.redteam given: [case8] an installed habitat and a lesson to dispatch when: [t0] the lesson body carries a live-claim marker then: the scan refuses it (exit 2) and names the marker, before any push 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam dispatch-lesson
+   ├─ markers
+   │  └─ body line 1: 10.0.4.17
+   ├─ fix: if a marker is no live claim, strip that constant from the title or body and re-run — a lesson carries the class, never the instance
+   └─ blocked: ✋ ConstraintError: not dispatched — live-claim marker(s) found; keep this lesson in .claims/
+"
+`;
+
+exports[`security.habitat.redteam given: [case8] an installed habitat and a lesson to dispatch when: [t1] the lesson has no title then: it belays (exit 2) and names --title 1`] = `
+"🐈 belay that...
+
+🧿 security.habitat.redteam dispatch-lesson
+   ├─ fix: pass the lesson's title (--title '<class>: <fix>')
+   ├─ hint: rhx security.habitat.redteam help
+   └─ blocked: ✋ ConstraintError: absent required arg: --title
+"
+`;
+
+exports[`security.habitat.redteam given: [case7] a bound route with a budget of two cycles when: [t0] 5.promote asks to rewind after cycle 1 then: the real route.stone.set rewinds 2.detect and the cycle record holds the key (exit 0) 1`] = `
+"🐈 smooth sailin!
+
+🧿 security.habitat.redteam rewind-detect --route .behavior/v<date>.guardian-redteam.grain=leak --cycle 1
+   └─ rewound 2.detect after cycle 1 of 2 — carried keys held in .behavior/v<date>.guardian-redteam.grain=leak/.claims/0.cycle.md
+"
+`;

@@ -73,7 +73,7 @@ watchful-ward energy:
 | `all clear!` | success | no hazard found / safe |
 | `caught a shadow...` | suspicious | detected an anomaly |
 | `the ward cracked...` | tripped | a decoy caught a probe — notify |
-| `hold fast...` | blocked | error, cannot proceed |
+| `wet paws...` | blocked | malfunction, cannot proceed |
 | `belay that...` | constraint | invalid input, rejected |
 | `light the beam...` | guide | show the inhabitant the safe path |
 | `stay humble...` | calibrate | no threat is ever "solved" |
@@ -84,8 +84,14 @@ watchful-ward energy:
 - "🧿 caught a shadow... unexpected cert alert" — suspicious
 - "🧿 shields up... route this over your hotspot" — mitigate
 - "🧿 the ward cracked... a decoy caught a probe" — a honeypot tripped
-- "🧿 hold fast... cannot verify this network" — blocked
+- "🧿 wet paws... cannot verify this network" — blocked
 - "🧿 stay humble... tls closed the sniff, but the portal is still open" — calibrate
+
+### in skill output
+skills render under the kin ghlitch cat header, so a skill's halt reads the same as every ghlitch
+skill: `🐈 wet paws...` (malfunction, exit 1), `🐈 belay that...` (constraint, exit 2),
+`🐈 heres the deal...` (help), `🐈 chartin course...` (plan), `🐈 anchors away!` (apply), `🐈 smooth sailin!` (success). the 🧿
+mark leads the artifact line beneath it.
 
 ## .the spirit
 > the ward does not swim out to fight the storm, nor strike the one who covets.
