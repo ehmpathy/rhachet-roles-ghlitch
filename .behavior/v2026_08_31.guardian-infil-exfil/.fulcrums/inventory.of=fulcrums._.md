@@ -10,7 +10,7 @@ fulcrums best-guessed mid-drive and left for the council / wisher.
 | F4 | the aggregate-map leak is deferred from v1, disclosed in every verdict | clean | best-guessed, awaits wisher | 85% |
 | F5 | the ward loop is clamped by contract phrases + deterministic seams, not an end-to-end sweep | clean | best-guessed, awaits council | 85% |
 | F6 | keep the ghlitch house render, not `✋ ConstraintError:` headers, in this skill alone | clean | closed: fused — the close line carries the qualified class | 95% |
-| F7 | prove the gh.issues push where it is owned (dispatcher), clamp only the gate here | clean | best-guessed, awaits council | 75% |
+| F7 | prove the gh.issues push where it is owned (dispatcher), clamp only the gate here | clean | ruled: opt-in live test (REDTEAM_LIVE_PUSH=true), vision exception line | 75% |
 | F8 | keep the render audit's glyph literal until a second reader needs a registry | clean | best-guessed, awaits council | 85% |
 | F9 | the init subcommand `exec`s init rather than nest its render in a bucket | clean | best-guessed, awaits council | 85% |
 | F10 | the self-dir resolves in each entry point, not via a shared `as_self_dir` | clean | best-guessed, awaits council | 85% |

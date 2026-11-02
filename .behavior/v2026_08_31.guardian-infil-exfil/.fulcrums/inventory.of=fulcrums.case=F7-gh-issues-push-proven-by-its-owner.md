@@ -55,4 +55,13 @@ moves.
 
 ## verdict once ruled
 
-_(awaits council)_
+ruled by the director, 2026-11-02: neither (a) nor (b) as posed. no sandbox repo, no new key.
+the live push gets one opt-in test, `[case9]` in
+`src/blackbox/security.habitat.redteam.acceptance.test.ts`:
+
+- it runs only under `REDTEAM_LIVE_PUSH=true`, so ci never runs it
+- once named, an absent `GITHUB_TOKEN` throws a `ConstraintError` with its fix
+- two dispatches of one fixed title must land (exit 0) under the same issue exid, so findsert
+  holds and repeated live runs touch one issue
+
+the vision states the exception in one line (`1.vision.yield.md` § groundwork).

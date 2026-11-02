@@ -1,4 +1,4 @@
-import { MalfunctionError } from 'helpful-errors';
+import { ConstraintError, MalfunctionError } from 'helpful-errors';
 import { genTempDir, given, then, useBeforeAll, when } from 'test-fns';
 
 import { execSync, spawnSync } from 'node:child_process';
@@ -18,6 +18,10 @@ import { join } from 'node:path';
  *         `rhx route.stone.set` rewind on a bound route. no network and no peer spend: plan
  *         stops before the spend, and dispatch-lesson runs only on its scan refusal, which
  *         halts before the push
+ * .note = the one exception: `[case9]` pushes a clean lesson live, via the real dispatcher, to
+ *         ehmpathy/rhachet-roles-ghlitch. it runs only when REDTEAM_LIVE_PUSH=true names it
+ *         (never in ci), needs GITHUB_TOKEN, and fails loud without it. the vision states
+ *         this exception (`1.vision.yield.md` § groundwork, F7)
  */
 
 /**
@@ -628,4 +632,79 @@ describe('security.habitat.redteam', () => {
       });
     });
   });
+
+  // the one sanctioned opt-in: a live push opens a public issue, so it runs only when a human
+  // names REDTEAM_LIVE_PUSH=true (never in ci), and fails loud on an absent key once named
+  given.runIf(process.env.REDTEAM_LIVE_PUSH === 'true')(
+    '[case9] a clean lesson pushed live to the role-package upstream, opt-in via REDTEAM_LIVE_PUSH=true',
+    () => {
+      const scene = useBeforeAll(async () => {
+        // fail loud: a named live run with no key is a caller fault, never a quiet pass
+        if (!process.env.GITHUB_TOKEN)
+          throw new ConstraintError(
+            'REDTEAM_LIVE_PUSH=true names the live push, but GITHUB_TOKEN is absent',
+            {
+              hint: 'export GITHUB_TOKEN with issue write on ehmpathy/rhachet-roles-ghlitch, then re-run',
+            },
+          );
+
+        // the real dispatcher role sends the push, through its own radio.uses gate
+        const habitat = genInstalledHabitat({
+          slug: 'redteam-acceptance-live-push',
+          branch: null,
+        });
+        execSync('npx rhachet init --roles bhuild/dispatcher', {
+          cwd: habitat.dir,
+          stdio: 'pipe',
+        });
+        runRhx({ dir: habitat.dir, args: ['radio.uses', 'allow'] });
+        return habitat;
+      });
+
+      // one fixed title, so every live run findserts the same issue, never a new one
+      const LIVE_TITLE =
+        'exfil: redteam live-push contract check (opt-in test; findsert, one issue ever)';
+      const LIVE_BODY =
+        'a generalized class: a lesson the redteam dispatches upstream must carry the class, never a live claim\n';
+
+      when('[t0] the same clean lesson is dispatched twice', () => {
+        const pushes = useBeforeAll(async () => {
+          const first = runRhx({
+            dir: scene.dir,
+            args: [SKILL, 'dispatch-lesson', '--title', LIVE_TITLE],
+            stdin: LIVE_BODY,
+          });
+          const second = runRhx({
+            dir: scene.dir,
+            args: [SKILL, 'dispatch-lesson', '--title', LIVE_TITLE],
+            stdin: LIVE_BODY,
+          });
+          return { first, second };
+        });
+        then(
+          'each push lands upstream (exit 0) under an issue exid, and the second findserts the first',
+          () => {
+            // the whole run rides the assert, so a held or refused push names what it said
+            const asOutcome = (run: {
+              exitCode: number;
+              stdout: string;
+            }): { exitCode: number; said: string } => ({
+              exitCode: run.exitCode,
+              said: run.exitCode === 0 ? '' : run.stdout,
+            });
+            expect(asOutcome(pushes.first)).toEqual({ exitCode: 0, said: '' });
+            expect(asOutcome(pushes.second)).toEqual({ exitCode: 0, said: '' });
+            expect(pushes.first.stdout).toContain(
+              'dispatched to ehmpathy/rhachet-roles-ghlitch',
+            );
+            const exidFirst = pushes.first.stdout.match(/exid\s+= #(\d+)/)?.[1];
+            const exidSecond =
+              pushes.second.stdout.match(/exid\s+= #(\d+)/)?.[1];
+            expect(exidFirst).toMatch(/^\d+$/);
+            expect(exidSecond).toEqual(exidFirst);
+          },
+        );
+      });
+    },
+  );
 });
