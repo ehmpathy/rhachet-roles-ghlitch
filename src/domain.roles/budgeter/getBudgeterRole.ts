@@ -24,13 +24,7 @@ export const ROLE_BUDGETER: Role = Role.build({
   },
   hooks: {
     onBrain: {
-      onBoot: [
-        {
-          command:
-            './node_modules/.bin/rhachet roles boot --repo ghlitch --role budgeter',
-          timeout: 'PT60S',
-        },
-      ],
+      onBoot: [],
       onTool: [],
       onStop: [],
     },

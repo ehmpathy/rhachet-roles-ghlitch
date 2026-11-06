@@ -1,0 +1,32 @@
+artifacts:
+  - $route/.claims/5.promote.yield.md
+
+reviews:
+  self:
+    - slug: has-fullsun-gate-and-terminal-verdict
+      say: |
+        did the promote stone gate every dispatched lesson through fullsun-safe, and emit a
+        terminal verdict on budget AND convergence?
+
+        BLOCKERS:
+        - a dispatched radio task that carries a path, host, key, or identifier from this tree (a live claim, not a fullsun-safe class)
+        - a radio task pushed by a raw `rhx radio.task.push`, not through `rhx security.habitat.redteam dispatch-lesson` (the scan must be a precondition of the push, never a step the agent may skip)
+        - a lesson dispatched that could not have its specifics stripped and its lesson kept (keep it in .claims/, do not dispatch)
+        - a terminal verdict whose open count is not split into still found and repaired-awaits-re-detect (a one-cycle budget would read every repair as a live hole)
+        - a fullsun-safe lesson taught but not accrued into the `inventory.of=vuln.class` corpus — its class absent from the yield's `## accrued classes` list (the flywheel is structural: the next detect's via_research stands on what this cycle learned)
+        - a terminal verdict absent — no {converged | budget-out-with-critical | held-on-human | budget-out-clean} state stated
+        - a terminal verdict with no `unswept: the aggregate map` line beside its state (a bare `converged` reads as "clean", the one claim the blind sweep cannot make)
+        - `converged` claimed on a spent budget whose repairs still await re-detect (that is `budget-out-clean`, or `budget-out-with-critical` when a critical stays open)
+        - a claim held on a human (a rotate that awaits its output, a third-party disclosure routed privately, a rewrite the backup gate handed to the human) counted as still found or as awaits re-detect, not as held on a human
+        - a loop-back, or an "add budget" escalation, taken for claims that are only held on a human (no cycle can close them — the remedy is the human act, named)
+        - a terminal verdict with no `human acts owed` line, where a rotate, a private route, or a `refs/redteam-backup/` ref awaits a human
+        - a budget-out state with critical claims open that terminates SILENTLY (must escalate "add budget" to the human)
+        - convergence claimed with critical claims still open, or with repairs still PENDING-REDETECT (unconfirmed)
+        - a loop-back decision taken with budget exhausted (budget is the cap; convergence is the terminal)
+        - a loop-back decision with no named rewind command (the route is forward-only — "loop" MUST name `rhx security.habitat.redteam rewind-detect`, or the agent on the route has no command to invoke)
+        - a loop-back by a raw `rhx route.stone.set --stone 2.detect --as rewound`, not through `rhx security.habitat.redteam rewind-detect` (the rewind may clear `.claims/` — only the gate carries, reads back, and re-carries the open PENDING-REDETECT keys into `.claims/0.cycle.md`)
+        - the verdict written anywhere but the gitignored `.claims/` path (it names the open critical claims — a driven + committed route would publish them on the next push)
+        - the verdict emitted with no not-security-advice disclaimer (it is a recommendation surface a human acts on — rule.require.recommendation-disclaimer)
+
+        promote is the hinge: teach the kin only what is safe to publish, then decide loop or
+        terminate on budget AND convergence — never a silent stop while critical claims remain.

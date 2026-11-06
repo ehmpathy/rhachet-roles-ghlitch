@@ -24,13 +24,7 @@ export const ROLE_DETECTIVE: Role = Role.build({
   },
   hooks: {
     onBrain: {
-      onBoot: [
-        {
-          command:
-            './node_modules/.bin/rhachet roles boot --repo ghlitch --role detective',
-          timeout: 'PT60S',
-        },
-      ],
+      onBoot: [],
       onTool: [],
       onStop: [],
     },

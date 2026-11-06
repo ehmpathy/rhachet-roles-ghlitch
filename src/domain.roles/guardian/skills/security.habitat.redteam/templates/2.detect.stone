@@ -1,0 +1,147 @@
+dispatch blind peers over the disjoint slices; hunt candidate claims two ways; fan them all in.
+
+.why = a code review asks "is this code good?"; a redteam asks "what reaches in, what could get
+out, what's already out?". the grain does the work a review is blind to. blind, disjoint peers
+catch compositional chains a shared theory would miss.
+
+read `.claims/1.ground.yield.md` for the partition. dispatch one blind peer per slice (via the Agent
+mechanism — fresh context per peer, no shared summary). each peer hunts ITS slice only.
+
+each peer's prompt carries one history rule, for the fresh hunt and the re-detect alike: a hunt
+that reads history excludes the repair's backup refs (`git log
+--exclude='refs/redteam-backup/*' --all -S '<value>'`). a backup holds a redacted value by
+design (the undo); a peer that reads it opens a new claim at a closed key, and the claim never
+CLOSEs.
+
+---
+
+## 2.0 re-detect the prior cycle's repairs FIRST — the trust check the loop rests on
+
+**this stone is the one that confirms a repair held.** the repair stone marks each fix
+PENDING-REDETECT and earns it CLOSED only here; the promote stone's convergence test reads
+"repairs held (re-detect confirmed)". so before the fresh hunt, re-detect every repair the last
+cycle made — otherwise the whole repair-safety story references a check no stone performs.
+
+read `.claims/0.cycle.md` (the cross-cycle record — named by convention so a fresh agent context
+after a rewind finds it). it carries, per prior cycle, the `{channel}::{mechanism}` key of every
+open claim — each PENDING-REDETECT repair and each critical claim still open. for each carried key:
+
+- **re-hunt that exact channel + mechanism against the repaired tree** (re-run the command that
+  banked the claim in the first place — the grep, the config read, the port probe). a leak key's
+  re-hunt also reads history (`git log --exclude='refs/redteam-backup/*' --all -S '<value>'`): a value gone from HEAD but present in
+  a commit still matches. every re-hunt excludes `$route/**` and every route's claims
+  (`.behavior/*/.claims/**`): a claim record holds the value verbatim, so a re-hunt that reads
+  one — this route's, or a prior or parallel sweep's — re-matches it and reports a repair that
+  held as one that did not.
+- a key whose channel + mechanism **no longer matches** → mark it **REDETECT-ABSENT**. the verify
+  stone flips a REDETECT-ABSENT key to CLOSED (the repair held).
+- a key that **still matches** → the claim stands. keep it an open claim, carried forward into
+  this cycle's candidate set alongside the fresh hunt below — whether or not a fresh peer re-finds it.
+
+a rewind resumes here with the cycle-1 partition, so the slices do not grow. each surface a
+repair added (`## surface added` in the prior `.claims/4.repair.yield.md`, when it still stands)
+joins the slice of the peer whose `confined-to` covers it; a surface no slice covers is hunted
+apart and named in the yield, never left to nobody.
+
+⚠️ **trust follows the re-detect, never a yield file.** read the keys from `.claims/0.cycle.md`, not
+from `.claims/4.repair.yield.md` — the rewind that restarts this stone may archive the repair yield
+out from under you, but `0.cycle.md` is written to survive it (see `5.promote.stone`). if there is no
+prior cycle (the first pass), `0.cycle.md` carries no keys — proceed straight to the fresh hunt.
+
+---
+
+## each peer itemizes its findings TWO ways
+
+### 2.1 detect.via_imagination
+the peer reasons from its slice + first principles. the instinct that hunts PAST any checklist and
+catches novel chains. itemize every candidate.
+
+### 2.2 detect.via_research
+the peer researches the current vuln landscape for the subjects on its slice, grounded on the
+`inventory.of=vuln.class` corpus (known classes). cite each source **verbatim via the bhrowser**
+(never WebFetch/WebSearch — see `rule.require.bhrowser-citations`). itemize every candidate.
+
+on a later cycle, also read the prior cycle's `## accrued classes` in `.claims/5.promote.yield.md`
+(the flywheel): each class listed there is a known class for this hunt, even before the upstream
+corpus lands. absent on the first cycle; proceed without it.
+
+if the `inventory.of=vuln.class` corpus is absent from this role, ground directly on the public
+canon (OWASP Top 10, CWE Top 25, MITRE ATT&CK) via the bhrowser instead, and say so in the yield.
+
+if the bhrowser itself is absent from this habitat (no bhrowser skill in `rhx list`), say so in the
+yield and hold each via_research candidate as an UNCITED lead — verify confirms it against the
+tree like any lead, and no claim cites a class it never read. never fall back to WebFetch/WebSearch.
+
+> a checklist alone misses novel chains; instinct alone misses known classes. the value is the AND.
+
+---
+
+## 2.3 detect.blend — the TOTAL fan-in
+
+merge the itemized candidates on **both** axes at once:
+- **within each peer** — its 2.1 + 2.2 findings
+- **across peers** — merge the claims two peers keyed alike, and link a chain they reached from
+  opposite ends
+
+**the dedup key = the (channel, mechanism) pair, NOT the prose.** two blind peers describe the same
+chain in different words. same channel + same mechanism → one claim, merge. same channel +
+different mechanism → two claims, keep both. this key doubles as the re-detect key later.
+
+two ends of one chain (an entry seen by one peer, its exit by another) carry different keys by
+construction, so the key never merges them. keep both claims, and give each a
+`chain-with: {the other's key}` line; verify confirms the linked claims together, and a repair of
+either end re-detects both keys.
+
+blindness held through 2.1 / 2.2; blend is the ONE non-blind join.
+
+---
+
+## ⚠️ the KNOWN BLIND SPOT — the aggregate map (deferred)
+
+blind, disjoint peers catch compositional chains, but they **cannot** see a leak that is a property
+of the WHOLE corpus — the *map* (topology + principal names + retrieval commands + guardrail status)
+that no single slice holds, yet the published SET discloses. a union reader whose scope is the whole
+tree would see it, but that reader breaks the blindness the rest of the sweep depends on.
+
+this v1 does **not** run that non-blind union pass — it is deferred (a design call the vision left
+open). so blend must **flag** a suspected aggregate map as an open item for a separate non-blind
+review, and must NOT report "no leaks, clean" on the strength of the blind slices alone. the map is
+the highest-value leak and the one this method is weakest on; name the gap, never paper over it.
+
+---
+
+## every claim is a CHAIN, never a smell
+
+| grain | the chain |
+|-------|-----------|
+| **infil** | entry point → mechanism → blast radius |
+| **exfil** | exit channel → mechanism → blast radius \| audience |
+| **leak**  | exposure → audience → payload |
+
+record each claim into `$route/.claims/{grain}/{peer-slug}.md` (gitignored — a live claim NEVER
+publishes). each cycle writes these files and the yield fresh: overwrite, never append, and remove
+a prior cycle's per-peer file this cycle did not rewrite. a stale file from cycle N must never
+stand in for cycle N+1's hunt. the per-grain namespace keeps the three disjoint grain-partitions from a filename clash
+in one flat dir, and attributes each claim file to its grain + slice without a read. EVERY artifact
+that names a claim — the per-claim records AND the yield below — lives under `.claims/`; no artifact
+with a channel/mechanism/blast-radius lands in the tracked route root.
+
+## emit
+
+```
+### claim: {short name}
+- grain: {infil | exfil | leak}
+- channel: {the entry/exit point, or the exposed-value location}
+- mechanism: {what makes it exploitable}
+- blast-radius | audience | payload: {the harm}
+- found-by: {which peer(s), which method(s)}
+- key: {channel}::{mechanism}   ← the dedup + re-detect key
+```
+
+and one line per peer, under `### out-of-scope reads`:
+
+```
+- {peer}: {none | each path it read outside its `confined-to`}
+```
+
+emit the candidate set into $route/.claims/2.detect.yield.md (all claim records live under .claims/)

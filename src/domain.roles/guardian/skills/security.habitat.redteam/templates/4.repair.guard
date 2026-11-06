@@ -1,0 +1,35 @@
+artifacts:
+  - $route/.claims/4.repair.yield.md
+
+reviews:
+  self:
+    - slug: has-gated-repairs-with-proof
+      say: |
+        did the repair stone gate each repair by disposition, prove each closure, and hold
+        each repair as PENDING-REDETECT until the next detect confirms it?
+
+        BLOCKERS:
+        - a repair marked CLOSED rather than PENDING-REDETECT (a repair is trusted only after the next detect, never on the edit)
+        - a repaired claim with no command + output behind it (a claim, not a closure)
+        - a third-party disclosure auto-repaired, committed, or routed to an issue (the mechanism IS the payload — private channel only)
+        - a revoke or rotate run by the agent at the issuer (it reaches outside the habitat and can cut off a live consumer — the agent drafts the command, a human runs it, and the claim stays open until the human returns its output)
+        - a repair begun before the verify stone's sorted roadmap exists (repair follows the sorted roadmap, never precedes it — a route only ever exists because apply ran, so this is the reachable hazard, not a plan-mode run)
+        - the roadmap order broken — a phase-2 blast-radius item repaired before a phase-1 deadline leak
+        - a repair with no re-detect key (the channel::mechanism key must carry, so the next detect can confirm)
+        - a claim present in `.claims/3.verify.yield.md`'s roadmap (phase 1, phase 2, or do-not-repair) absent from `.claims/4.repair.yield.md` under a section that fits its disposition — every roadmap claim lands in the log as repaired, handed to a human, routed to a private channel, or deferred with a stated reason; none may simply not appear (a dropped verified hole lets the loop converge with it still open)
+        - the final `roadmap claims: N · logged: N` line absent, or its two counts unequal
+        - a leak's redact-vs-rotate split read from `git log --all` rather than `git log --remotes` after a fetch (a local-only leak needs the history rewrite, never a rotate; a pushed one needs the rotate, never a redact)
+        - a history rewrite with no `rhx security.habitat.redteam backup-before-rewrite` exit 0 on that branch before it (the gate refuses uncommitted work and takes the backup — the undo)
+        - a history rewrite with no `backup:` + `restore:` line from that gate recorded beside it
+        - a history rewrite after the gate exited 2 (uncommitted work, or no branch checked out — hand it to the human instead)
+        - a claim whose gate exited 2 absent from `## handed to a human to rewrite` (promote reads that section to count it held, never still found)
+        - a backup taken by a hand-run `git branch` or `git update-ref`, not the gate (a hand-run backup is not read back, and no check refuses a dirty tree)
+        - a `refs/redteam-backup/` ref pushed, or a push with `--mirror` or a `refs/*` refspec while one stands (the backup carries the leaked value — a push publishes what the redact removed)
+        - a `refs/redteam-backup/` ref deleted by the agent (the undo is the human's to drop, once verify has CLOSED the claim)
+        - the gate run while this sweep's own edits sat uncommitted (it refuses them as a human's work, and hands the rewrite off for no cause)
+        - a redact rewrite run where the value also sits on another branch, a tag, or a stash entry, with that rest not handed to the human (the re-hunt still matches it, and the claim can never CLOSE)
+        - a redact chosen after a fetch that failed (an unproven "unpushed" reads as pushed — rotate)
+        - the repair log written anywhere but the gitignored `.claims/` path (it names each closed hole AND the fix command that proves what was vulnerable — a driven + committed route would publish it on the next push)
+
+        a repair mutates the tree. an unverified fix can open a worse path than it closed —
+        so trust follows the re-detect, never the edit.

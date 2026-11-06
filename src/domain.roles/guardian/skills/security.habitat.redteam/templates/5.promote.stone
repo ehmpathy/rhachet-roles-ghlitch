@@ -1,0 +1,210 @@
+the loop's hinge — teach the kin, then decide: loop again, or terminate.
+
+.why = a sweep that ends at one habitat's roadmap teaches nobody. promote turns each loop into a
+lesson the whole role-package keeps, and decides — on budget AND convergence — whether the ward
+is done or the loop goes again over the repaired tree.
+
+read `.claims/4.repair.yield.md` (what was repaired this loop) + `.claims/3.verify.yield.md` (the
+full claim set).
+
+---
+
+## 5.1 teach the kin — radio-dispatch the fullsun-safe lessons
+
+for each repair whose lesson generalizes, dispatch a radio task upstream to
+`rhachet-roles-ghlitch`, so the kin role-package learns to beware.
+
+🛑 **the fullsun-safe gate.** the dispatch tool is itself an exfil channel. only a lesson that is
+**a generalized CLASS** may leave — never a live claim about THIS habitat.
+
+| leaves (fullsun-safe) | stays (live claim) |
+|-----------------------|--------------------|
+| "an egress path with no allowlist lets a compromised host phone home" | "the EC2 in `infra/main.tf:42` has open egress" |
+| "a launch flag that opens a control channel to any writer inverts trust" | "`boot.sh:12` grants control to a remote box" |
+
+a fullsun-safe lesson names the class, the detect question, and the fix — with NO path, host,
+key, or identifier from this tree. if you cannot strip the specifics and keep the lesson, it is
+not fullsun-safe: keep it in `.claims/`, do not dispatch it.
+
+🔬 **the deterministic backstop — dispatch ONLY through the gate.** never call
+`rhx radio.task.push` direct. dispatch each lesson via the skill's `dispatch-lesson` gate, which
+runs `scan_for_live_claim_markers` over the title and body and refuses the push on any hit:
+
+```sh
+printf '%s' "$drafted_body" | rhx security.habitat.redteam dispatch-lesson --title "$lesson_title"
+```
+
+exit 2 + a marker list = a live-claim marker still in the draft — a repo path, a host, an ip, a
+key-shaped run, an arn, or an account id. **any hit means the body is NOT fullsun-safe**: naught
+was sent; keep it in `.claims/`, strip the specific, retry until the gate passes. exit 2 + `held,
+not yet sent` = radio.uses blocks the push: the lesson waits QUEUED and delivers on the next push
+or drain — **do not re-dispatch it** (a rephrased title would open a twin); record it as held in
+the yield. exit 1 = the scanner or the push broke; naught is trusted as sent. the scan is a floor, never the
+whole gate — a clean scan is necessary but NOT sufficient (you must still strip semantic specifics
+a regex cannot see, per the table above), yet a dirty scan is proof the body must not leave. this
+is the one automated net under the gate the wish names as this capability's sharpest exfil irony.
+
+fullsun-safe lessons also accrue into the `inventory.of=vuln.class` corpus, so the next detect's
+`via_research` stands on more — the flywheel, made structural. the corpus lives in the role
+package upstream, so the dispatched lesson IS the accrual: list each class it carries under
+`## accrued classes` in the promote yield (class + the dispatched title), so the next detect in
+this habitat reads them even before the upstream corpus lands.
+
+## 5.2 loop or terminate — decide on budget AND convergence
+
+| state | decision | the command |
+|-------|----------|-------------|
+| **converged** — no critical claim left, repairs held (re-detect confirmed) | **terminate** — the ward is done | `rhx route.stone.set --stone 5.promote --as passed` |
+| **not converged, budget remains** | **loop** — re-detect over the repaired tree | `rhx security.habitat.redteam rewind-detect` (see below) |
+| **not converged, budget exhausted** | **terminate + escalate** — tell the human, clearly, that critical claims remain, and name the resume (below) | `rhx route.stone.set --stone 5.promote --as passed`, verdict carries the escalation |
+
+**the "add budget" escalation names its resume, word for word.** a re-run of apply alone adopts the
+new allowance on a passed route and drives naught; the rewind is what reopens the loop. so the
+escalation tells the human to run, in order — the scope and grain read from the route's
+`0.scope.md`, as the rewind-detect refusal prints them:
+
+```sh
+rhx security.habitat.redteam --scope <the record's scope> --grain <the record's grain> --mode apply --budget <more than the spent allowance>
+rhx security.habitat.redteam rewind-detect --route "$route" --cycle <the cycle just spent> <<'KEYS'
+<each open key, one per line>
+KEYS
+rhx route.drive
+```
+
+the escalation writes the open keys out in full, one per line, in place of the placeholder — the
+same set the carry gate below reads (every open claim's `channel::mechanism`). an empty heredoc is
+valid to the gate and drops each open critical key from the ledger, so never hand the human a
+variable name they must fill.
+
+🛑 **keys ride a quoted heredoc (`<<'KEYS'`), never a command line.** a key is text a blind peer
+wrote about a hostile surface, so it can carry `$(…)`, a backtick, or a `;`. inside `<<'KEYS'` the
+shell expands naught; pasted into `printf` or `echo` args, the shell runs it.
+
+**the loop is a REWIND, and the route is forward-only.** `route.drive` walks each stone once; the
+only way back is `rhx route.stone.set --stone 2.detect --as rewound`. a rewind of `2.detect`
+**cascades** — it rewinds `2.detect` AND every stone sorted at or after it (`3.verify`, `4.repair`,
+`5.promote`), so the whole detect → verify → repair → promote cycle walks again. (the kin skill
+`cicd.deflake/5.verification.stone` documents the same `--as rewound` mechanism — this mirrors it.)
+
+⚠️ **the rewind may or may NOT archive `.claims/` yields.** the framework's rewind archives a
+stone's yield at `$route/<stone>.yield.md`, but THIS skill deliberately writes to
+`$route/.claims/<stone>.yield.md` (the gitignore override). so the loop must NOT assume
+`.claims/4.repair.yield.md` survives (or is cleared) by the rewind. trust follows the re-detect,
+never a yield file the rewind may or may not have touched.
+
+🔁 **rewind ONLY through the carry gate.** never call `rhx route.stone.set --stone 2.detect --as
+rewound` direct. rewind via the skill's `rewind-detect` gate, with the `channel::mechanism` key of
+**every open claim** on stdin, one per line — each PENDING-REDETECT repair, AND each critical claim
+still open (unrepaired, routed to a private channel, or a repair that did not hold), AND each key
+carried in from a prior cycle that has not been CLOSED. blind peers are not deterministic: a claim
+the next cycle's peers happen not to re-find has not gone away, so its key is carried and re-hunted
+until a re-hunt shows it absent:
+
+```sh
+rhx security.habitat.redteam rewind-detect --route "$route" --cycle "$cycle" <<'KEYS'
+<each open key, one per line>
+KEYS
+```
+
+write the keys out in full, in place of the placeholder, inside the quoted heredoc; an empty
+heredoc drops each open key, as above.
+
+it reads the allowance from `0.scope.md`'s `budget` and refuses the rewind (exit 2, naught
+rewound) once cycle `$cycle` reaches the allowance, or when `$cycle` is not the next cycle in
+order: that is the budget cap, enforced by the tool, never by your arithmetic. on exit 2 for a
+spent budget, terminate; escalate "add budget" only when a critical claim stays open that a cycle could close (a spent
+budget with no critical claim open terminates as `budget-out-clean`, with no ask for more spend —
+never as `converged`, which needs every repair re-detect confirmed). otherwise it
+writes the keys into the cycle block, reads them back, rewinds, marks the cycle rewound, then
+re-carries and reads them back again, so the keys survive whatever the rewind does to `.claims/`.
+exit 1 = a key could not be held, or the rewind failed: do not loop on a lost key; report it.
+the call is idempotent: once cycle `$cycle` has rewound, a repeat call for that cycle re-confirms the
+carry and rewinds naught (exit 0, "already rewound") — even after the record has moved on to a
+later cycle — so a retry never re-dispatches the peers.
+
+- **convergence** is the natural terminal: every critical claim CLOSED (re-detect confirmed), no
+  new claim opened. ("critical" is the severity `3.verify` assigns each claim — see that stone.)
+  judge it against the whole carried ledger — every key in `.claims/0.cycle.md` plus this cycle's
+  verify yield — never the latest verify yield alone. a critical key carried in and never CLOSED
+  holds convergence open, even when no fresh peer re-found it.
+- **budget** is the cap: `0.scope.md`'s `budget` is the allowance, and each detect → verify →
+  repair cycle draws it down. track spend across cycles in **`.claims/0.cycle.md`** (named by
+  convention alongside `0.scope.md`, so a fresh agent context after a rewind finds it — this design
+  is blind peers with no shared session memory, so a vague "somewhere in `.claims/`" would produce a
+  different filename per cycle). plan mode printed the projected spend before the run.
+- a budget-out state with critical claims still open does NOT stop silent. it terminates with an
+  explicit **"add budget"** escalation — the earned-exhaustion shape, never a quiet halt. the
+  escalation splits the open count: a claim still found, and a claim repaired that awaits the
+  re-detect. a one-cycle budget re-detects naught, so its repairs all land in the second count —
+  name them as such, so a human reads "repaired, unconfirmed", never "still vulnerable".
+- **held on a human** is the third bucket: a rotate that awaits the human's output, a
+  third-party disclosure routed to a private channel, and a history rewrite the
+  `backup-before-rewrite` gate refused (exit 2) and handed to the human. no cycle can close any of
+  them — a re-hunt still matches an unrewritten leak — so none is a
+  loop target: never rewind for a claim that is only held, and never answer one with "add budget".
+  when every open critical claim is held, terminate with state `held-on-human` and escalate the
+  human act itself — each drafted rotate command, each private-channel route. a held claim stays
+  open in the ledger, so convergence is never claimed past it. a hold ends when its human act
+  lands — a rotate's output recorded in `.claims/rotate.proofs.md`, a handed rewrite done — and a
+  reopen (a raised budget, then the rewind) lets the next verify CLOSE it.
+
+the cycle record **`.claims/0.cycle.md`** holds, per loop (the `rewind-detect` gate writes it; do not
+hand-edit a block):
+
+```
+## cycle {n}
+- spent: {n} / {allowance}
+- carried PENDING-REDETECT: {channel::mechanism}   ← one line per open key (repairs + open criticals); survives the rewind
+- rewound: yes                                     ← once the rewind lands; a repeat call converges
+```
+
+## emit — the verdict
+
+```
+## teach the kin — radio tasks dispatched (fullsun-safe only)
+- {lesson class} → rhachet-roles-ghlitch — {detect question} — {fix}
+
+## accrued classes
+- {vuln class} — dispatched as: {the lesson title}
+
+## kept in .claims/ (NOT fullsun-safe — specifics could not be stripped)
+- {live claim} — why it stays
+
+## the terminal verdict
+- state: {converged | budget-out-with-critical | held-on-human | budget-out-clean}
+  (budget-out-clean = budget spent, no critical claim open; a non-critical repair may still await re-detect — say how many)
+- unswept: the aggregate map — no state above reads "clean"; each covers only what the blind slices found{, and detect flagged a suspected map: yes|no}
+- budget: {spent} / {allowance}
+- critical claims open: {n}
+  - still found (no repair, or a repair the re-detect proved did not hold): {n}
+  - repaired, awaits re-detect (PENDING-REDETECT — a one-cycle budget leaves every repair here): {n}
+  - held on a human (a rotate that awaits its output · a third-party disclosure routed privately · a rewrite the gate handed to the human): {n}
+- decision: {terminate | loop | terminate + escalate "add budget" | terminate + escalate the human act}
+- human acts owed: {each drafted rotate command · each private-channel route · each handed rewrite (commit or move the uncommitted work, then re-run the gate) · each refs/redteam-backup/ ref to delete (`git update-ref -d <ref>`) once its claim is CLOSED}
+
+## scope limit — read before you trust a clean verdict
+- this v1 runs BLIND, disjoint peers, so it catches compositional chains but is BLIND to the
+  aggregate map (a leak that is a property of the WHOLE corpus — topology + principal names +
+  retrieval commands + guardrail status — that no single slice holds, yet the published SET
+  discloses). the non-blind union pass that would catch it is DEFERRED (see `2.detect.stone`).
+- so a "converged" verdict means "no critical claim the blind slices found remains open" — NOT
+  "this habitat is clean". if `2.detect` flagged a suspected aggregate map, it is listed among the
+  open claims above; a clean verdict still warrants a separate whole-corpus review for that class.
+- the accrued classes turn within this route only, until the dispatched lessons land in the
+  upstream `inventory.of=vuln.class` corpus; a sweep in another habitat reads them only after that.
+```
+
+## carry the disclaimer — the verdict IS a recommendation surface
+
+the verdict is the artifact a human reads to decide what to act on, so it MUST open with the
+not-security-advice disclaimer (`rule.require.recommendation-disclaimer`, `motto.not-security-advice`):
+
+> ⚠️ informational only — not professional security advice. this verdict is not exhaustive; consult a
+> qualified security professional for any assessment of your own habitat.
+
+and if any open critical claim reads as an ACTIVE compromise (not a theoretical hole), carry the
+escalation carve-out: tell the human to act now — disconnect, rotate credentials from a trusted
+device, contact their security team.
+
+emit into $route/.claims/5.promote.yield.md (gitignored — the verdict names the open critical
+claims, so it never publishes; only the fullsun-safe lessons above leave, via radio dispatch)

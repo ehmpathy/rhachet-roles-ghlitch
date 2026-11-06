@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+######################################################################
+# .what = a stub `rhx` that answers the one probe the redteam apply path makes
+#
+# .why  = `security.habitat.redteam --mode apply` probes `rhx route.bind.get` to learn
+#         whether a redteam route is already bound. the default suite PATH omits rhx, so
+#         that probe fails and apply halts on a probe-malfunction — a real critipath the
+#         suite covers separately. this stub answers the probe so apply reaches its
+#         scaffold + honest-handoff branch (no route bound), OR — when a test sets
+#         STUB_BOUND_ROUTE — its route-reuse branch (a route IS bound), the core apply
+#         deliverables.
+#
+# .note = deliberately dumb. it answers `route.bind.get` from the last persisted bind, else
+#         STUB_BOUND_ROUTE (empty by default = no route bound; a path = that route is bound),
+#         answers `route.bind.set` per STUB_BIND_RC (0 = the bind took; non-zero = the bind
+#         did not take, so init's exit-1 failure tree runs), answers `radio.task.push` into
+#         STUB_RADIO_LOG and `route.stone.set` into STUB_REWIND_LOG when set, and belays
+#         loudly on every other call, so a skill that
+#         grows a NEW rhx call cannot silently get an empty answer and take a wrong path
+#         while a test claims it reached the scaffold (rule.forbid.failhide).
+#
+# .mock = rhx (route.bind.get / route.bind.set / route.stone.set / radio.task.push)
+# .why  = a real bind mutates the branch's bind, a real rewind mutates a route the suite does
+#         not own, and a real push opens a public issue upstream — none may run per test
+# .real = the bhrain route.bind.* and route.stone.set contracts this mirrors (checked against
+#         their source); a real push is never run by the suite, by design
+######################################################################
+set -euo pipefail
+
+# the bind state persists beside this stub (a per-temp-repo copy) unless a test names its
+# own file, so every bind is read back as a real bind would be (init reads the bind back).
+STUB_BIND_STATE_FILE="${STUB_BIND_STATE_FILE:-$(dirname "$0")/bind.state}"
+
+# route.bind.get — echo the bound route. route.bind.set writes the bound path to
+# STUB_BIND_STATE_FILE and this reads it back, so one apply run sees "none bound" before the
+# scaffold and the fresh route after (the vision's primary --mode apply shape). before any
+# bind, fall back to STUB_BOUND_ROUTE (empty = none bound; a path = that route is bound).
+# per-call knobs, counted across one stub copy: the Nth get call fails (STUB_BIND_GET_FAIL_ON=N),
+# reads back empty (STUB_BIND_GET_EMPTY_ON=N), or reads back STUB_FOREIGN_ROUTE
+# (STUB_BIND_GET_FOREIGN_ON=N) — so a case can break the one call it targets.
+if [[ "${1:-}" == "route.bind.get" ]]; then
+  count_file="$(dirname "$STUB_BIND_STATE_FILE")/bind.get.count"
+  # builtins only (read, $(<file)): a case may break `cat` on PATH, and the stub must still answer
+  count=0
+  [[ -s "$count_file" ]] && read -r count < "$count_file"
+  count=$(( count + 1 ))
+  printf '%s\n' "$count" > "$count_file"
+  if [[ "$count" == "${STUB_BIND_GET_FAIL_ON:-}" ]]; then
+    echo "stub rhx: route.bind.get refused" >&2
+    exit 1
+  fi
+  [[ "$count" == "${STUB_BIND_GET_EMPTY_ON:-}" ]] && exit 0
+  if [[ "$count" == "${STUB_BIND_GET_FOREIGN_ON:-}" ]]; then
+    echo "$STUB_FOREIGN_ROUTE"
+    exit 0
+  fi
+  if [[ -s "$STUB_BIND_STATE_FILE" ]]; then
+    printf '%s\n' "$(<"$STUB_BIND_STATE_FILE")"
+    exit 0
+  fi
+  [[ -n "${STUB_BOUND_ROUTE:-}" ]] && echo "$STUB_BOUND_ROUTE"
+  exit 0
+fi
+
+# route.bind.set — the real init bind boundary. default success (rc 0); a test that sets
+# STUB_BIND_RC to a non-zero value drives init's "bind did not take" failure tree (exit 1).
+# on success, persist the bound --route value so a later route.bind.get returns it — models
+# real rhx bind persistence. a test that sets STUB_BIND_RACE_ROUTE models a concurrent init
+# whose bind landed last: that path persists instead, so the read-back sees the winner.
+if [[ "${1:-}" == "route.bind.set" ]]; then
+  if [[ "${STUB_BIND_RC:-0}" != "0" ]]; then
+    # STUB_BIND_SAID, when set, is the refusal text verbatim (e.g. the real protected-branch
+    # ConstraintError, with its run banner and color codes), so a case can pin how init reads it
+    [[ -n "${STUB_BIND_SAID:-}" ]] && { printf '%b\n' "$STUB_BIND_SAID"; exit "$STUB_BIND_RC"; }
+    echo "stub rhx: route.bind.set refused" >&2
+    exit "$STUB_BIND_RC"
+  fi
+  shift
+  bind_route=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --route) bind_route="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  printf '%s\n' "${STUB_BIND_RACE_ROUTE:-$bind_route}" > "$STUB_BIND_STATE_FILE"
+  exit 0
+fi
+
+# route.stone.set — the promote stone's loop rewind. a test sets STUB_REWIND_LOG to a file;
+# the stub appends the argv there. STUB_REWIND_CLEARS_CLAIMS=1 models a rewind whose archiver
+# sweeps the route's `.claims/0.cycle.md` away; STUB_REWIND_RC sets a non-zero refusal.
+if [[ "${1:-}" == "route.stone.set" && -n "${STUB_REWIND_LOG:-}" ]]; then
+  printf 'argv: %s\n' "$*" >> "$STUB_REWIND_LOG"
+  if [[ "${STUB_REWIND_RC:-0}" != "0" ]]; then
+    echo "stub rhx: route.stone.set refused" >&2
+    exit "$STUB_REWIND_RC"
+  fi
+  rewind_route=""
+  shift
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --route) rewind_route="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  [[ "${STUB_REWIND_CLEARS_CLAIMS:-0}" == "1" ]] && rm -f "$rewind_route/.claims/0.cycle.md"
+  exit 0
+fi
+
+# radio.task.push — the promote stone's upstream dispatch. a test sets STUB_RADIO_LOG to a
+# file; the stub appends the argv and the stdin body there, so a case can assert what WOULD
+# have been sent. with no log set, a push is an unhandled call (belay below).
+if [[ "${1:-}" == "radio.task.push" && -n "${STUB_RADIO_LOG:-}" ]]; then
+  {
+    printf 'argv: %s\n' "$*"
+    printf 'body: %s\n' "$(cat)"
+  } >> "$STUB_RADIO_LOG"
+  if [[ "${STUB_RADIO_RC:-0}" != "0" ]]; then
+    echo "stub rhx: radio.task.push refused" >&2
+    exit "$STUB_RADIO_RC"
+  fi
+  exit 0
+fi
+
+echo "stub rhx: unhandled call: $*" >&2
+exit 1

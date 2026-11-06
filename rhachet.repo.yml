@@ -66,3 +66,12 @@ roles:
     inits:
       dirs: dist/domain.roles/hardener/inits
     boot: dist/domain.roles/hardener/boot.yml
+  - slug: guardian
+    readme: dist/domain.roles/guardian/readme.md
+    briefs:
+      dirs: dist/domain.roles/guardian/briefs
+    skills:
+      dirs: dist/domain.roles/guardian/skills
+    inits:
+      dirs: dist/domain.roles/guardian/inits
+    boot: dist/domain.roles/guardian/boot.yml

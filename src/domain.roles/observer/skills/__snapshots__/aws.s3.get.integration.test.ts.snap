@@ -76,7 +76,7 @@ exports[`aws.s3.get given: [case4] credentials not unlocked when: [t0] skill run
 🔐 keyrack
    └─ ehmpathy.prep.AWS_PROFILE
       ├─ status: absent 🫧
-      └─ tip: rhx keyrack set --owner ehmpath --key AWS_PROFILE --env prep
+      └─ tip: rhx keyrack set --owner ehmpath --key AWS_PROFILE --env prep --vault aws.config
 
 "
 `;

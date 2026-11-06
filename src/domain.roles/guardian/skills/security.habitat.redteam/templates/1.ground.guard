@@ -1,0 +1,25 @@
+artifacts:
+  - $route/.claims/1.ground.yield.md
+
+reviews:
+  self:
+    - slug: has-disjoint-grain-surface-partition
+      say: |
+        did the ground stone map THIS habitat's surface per grain and partition it into
+        disjoint slices, by grain-surface (never by directory)?
+
+        BLOCKERS:
+        - a partition split by top-level directory instead of by grain-surface (a directory split cuts a cross-dir chain so no peer sees it whole)
+        - a peer row with no `confined-to` scope (blindness + disjointness are prompt-enforced, not tool-enforced — an unconfined peer wanders into another slice)
+        - a grain's focus-surface left unmapped, or a channel named with no location + power
+        - two peers of one grain whose `confined-to` globs overlap (the slices are not disjoint, so two blind peers re-hunt one surface and the dedup hides it)
+        - a mapped channel in no peer's slice (a surface no peer hunts is a silent gap)
+        - one peer row asked two grains (one partition, one question — never two)
+        - more peer rows in a grain than `peers` in `0.scope.md` (the spend outruns the bound the plan priced)
+        - a `confined-to` that does not exclude `$route/**` (the route dir holds the live claims verbatim — a peer reads another's claim file, and a re-hunt re-matches its own record)
+        - a `confined-to` that does not exclude every route's claims, `.behavior/*/.claims/**` (a prior or parallel sweep's record holds its values verbatim too)
+        - the known aggregate-map blind spot not carried forward for detect (the map is a whole-corpus leak no blind slice sees)
+        - the ground map written anywhere but the gitignored `.claims/` path (it names THIS habitat's attack surface — a driven + committed route would publish it on the next push)
+
+        the hunt stands on the surface. ground is the highest-leverage stage: a bad map splits a
+        chain so no peer sees it whole, so this stage earns a guard like every stage after it.

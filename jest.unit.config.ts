@@ -30,7 +30,9 @@ const config: Config = {
   ],
   testMatch: [
     // note: order matters
-    '**/*.test.ts',
+    // scoped to src, like the integration + acceptance configs: a repo-root walk also collects
+    // the built dist copy of each test and any untracked harness (an actor's .claude plugins)
+    '<rootDir>/src/**/*.test.ts',
     '!**/*.acceptance.test.ts',
     '!**/*.integration.test.ts',
     '!**/.agent/.cache/**',

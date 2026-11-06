@@ -1,0 +1,26 @@
+artifacts:
+  - $route/.claims/2.detect.yield.md
+
+reviews:
+  self:
+    - slug: has-blind-disjoint-chains
+      say: |
+        did the detect stone dispatch blind, disjoint peers and return CHAINS?
+
+        BLOCKERS:
+        - a claim is a smell ("this looks risky"), not a chain (channel → mechanism → harm)
+        - a claim has no channel+mechanism key (so the fan-in cannot dedup, the re-detect cannot confirm)
+        - a prior cycle left PENDING-REDETECT keys in `.claims/0.cycle.md` and this detect did NOT re-hunt each one (§2.0) — the repair-trust check the promote stone waits on never ran
+        - a carried key was re-hunted but tagged neither REDETECT-ABSENT nor still-open (the verify stone has no flip to make)
+        - a research citation came from WebFetch/WebSearch, not a verbatim bhrowser read
+        - a peer read outside its assigned slice (an out-of-scope read is a reportable violation)
+        - the `### out-of-scope reads` section absent, or a dispatched peer with no line in it (`none` is a line; silence is not)
+        - a carried key re-hunted over `$route/**`, or over any route's `.behavior/*/.claims/**` (a claim record holds the value verbatim, so the re-hunt re-matches itself or a prior sweep's record)
+        - a per-peer claim file or yield left from a prior cycle that this cycle did not rewrite (a stale file stands in for a hunt that never ran)
+        - a hunt — fresh or re-detect — that read history with `git log --all` and no `--exclude='refs/redteam-backup/*'` ahead of it (a backup holds a redacted value by design; a read of it opens a claim at a closed key)
+        - two peers' same-key claims were left un-merged, OR two distinct-mechanism claims were wrongly merged
+        - two ends of one chain (different keys) left with no `chain-with:` link between them
+        - a live claim OR a yield that names a claim was written anywhere but the gitignored `.claims/` path (a driven + committed route would publish the map on the next push)
+
+        every claim is a chain, keyed on (channel, mechanism). blindness holds through 2.1/2.2;
+        blend is the one non-blind join.

@@ -25,9 +25,12 @@ ignores:
   - rhachet-brains-anthropic
   - rhachet-roles-ghlitch
   - rhachet-brains-xai
+  - rhachet-brains-openrouter
   - rhachet-roles-rhachet
   - as-procedure
   - type-fns
   - test-fns
   - rhachet-brains-fireworksai
   - playwright
+ignore-patterns:
+  - .claude

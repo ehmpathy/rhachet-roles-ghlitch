@@ -1,0 +1,131 @@
+confirm each candidate against the tree, drop false positives, classify, and sort → the roadmap.
+
+.why = a peer read is a LEAD, never a verdict. a real sweep named placeholders as secrets and
+carve-out paths as leaks. an unverified claim that earns a work item wastes a repair — or worse,
+a repair that mutates the tree for a hole that was never there.
+
+read `.claims/2.detect.yield.md` + the `.claims/`. for each candidate:
+
+---
+
+## 0. flip the re-detected repairs — the CLOSED the loop waits on
+
+the detect stone (§2.0) re-hunted each prior-cycle PENDING-REDETECT key and tagged it:
+
+- a key tagged **REDETECT-ABSENT** → the repair held. flip it to **CLOSED**, and carry the
+  detect stone's re-run command + its (empty) output as the proof — a CLOSED with no run behind it
+  is a claim, not a confirmation. a leak key flips CLOSED only when its re-hunt read history
+  (`git log --exclude='refs/redteam-backup/*' --all -S '<value>'`) as well as the tree, or when a rotate proof stands; a value gone
+  from HEAD but present in any commit, local or pushed, stays open.
+- a **rotate** key flips CLOSED on its proof alone: the human records the revoke or rotate
+  command's output under the claim's key in **`.claims/rotate.proofs.md`** (gitignored). verify
+  reads that file each cycle; a key with an entry flips CLOSED and carries the entry as its proof.
+  a key with none stays held on a human.
+- a key that **still matched** → the repair did NOT hold. it re-entered the candidate set as an open
+  claim; verify it against the tree below like any other candidate.
+
+this is the one step that earns a PENDING-REDETECT key its CLOSED. the promote stone's convergence
+test ("no critical claim left, repairs held") reads these flips — a repair the detect stone never
+re-hunted stays PENDING-REDETECT, and an unconfirmed repair can NEVER satisfy convergence.
+
+---
+
+## 1. verify against the tree
+
+confirm the claim is real: read the actual file, run the actual command, show the actual value.
+- a **pass** banks the claim.
+- a **fail** is a false positive — drop it, and note why (it refines the next detect round).
+
+⚠️ every CLOSED-by-verification carries the **command that confirmed it + that command's output**.
+a verdict with no run behind it is a claim, not a confirmation.
+
+## 2. classify by disposition
+
+**pushed = reachable from a remote ref.** fetch first (`git fetch --all`), then
+`git log --remotes -S '<value>'` names each pushed commit that carries the value. `--all` cannot
+tell pushed from local: it also reads local branches and tags. so one leaked value sits in one of
+three places:
+
+| where the value sits | `--all` names a commit | `--remotes` names a commit | disposition |
+|----------------------|------------------------|----------------------------|-------------|
+| the work tree only | no | no | redact |
+| a local, unpushed commit | yes | no | redact (the history rewrite too) |
+| a pushed commit | yes | yes | rotate |
+
+a fetch that fails (offline, a sandbox, no remote access) leaves `--remotes` stale, so it cannot
+prove a value unpushed. read such a value as pushed: rotate. redact only after a fetch that took.
+
+| disposition | when | who repairs |
+|-------------|------|-------------|
+| **own-tree fix** | a defect in this habitat's own code/config | fix in repo |
+| **redact** | an own-tree leaked value no push has published (`git log --remotes -S '<value>'` names no commit) | redact from the tree AND rewrite each unpushed commit that carries it (deadline = next push) |
+| **rotate** | a leaked value already pushed (`git log --remotes -S '<value>'` names a commit) | revoke or rotate at the issuer; a redaction alone never closes it |
+| **third-party disclosure** | the mechanism IS the payload; redaction cannot fix it | route to a PRIVATE channel — NEVER an issue, never a repair |
+
+## 2b. assign a severity — the `critical` flag the loop terminates on
+
+the promote stone's convergence test keys on **critical claims** ("no critical claim left"), so each
+verified claim MUST carry a severity — otherwise "critical" is undefined and the loop cannot compute
+its terminal. assign one of two:
+
+| severity | when | how the loop treats it |
+|----------|------|------------------------|
+| **critical** | the harm is severe AND the trigger is near — a leak that ships on the next push, an infil/exfil whose blast radius is account-takeover-class | MUST be CLOSED before the loop may converge; an open one continues the loop (when budget remains) |
+| **minor** | a real claim whose harm is bounded or whose trigger is remote | recorded in the roadmap; does NOT hold convergence |
+
+severity is NOT the sort key — the sort (step 3) is by permanence trigger (deadline vs blast radius);
+severity is the separate CONVERGENCE gate the promote stone reads. a claim carries both: its sort key
+orders the human's work, its severity decides whether the ward is done.
+
+## 3. sort by the permanence trigger — NOT by severity
+
+the sort key follows WHO fires the permanence, and WHEN:
+
+- **leaks** → **deadline**. permanence fires on YOUR next push (imminent, certain, self-inflicted).
+  git keeps the blob; a later redaction clears HEAD and nowhere else. sort by the nearest deadline.
+- **infil + exfil** → **blast radius**. permanence fires only if an ATTACKER uses the channel, on a
+  clock you cannot predict. no self-driven deadline, so rank by how bad the use would be.
+- **self-exfil** (a legitimate channel of the habitat's own that ships the value every run) →
+  **deadline**, in phase 1 beside the leaks. no attacker is needed: the next run fires it, so it
+  is already on your own clock.
+
+a **cross-grain claim** (one claim seen by two grains at fan-in) sorts by its facets:
+- it carries a **leak** facet (a value your push publishes) → it takes the **deadline** key in
+  phase 1, AND appears in phase 2 by blast radius, so its channel work is scheduled too.
+- every facet fires only on an attacker (an infil channel that is also an exfil channel) →
+  **blast radius** only.
+
+within phase 1, the nearest permanence sorts first: a value **already public** (a pushed leak,
+disposition rotate — its exposure runs now) → **next run** (a self-exfil) → **next push** (a local
+leak, redact). a rotate never sorts behind an unpushed item.
+
+keep the two sorts apart; **interleave only at the end**. a severity sort mixes them and reliably
+lets the cheap, irreversible leak items expire behind expensive attacker-triggered ones.
+
+## emit — the roadmap (the human reads here)
+
+```
+## phase 1 — leaks + self-exfil, by deadline (already public, then next run, then next push)
+1. {claim} — kind: {leak|self-exfil} — severity: {critical|minor} — deadline: {already public|next run|next push} — disposition: {rotate|redact|own-tree fix} — key: {channel::mechanism}
+
+## phase 2 — infil + exfil, by blast radius (fire on an attacker's clock)
+1. {claim} — severity: {critical|minor} — blast radius: {harm} — disposition: {own-tree fix} — key: {channel::mechanism}
+
+## do-not-repair (routed to a private channel)
+- {third-party disclosure} — severity: {critical|minor} — why redaction cannot fix it
+```
+
+## carry the disclaimer — the roadmap IS a recommendation surface
+
+the roadmap is the artifact a human reads and acts on, so it MUST open with the not-security-advice
+disclaimer (`rule.require.recommendation-disclaimer`, `motto.not-security-advice`):
+
+> ⚠️ informational only — not professional security advice. this roadmap is not exhaustive; consult a
+> qualified security professional for any assessment of your own habitat.
+
+and if any claim reads as an ACTIVE compromise (not a theoretical hole), carry the escalation
+carve-out too: tell the human to act now — disconnect, rotate credentials from a trusted device,
+contact their security team.
+
+emit into $route/.claims/3.verify.yield.md (gitignored — the roadmap names live claims, so it never
+publishes; a driven + committed route must not push the map on the next push)

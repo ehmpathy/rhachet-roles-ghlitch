@@ -1,0 +1,87 @@
+map the habitat's own focus-surface, per grain.
+
+.why = the hunt stands on the surface. before any peer hunts, you name THIS habitat's attack
+surface — not a generic corpus. a bad ground map splits a chain so no peer sees it whole.
+
+read `0.scope.md` for the scope + grain. then map the focus-surface for each active grain.
+
+the active grains: the record's grain, or all three (infil, exfil, leak) when it reads `all`.
+`all` is a shorthand for the three, never a fourth grain and never a `.claims/all/` dir.
+
+---
+
+## the three grains
+
+| grain | the surface to map | the question |
+|-------|--------------------|--------------|
+| **infil** | every inbound channel — a port, an API, a file upload, a launch flag, an SSH grant, a dependency the build trusts, a prompt-injection input | what can reach IN, with what power? |
+| **exfil** | every outbound channel — NOT just network egress: a DNS lookup, a log line, a crash/telemetry report, a shared temp dir, a build cache, a webhook, a public bucket, a git push, an artifact, EXIF/steganography, a time-based side channel | what could get OUT, by ANY means? |
+| **leak** | every exposed value — a committed id, a key, a map, a guardrail's open/closed status | what is ALREADY out, right now? |
+
+**exfil is every exit, and the creative ones are the point.** do not stop at the obvious network
+egress. enumerate the exits a determined path would use that a review never thinks of.
+
+**self-exfil is the quiet case: no infiltrator at all.** the habitat's own *legitimate* outbound
+channel is the leak — a telemetry call, a log shipper, an analytics beacon, an error report that
+carries a secret or a private value by design, every run. map each legitimate exit with what it
+carries, not only the exits an attacker would open.
+
+---
+
+## the partition — by grain-surface, not by directory
+
+split each grain's surface into **disjoint slices**, one per blind peer (`0.scope.md`'s `peers`). partition
+by the surface a grain reads (infil by inbound channel, exfil by outbound channel, leak by
+exposed-value location), NOT by top-level directory — a directory split cuts a cross-dir chain so
+neither peer sees it whole.
+
+the partition holds four rules, each one the guard checks:
+
+- **one grain per peer.** a peer row serves exactly one grain; never one peer asked two questions.
+- **disjoint within a grain.** no two peers of one grain share a path: their `confined-to` globs
+  never overlap.
+- **full coverage.** each channel the focus-surface maps sits in exactly one peer's slice; none is
+  left to nobody.
+- **within the count.** each grain has at most `peers` rows (`0.scope.md`).
+
+🛑 **the route dir is never surface.** `$route/` (this route, its `.claims/` above all) holds the
+live claims verbatim, secret values included. so each `confined-to` excludes `$route/**`, even under
+`--scope .`. else a peer reads another peer's claim file (blindness broken), and a re-hunt grep for
+a value re-matches its own claim record (a false "did not hold"). every other route's claims hold
+values verbatim too (a prior sweep, a parallel grain), so each `confined-to` also excludes
+`.behavior/*/.claims/**`.
+
+🛑 **claim text never leaves `.claims/`.** only `.claims/` is gitignored. a blocker, fulcrum, dream,
+or radio note sits in a tracked path and publishes, so it names a claim by its key, never by its value.
+
+⚠️ **blindness + disjointness are PROMPT-enforced, not tool-enforced.** the Agent tool isolates
+context, but every peer shares the filesystem. a blind peer told to read `slice-A` CAN wander into
+`slice-B`; no wall stops it. so each peer's prompt must confine it to its slice, and an out-of-scope
+read is a reportable violation — never assume the tool walls it off.
+
+---
+
+## emit
+
+for each active grain, emit the mapped surface + the per-peer partition:
+
+```
+### grain: {infil | exfil | leak}
+
+**focus-surface (the channels/values this grain reads):**
+- {channel or value} — {where it lives, what power it carries}
+
+**partition (disjoint slices, one per blind peer):**
+| peer | slice | confined-to |
+|------|-------|-------------|
+| p1   | {channel set} | {paths/globs this peer may read, and ONLY these; `$route/**` and `.behavior/*/.claims/**` excluded} |
+
+**carried forward for detect:**
+- aggregate-map blind spot — no blind slice sees a whole-corpus map; detect's blend flags a suspected one
+```
+
+emit into $route/.claims/1.ground.yield.md
+
+> ⚠️ the ground map names THIS habitat's attack surface — a live reconnaissance artifact. it lives
+> under the gitignored `.claims/` path (never the tracked route root), so a driven + committed route
+> never publishes the map on the next push (the dispatch tool is itself an exfil channel).
